@@ -1,24 +1,77 @@
-# Loopa — Your Personal Media Universe
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Dragonballsuper-1995/loopa/main/website/assets/logo.svg" width="200" alt="Loopa Logo">
+  
+  <h1>LOOPA</h1>
+  
+  <p><strong>Your Digital Media Universe. Track, Sync, and Discover.</strong></p>
+  
+  <p>
+    <a href="https://github.com/Dragonballsuper-1995/loopa/releases/latest"><img src="https://img.shields.io/badge/Download-APK-FF4500?style=for-the-badge&logo=android" alt="Download APK" /></a>
+    <a href="https://loopa-web.vercel.app"><img src="https://img.shields.io/badge/Visit-Website-00E5FF?style=for-the-badge&logo=vercel" alt="Website" /></a>
+  </p>
+</div>
 
-Loopa is a modern, cross-platform media tracking application designed to help you beautifully log everything you watch (Movies, TV Shows, Anime). Integrated with a powerful AI recommendation engine, Loopa curates your next obsession based on your exact tastes.
+<br />
 
-## Features
-- **Cross-Platform**: A seamless experience across both Android and the Web.
-- **Realtime Sync**: Powered by Supabase, your watchlist updates instantly across all your devices.
-- **AI Recommendations**: A conversational AI interface powered by Gemini to help you discover new content.
-- **Premium Design**: Warm, immersive UI with haptic feedback, spring physics, and 3D parallax effects.
+> **Loopa** is a premium, cross-platform media tracker (Movies, TV Shows, Anime) engineered with a brutalist aesthetic (Project "Tsugi"). Powered by Supabase for real-time synchronization and Google Gemini AI for highly personalized recommendations.
 
-## Project Structure
-- `/app`: The Android application built with Jetpack Compose.
-- `/website`: The Web frontend built with HTML, Tailwind CSS, and Vanilla JavaScript.
+---
 
-## Setup Instructions
+## ⚡ Key Features
+
+| Feature | Description |
+|---|---|
+| 🌌 **Premium Cyberpunk UI** | Brutalist styling, skewed neon geometry (`transform: skewX(-3deg)`), glassmorphism, and dynamic 3D parallax hover effects. |
+| 🔄 **Real-Time Sync** | Built on **Supabase**. Your watchlist is instantly updated and mirrored across the Web and Android apps. |
+| 🧠 **AI Recommendations** | Integrated with **Google Gemini**. A conversational UI that learns your exact tastes and tells you what to watch next. |
+| 📱 **Native Android App** | Fully native Jetpack Compose application featuring spring-physics animations, haptic feedback, and custom Aurora shaders. |
+| 🌐 **Modern Web App** | Lightning-fast HTML/Tailwind web client with fluid micro-interactions and smooth transitions. |
+| 🚨 **Crash & Analytics** | Fully integrated with **Firebase Crashlytics** and **Google Analytics** for bulletproof stability. |
+
+---
+
+## 🎨 Design Philosophy (Tsugi Redesign)
+
+The application embraces a tech-forward, digital-first aesthetic defined by:
+- **Palette**: Deep blacks (`#0a0a0a`), elevated charcoals (`#161616`), pierced by vivid **Neon Orange** (`#FF4500`) and **Vibrant Cyan** (`#00E5FF`).
+- **Typography**: Heavily reliant on **Bebas Neue** for striking, uppercase headers, paired with **Manrope** for clean, geometric readability.
+- **Geometry**: Sharp edges replacing standard Material rounded corners. Elements lean forward slightly, emphasizing speed and raw data.
+
+---
+
+## 🚀 Setup & Installation
 
 ### Android App
-1. Open the `/app` directory in Android Studio.
-2. Add your `google-services.json` file in the `app/` folder (for Firebase Analytics/Crashlytics).
-3. Build and run on an emulator or physical device.
+To run the native Jetpack Compose application:
 
-### Web App
-1. Serve the `/website` directory using any local web server (e.g., `npx serve website`).
-2. The web app can be deployed seamlessly to Vercel or any static hosting provider.
+1. Open the `/app` folder in Android Studio.
+2. Ensure you have your `google-services.json` placed inside the `/app` directory.
+3. Add a `.env` file in the root containing your `GEMINI_API_KEY` and Supabase keys.
+4. Click **Run** on your physical device or emulator. 
+   *(Alternatively, grab the latest pre-compiled [Release APK](https://github.com/Dragonballsuper-1995/loopa/releases/latest)).*
+
+### Web Platform
+To run the web dashboard:
+
+1. Navigate to the `/website` directory.
+2. The site requires no build step—you can serve it using any static server:
+   ```bash
+   npx serve website
+   ```
+3. To deploy, simply link the repository to a Vercel or Netlify project pointing to the `/website` root!
+
+---
+
+## 🏗 Architecture & Stack
+
+- **Android Client**: Kotlin, Jetpack Compose, Coroutines/Flow, Retrofit, Ktor.
+- **Web Client**: HTML5, Vanilla JavaScript (ESModules), Tailwind CSS.
+- **Backend & Auth**: Supabase (PostgreSQL, GoTrue, Realtime).
+- **AI Engine**: Google Gemini Pro APIs.
+- **Media Data**: TMDB API, Jikan (MyAnimeList) API.
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ by Dragonballsuper-1995</sub>
+</div>

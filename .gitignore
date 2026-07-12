@@ -19,3 +19,13 @@ debug.keystore
 release.keystore
 app/build/
 /website/node_modules/
+loop_website_screenshots/
+references/
+tsugi_screenshots/
+gemini_free_models.md
+groq_free_models.md
+openrouter_free_models.md
+TSUGI_DESIGN.md
+tsugi_desktop_prototype.html
+tsugi_premium_app.html
+CONTEXT.md
