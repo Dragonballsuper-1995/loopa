@@ -1,77 +1,90 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Dragonballsuper-1995/loopa/main/website/assets/logo.svg" width="200" alt="Loopa Logo">
+  <img src="website/assets/logo.svg" width="200" alt="Loopa Logo">
   
-  <h1>LOOPA</h1>
+  # Loopa.
+  **Discover Your Next Obsession.**
   
-  <p><strong>Your Digital Media Universe. Track, Sync, and Discover.</strong></p>
+  [![Android](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](#)
+  [![Web](https://img.shields.io/badge/Platform-Web-000000?style=for-the-badge&logo=vercel&logoColor=white)](#)
+  [![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](#)
   
-  <p>
-    <a href="https://github.com/Dragonballsuper-1995/loopa/releases/latest"><img src="https://img.shields.io/badge/Download-APK-FF4500?style=for-the-badge&logo=android" alt="Download APK" /></a>
-    <a href="https://loopa-web.vercel.app"><img src="https://img.shields.io/badge/Visit-Website-00E5FF?style=for-the-badge&logo=vercel" alt="Website" /></a>
-  </p>
+  *A cross-platform, AI-powered media tracking universe.*
+
+  [**Explore the Web App (Live)**](https://placeholder-website-link.com) | [**Download Android APK**](https://github.com/Dragonballsuper-1995/loopa/releases/download/v1.0.0/loopa.apk)
 </div>
 
-<br />
-
-> **Loopa** is a premium, cross-platform media tracker (Movies, TV Shows, Anime) engineered with a brutalist aesthetic (Project "Tsugi"). Powered by Supabase for real-time synchronization and Google Gemini AI for highly personalized recommendations.
+<br>
 
 ---
 
-## ⚡ Key Features
+## ⚡ What is Loopa?
 
-| Feature | Description |
-|---|---|
-| 🌌 **Premium Cyberpunk UI** | Brutalist styling, skewed neon geometry (`transform: skewX(-3deg)`), glassmorphism, and dynamic 3D parallax hover effects. |
-| 🔄 **Real-Time Sync** | Built on **Supabase**. Your watchlist is instantly updated and mirrored across the Web and Android apps. |
-| 🧠 **AI Recommendations** | Integrated with **Google Gemini**. A conversational UI that learns your exact tastes and tells you what to watch next. |
-| 📱 **Native Android App** | Fully native Jetpack Compose application featuring spring-physics animations, haptic feedback, and custom Aurora shaders. |
-| 🌐 **Modern Web App** | Lightning-fast HTML/Tailwind web client with fluid micro-interactions and smooth transitions. |
-| 🚨 **Crash & Analytics** | Fully integrated with **Firebase Crashlytics** and **Google Analytics** for bulletproof stability. |
+**Loopa** (formerly known as ContentGram / Tsugi) is a modern, premium application designed to help you beautifully log everything you watch—Movies, TV Shows, and Anime—and let a conversational AI curate your next obsession. 
+
+Featuring a highly stylized **cyberpunk, brutalist design**, Loopa strips away standard rounded-corner templates in favor of a dynamic, edge-forward UI with **skewed parallelograms, neon-accented glows, and 3D parallax hover effects**. 
+
+Whether you're sitting at your desktop browsing on the Web, or swiping on the Android app, your watchlist updates **instantly** via Realtime Supabase syncing.
 
 ---
 
-## 🎨 Design Philosophy (Tsugi Redesign)
+## ✨ Core Features
 
-The application embraces a tech-forward, digital-first aesthetic defined by:
-- **Palette**: Deep blacks (`#0a0a0a`), elevated charcoals (`#161616`), pierced by vivid **Neon Orange** (`#FF4500`) and **Vibrant Cyan** (`#00E5FF`).
-- **Typography**: Heavily reliant on **Bebas Neue** for striking, uppercase headers, paired with **Manrope** for clean, geometric readability.
-- **Geometry**: Sharp edges replacing standard Material rounded corners. Elements lean forward slightly, emphasizing speed and raw data.
-
----
-
-## 🚀 Setup & Installation
-
-### Android App
-To run the native Jetpack Compose application:
-
-1. Open the `/app` folder in Android Studio.
-2. Ensure you have your `google-services.json` placed inside the `/app` directory.
-3. Add a `.env` file in the root containing your `GEMINI_API_KEY` and Supabase keys.
-4. Click **Run** on your physical device or emulator. 
-   *(Alternatively, grab the latest pre-compiled [Release APK](https://github.com/Dragonballsuper-1995/loopa/releases/latest)).*
-
-### Web Platform
-To run the web dashboard:
-
-1. Navigate to the `/website` directory.
-2. The site requires no build step—you can serve it using any static server:
-   ```bash
-   npx serve website
-   ```
-3. To deploy, simply link the repository to a Vercel or Netlify project pointing to the `/website` root!
+- 🧠 **AI-Powered Discovery:** Chat with an integrated conversational AI (powered by Google Gemini) to get hyper-personalized recommendations based on your tastes.
+- 🔄 **Realtime Cross-Platform Sync:** Start logging a movie on the web, and watch it instantly appear on your Android device. Data is powered by a robust Supabase backend.
+- 🎨 **Premium Aesthetic & UX:**
+  - **Android:** Custom canvas-drawn shapes, Haptic feedback engines, fluid Spring physics, and a custom Aurora Shader backdrop.
+  - **Web:** Glassmorphic overlays, 3D pointer-tracking parallax on movie posters, and fluid CSS transitions.
+- 📊 **Firebase Analytics & Crashlytics:** Enterprise-grade crash reporting and usage analytics built directly into the Android client.
 
 ---
 
-## 🏗 Architecture & Stack
+## 📱 Platforms
 
-- **Android Client**: Kotlin, Jetpack Compose, Coroutines/Flow, Retrofit, Ktor.
-- **Web Client**: HTML5, Vanilla JavaScript (ESModules), Tailwind CSS.
-- **Backend & Auth**: Supabase (PostgreSQL, GoTrue, Realtime).
-- **AI Engine**: Google Gemini Pro APIs.
-- **Media Data**: TMDB API, Jikan (MyAnimeList) API.
+### 1. Android (Native Kotlin / Jetpack Compose)
+The Android app is built entirely natively using the latest declarative UI framework from Google. It completely overhauls the Material 3 standard in favor of a bespoke visual language (Bebas Neue fonts, sharp edges, and skewed modifier paths).
+
+* **Source Location:** `/app` directory
+* **Tech Stack:** Kotlin, Jetpack Compose, Ktor, Supabase Android SDK, Room DB, Firebase Crashlytics.
+* **Building it locally:**
+  1. Open the `/app` folder in Android Studio.
+  2. Place your `google-services.json` inside the `app/` folder.
+  3. Ensure your `.env` contains the required Supabase and Gemini keys.
+  4. Hit **Run** or build `loopa.apk` via `./gradlew assembleRelease`.
+
+### 2. Web (HTML / Tailwind CSS / Vanilla JS)
+The Web dashboard provides a lightweight, blisteringly fast desktop experience with 3D interactions.
+
+* **Source Location:** `/website` directory
+* **Tech Stack:** HTML5, Tailwind CSS (via CDN), Vanilla JavaScript, Supabase JS SDK, Firebase Web SDK.
+* **Running it locally:**
+  1. Navigate to `/website`.
+  2. Serve locally: `npx serve .` or `python -m http.server 8000`.
+  3. Deploy instantly to Vercel or any static host.
 
 ---
+
+## 🎨 Design Language & Visual Tokens
+
+Loopa strictly follows a cyberpunk/neon-brutalist identity:
+* **Backgrounds:** `CineCharcoal` (#0a0a0a) and `CineSurface` (#161616).
+* **Accents:** `NeonOrange` (#FF4500) for primary actions and `VibrantCyan` (#00E5FF) for secondary highlights.
+* **Typography:** `Bebas Neue` for massive, condensed, uppercase headers. `Manrope` for legible, geometric body text.
+* **Geometry:** Sharp edges, `skewX(-3deg)` transform logic on cards to invoke speed and digital distortion, and heavy use of `mix-blend-screen` gradients.
+
+---
+
+## 🚀 Getting Started
+
+If you are cloning this repository to build locally, you will need a few secrets:
+
+1. **Supabase:** Create a Supabase project, enable Email Auth, and copy your `URL` and `ANON_KEY`.
+2. **Gemini AI:** Get a free API key from Google AI Studio.
+3. **TMDB:** Get a free API key from The Movie Database.
+
+Place these in an `.env` file for Android, and in `website/js/config.js` for the web!
+
+<br>
 
 <div align="center">
-  <sub>Built with ❤️ by Dragonballsuper-1995</sub>
+  <sub>Built with ❤️ by Dragonballsuper-1995.</sub>
 </div>

@@ -7,6 +7,12 @@
     <meta name="description" content="loopa is your personal media tracker. Beautifully log everything you watch — movies, series, anime — and let AI curate your next obsession.">
     
     <!-- OpenGraph & SEO Meta Tags -->
+    <meta property="twitter:title" content="Loopa - Discover Your Next Obsession">
+    <meta property="twitter:description" content="AI-powered media tracker. Sync across web and Android. Beautiful, fast, and entirely yours.">
+    
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+
+    <!-- Fonts -->
     <meta property="og:title" content="loopa — Your Personal Media Universe">
     <meta property="og:description" content="loopa is your personal media tracker. Beautifully log everything you watch and let AI curate your next obsession.">
     <meta property="og:type" content="website">
@@ -541,5 +547,24 @@
     <script src="js/supabase.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/app.js?v=4"></script>
+
+    <!-- Firebase SDK (Modular) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCo8Rn5q6XrSQommpiRTxV1vguSsfZZ5Dc",
+            authDomain: "loopa-4e92d.firebaseapp.com",
+            projectId: "loopa-4e92d",
+            storageBucket: "loopa-4e92d.firebasestorage.app",
+            messagingSenderId: "752063756580",
+            appId: "1:752063756580:web:4175ffe3b6c7e44329dbb1",
+            measurementId: "G-XRL3HP9CT4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+    </script>
 </body>
 </html>

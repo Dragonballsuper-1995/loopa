@@ -19,6 +19,8 @@ debug.keystore
 release.keystore
 app/build/
 /website/node_modules/
+
+# Design References and Screenshots
 loop_website_screenshots/
 references/
 tsugi_screenshots/
