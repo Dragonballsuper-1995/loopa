@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "752063756580",
+    "project_id": "loopa-4e92d",
+    "storage_bucket": "loopa-4e92d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:752063756580:android:26f4785705e2bdc129dbb1",
+        "android_client_info": {
+          "package_name": "com.example"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBN3DjgjxOSYsGb6GdgrV7fSiT0HB1Fw5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

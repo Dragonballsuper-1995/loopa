@@ -1,0 +1,6 @@
+{
+  "name": "ContentGram",
+  "description": "Cross-platform tracking app for Movies, TV Shows, and Anime.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

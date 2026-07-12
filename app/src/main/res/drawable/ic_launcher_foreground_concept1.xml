@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer Circle Outline -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,24A30,30 0 1,0 84,54A30,30 0 0,0 54,24" />
+    <!-- Gradient Play Button Iris -->
+    <path
+        android:fillColor="#FF4500"
+        android:pathData="M48,42L66,54L48,66Z" />
+</vector>

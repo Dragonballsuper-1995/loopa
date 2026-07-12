@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tsugi - Premium Desktop Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cineCharcoal: '#0a0a0a',
+                        cineSurface: '#161616',
+                        neonOrange: '#FF4500',
+                        vibrantCyan: '#00E5FF'
+                    },
+                    fontFamily: {
+                        headers: ['Bebas Neue', 'sans-serif'],
+                        body: ['Manrope', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0a0a0a; color: #fff; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .skewed-elem { transform: skewX(-5deg); transition: transform 0.3s, background-color 0.3s; }
+        .skewed-elem:hover { transform: skewX(-5deg) scale(1.02); }
+        .unskew { transform: skewX(5deg); display: block; } 
+        
+        #detailModal { transition: opacity 0.3s ease; }
+        #modalContent { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: scale(0.95); }
+        #detailModal.active { opacity: 1; pointer-events: auto; }
+        #detailModal.active #modalContent { transform: scale(1); }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen selection:bg-neonOrange selection:text-white font-body overflow-x-hidden">
+
+    <!-- Top Navigation -->
+    <header class="w-full bg-cineSurface/95 backdrop-blur-md border-b-2 border-white/5 sticky top-0 z-40 px-10 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-8">
+            <h1 class="font-headers text-4xl tracking-wider text-white">TSUGI<span class="text-neonOrange">.</span></h1>
+            <nav class="hidden md:flex gap-4 ml-6">
+                <button onclick="switchTab('home')" id="nav-home" class="px-6 py-2 skewed-elem bg-neonOrange text-white font-headers text-2xl">
+                    <span class="unskew">HOME</span>
+                </button>
+                <button onclick="switchTab('search')" id="nav-search" class="px-6 py-2 skewed-elem bg-transparent hover:bg-white/10 text-gray-400 hover:text-white font-headers text-2xl transition-colors">
+                    <span class="unskew">RADAR</span>
+                </button>
+                <button onclick="switchTab('watchlist')" id="nav-watchlist" class="px-6 py-2 skewed-elem bg-transparent hover:bg-white/10 text-gray-400 hover:text-white font-headers text-2xl transition-colors">
+                    <span class="unskew">UP NEXT</span>
+                </button>
+            </nav>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="w-10 h-10 bg-white/10 skewed-elem flex justify-center items-center cursor-pointer hover:bg-vibrantCyan group">
+                <i class="fa-solid fa-user unskew text-gray-300 group-hover:text-cineCharcoal transition-colors"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Views -->
+    <div class="flex-1 w-full flex flex-col">
+        
+        <!-- Tab 1: Home -->
+        <main id="tab-home" class="flex-1 w-full pb-20">
+            <div id="hero-section" class="relative w-full h-[600px] border-b-4 border-neonOrange">
+                <div class="absolute inset-0 animate-pulse bg-cineSurface"></div>
+            </div>
+
+            <div class="max-w-[1600px] mx-auto px-10 pt-16 space-y-16">
+                <section>
+                    <div class="flex items-end justify-between mb-6 border-l-8 border-vibrantCyan pl-4">
+                        <h2 class="font-headers text-5xl leading-none uppercase">Action & Sci-Fi</h2>
+                    </div>
+                    <div class="flex gap-6 overflow-x-auto no-scrollbar pb-6" id="row-action"></div>
+                </section>
+                <section>
+                    <div class="flex items-end justify-between mb-6 border-l-8 border-neonOrange pl-4">
+                        <h2 class="font-headers text-5xl leading-none uppercase">Anime Hits</h2>
+                    </div>
+                    <div class="flex gap-6 overflow-x-auto no-scrollbar pb-6" id="row-anime"></div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Tab 2: Search -->
+        <main id="tab-search" class="flex-1 w-full pb-20 hidden max-w-[1600px] mx-auto px-10 pt-12">
+            <h1 class="font-headers text-7xl mb-8 text-white tracking-wide uppercase">Global Radar</h1>
+            
+            <div class="relative w-full max-w-4xl mb-12 skewed-elem bg-cineSurface border-2 border-white/10 hover:border-vibrantCyan transition-colors">
+                <input type="text" id="searchInput" placeholder="SEARCH DIRECTIVE..." 
+                    class="w-full bg-transparent text-white py-6 pl-16 pr-6 outline-none font-bold text-xl tracking-wider placeholder-gray-600 unskew uppercase">
+                <i class="fa-solid fa-search text-vibrantCyan text-2xl absolute left-6 top-1/2 -translate-y-1/2 unskew"></i>
+            </div>
+            
+            <div id="searchState" class="text-gray-600 py-20 font-headers text-4xl">AWAITING INPUT...</div>
+            <div id="searchResults" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 pb-10"></div>
+        </main>
+
+        <!-- Tab 3: Watchlist -->
+        <main id="tab-watchlist" class="flex-1 w-full pb-20 hidden max-w-[1600px] mx-auto px-10 pt-12">
+            <div class="flex justify-between items-end mb-10 border-b-2 border-white/10 pb-4">
+                <h1 class="font-headers text-7xl tracking-wide uppercase">UP NEXT</h1>
+                <p class="text-vibrantCyan font-bold text-xl uppercase tracking-widest" id="watchlistCount">0 TARGETS ACQUIRED</p>
+            </div>
+            
+            <div id="watchlistEmpty" class="hidden py-20 text-center border-2 border-dashed border-white/10 skewed-elem bg-cineSurface">
+                <p class="unskew font-headers text-4xl text-gray-500">NO TARGETS IN DATABASE</p>
+            </div>
+            <div id="watchlistGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 pb-10"></div>
+        </main>
+    </div>
+
+    <!-- Desktop Centered Modal -->
+    <div id="detailModal" class="fixed inset-0 z-50 opacity-0 pointer-events-none flex justify-center items-center px-4 bg-black/90 backdrop-blur-sm">
+        <div id="modalContent" class="relative w-full max-w-6xl h-[80vh] min-h-[600px] bg-cineCharcoal border-l-8 border-neonOrange flex flex-col md:flex-row shadow-2xl overflow-hidden">
+            
+            <!-- Close Btn -->
+            <button class="absolute top-4 right-4 w-12 h-12 bg-white/10 hover:bg-neonOrange text-white flex items-center justify-center z-20 skewed-elem transition-colors" onclick="closeModal()">
+                <i class="fa-solid fa-xmark text-xl unskew"></i>
+            </button>
+
+            <!-- Left: Image -->
+            <div class="w-full md:w-2/5 h-64 md:h-full relative overflow-hidden bg-cineSurface shrink-0">
+                <div id="modalImageContainer" class="absolute inset-0"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-cineCharcoal md:bg-gradient-to-r md:from-transparent md:to-cineCharcoal"></div>
+            </div>
+
+            <!-- Right: Details -->
+            <div class="w-full md:w-3/5 h-full p-8 md:p-12 flex flex-col overflow-y-auto no-scrollbar relative z-10">
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="bg-vibrantCyan text-cineCharcoal font-bold text-sm px-3 py-1 skewed-elem uppercase"><span class="unskew">TARGET DATA</span></span>
+                    <div class="bg-white/10 px-3 py-1 skewed-elem border border-white/20 text-white font-headers text-xl">
+                        <span class="unskew" id="modalRating">--</span>
+                    </div>
+                </div>
+
+                <h2 class="font-headers text-6xl md:text-8xl leading-none mb-4 uppercase text-white shadow-black drop-shadow-lg" id="modalTitle">Loading...</h2>
+                <div class="flex flex-wrap gap-3 mb-10 text-sm font-bold text-gray-300 uppercase tracking-wider" id="modalGenres"></div>
+                
+                <div class="mb-12 max-w-md">
+                    <button id="watchlistBtn" onclick="toggleCurrentWatchlist()" class="w-full bg-neonOrange text-white font-headers text-3xl py-4 skewed-elem hover:bg-white hover:text-neonOrange transition-all shadow-[8px_8px_0px_rgba(255,69,0,0.3)] hover:shadow-none hover:translate-x-1 hover:translate-y-1">
+                        <span class="unskew flex items-center justify-center gap-3">
+                            <i class="fa-solid fa-crosshairs" id="watchlistBtnIcon"></i> 
+                            <span id="watchlistBtnText">ADD TARGET</span>
+                        </span>
+                    </button>
+                </div>
+
+                <h3 class="font-headers text-3xl text-vibrantCyan mb-4 uppercase">BRIEFING</h3>
+                <div class="text-base text-gray-300 leading-relaxed font-medium max-w-2xl" id="modalSummary"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-vibrantCyan text-cineCharcoal px-8 py-3 skewed-elem font-headers text-2xl transform -translate-y-10 opacity-0 transition-all duration-300 z-[60] flex items-center gap-3 shadow-[4px_4px_0px_#fff]">
+        <span class="unskew uppercase flex items-center gap-2" id="toastMsg"><i class="fa-solid fa-satellite-dish"></i> Action Confirmed</span>
+    </div>
+
+    <script>
+        let currentShows = {}; 
+        let activeShowId = null;
+        let watchlist = JSON.parse(localStorage.getItem('tsugi_desktop_watchlist')) || [];
+
+        const getImg = (s) => s.image ? s.image.original || s.image.medium : `https://placehold.co/600x900/161616/FF4500?text=${encodeURIComponent(s.name)}`;
+
+        window.onload = () => { fetchHomeData(); updateWatchlistUI(); };
+
+        function switchTab(tabId) {
+            ['home', 'search', 'watchlist'].forEach(id => {
+                document.getElementById(`tab-${id}`).classList.add('hidden');
+                const btn = document.getElementById(`nav-${id}`);
+                btn.classList.remove('bg-neonOrange', 'text-white');
+                btn.classList.add('bg-transparent', 'text-gray-400');
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            activeBtn.classList.remove('bg-transparent', 'text-gray-400');
+            activeBtn.classList.add('bg-neonOrange', 'text-white');
+            if (tabId === 'watchlist') updateWatchlistUI();
+        }
+
+        async function fetchHomeData() {
+            try {
+                const [action, anime, hero] = await Promise.all([
+                    fetch('https://api.tvmaze.com/search/shows?q=action').then(r=>r.json()),
+                    fetch('https://api.tvmaze.com/search/shows?q=anime').then(r=>r.json()),
+                    fetch('https://api.tvmaze.com/search/shows?q=cyberpunk').then(r=>r.json())
+                ]);
+                renderRow('row-action', action); renderRow('row-anime', anime);
+                if(hero.length) renderHero(hero[0].show);
+            } catch (e) { console.error(e); }
+        }
+
+        function renderRow(containerId, dataArray) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            dataArray.slice(0, 10).forEach(item => {
+                const show = item.show; currentShows[show.id] = show;
+                const card = document.createElement('div');
+                card.className = 'w-[220px] shrink-0 cursor-pointer snap-start skewed-elem group';
+                card.onclick = () => openModal(show.id);
+                card.innerHTML = `
+                    <div class="w-full aspect-[2/3] rounded-sm overflow-hidden relative bg-cineSurface border-2 border-white/10 group-hover:border-neonOrange transition-colors shadow-lg">
+                        <img src="${getImg(show)}" class="w-full h-full object-cover unskew scale-[1.15] group-hover:scale-[1.25] transition-transform duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+                        <div class="absolute bottom-4 left-4 unskew pr-4">
+                            <span class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-sm uppercase mb-2 inline-block backdrop-blur-sm text-vibrantCyan border border-white/10">${show.genres[0] || 'DATA'}</span>
+                            <h3 class="font-headers text-2xl text-white leading-tight uppercase line-clamp-2">${show.name}</h3>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderHero(show) {
+            currentShows[show.id] = show;
+            document.getElementById('hero-section').innerHTML = `
+                <img src="${getImg(show)}" class="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen">
+                <div class="absolute inset-0 bg-gradient-to-t from-cineCharcoal via-cineCharcoal/50 to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-cineCharcoal via-cineCharcoal/80 to-transparent"></div>
+                
+                <div class="absolute bottom-0 left-0 w-full max-w-[1600px] mx-auto right-0 px-10 pb-16 flex flex-col justify-end">
+                    <span class="bg-vibrantCyan text-cineCharcoal font-bold text-sm px-4 py-1.5 skewed-elem inline-block w-fit mb-6 uppercase border border-vibrantCyan shadow-[4px_4px_0px_#FF4500]"><span class="unskew">PRIORITY DIRECTIVE</span></span>
+                    
+                    <h1 class="font-headers text-8xl md:text-[9rem] leading-[0.9] mb-6 text-white shadow-black drop-shadow-2xl uppercase max-w-4xl">${show.name}</h1>
+                    
+                    <div class="flex gap-4">
+                        <button onclick="openModal(${show.id})" class="bg-neonOrange text-white px-12 py-4 skewed-elem font-headers text-3xl hover:bg-white hover:text-neonOrange transition-all shadow-[6px_6px_0px_rgba(255,255,255,0.2)] hover:shadow-none hover:translate-x-1 hover:translate-y-1">
+                            <span class="unskew flex items-center gap-3"><i class="fa-solid fa-bolt"></i> INITIATE</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        let st;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const q = e.target.value.trim();
+            const res = document.getElementById('searchResults');
+            const state = document.getElementById('searchState');
+            if(q.length > 0) {
+                state.classList.add('hidden');
+                res.innerHTML = '<div class="col-span-full py-20 text-vibrantCyan font-headers text-5xl flex items-center gap-4"><i class="fa-solid fa-radar fa-spin"></i> SCANNING NETWORK...</div>';
+                clearTimeout(st); st = setTimeout(() => fetchSearch(q), 500);
+            } else {
+                state.classList.remove('hidden');
+                res.innerHTML = '';
+            }
+        });
+
+        async function fetchSearch(q) {
+            try {
+                const data = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`).then(r=>r.json());
+                const res = document.getElementById('searchResults'); res.innerHTML = '';
+                if(!data.length) return res.innerHTML = `<div class="col-span-full py-20 text-gray-500 font-headers text-5xl">NO TARGETS FOUND</div>`;
+                
+                data.forEach(item => {
+                    const show = item.show; currentShows[show.id] = show;
+                    const card = document.createElement('div');
+                    card.className = 'w-full aspect-[2/3] relative rounded-sm overflow-hidden cursor-pointer skewed-elem group bg-cineSurface border-2 border-white/5 hover:border-vibrantCyan shadow-lg';
+                    card.onclick = () => openModal(show.id);
+                    card.innerHTML = `
+                        <img src="${getImg(show)}" class="w-full h-full object-cover unskew scale-[1.15] group-hover:scale-[1.2]">
+                        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center unskew p-4 text-center">
+                            <i class="fa-solid fa-plus text-5xl text-neonOrange mb-4 transform scale-50 group-hover:scale-100 transition-transform duration-300"></i>
+                            <h3 class="font-headers text-2xl uppercase leading-tight">${show.name}</h3>
+                        </div>
+                    `;
+                    res.appendChild(card);
+                });
+            } catch(e) {}
+        }
+
+        function openModal(id) {
+            const show = currentShows[id]; activeShowId = id;
+            document.getElementById('modalImageContainer').innerHTML = `<img src="${getImg(show)}" class="w-full h-full object-cover opacity-80 md:opacity-100 unskew md:transform-none scale-[1.1] md:scale-100">`;
+            document.getElementById('modalTitle').textContent = show.name;
+            document.getElementById('modalRating').textContent = show.rating?.average ? show.rating.average.toFixed(1) : 'NR';
+            document.getElementById('modalGenres').innerHTML = show.genres.map(g => `<span class="bg-white/10 border border-white/20 px-3 py-1 skewed-elem"><span class="unskew">${g}</span></span>`).join('');
+            document.getElementById('modalSummary').innerHTML = show.summary || 'DATA CLASSIFIED / NOT FOUND.';
+            updateModalBtn();
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function closeModal() { 
+            document.getElementById('detailModal').classList.remove('active'); 
+            setTimeout(() => activeShowId = null, 300); 
+        }
+
+        function toggleCurrentWatchlist() {
+            if(!activeShowId) return;
+            const idx = watchlist.findIndex(i => i.id === activeShowId);
+            if(idx === -1) { 
+                watchlist.push(currentShows[activeShowId]); 
+                showToast("TARGET ACQUIRED", true); 
+            } else { 
+                watchlist.splice(idx, 1); 
+                showToast("TARGET DROPPED", false); 
+            }
+            localStorage.setItem('tsugi_desktop_watchlist', JSON.stringify(watchlist));
+            updateModalBtn(); 
+            if(!document.getElementById('tab-watchlist').classList.contains('hidden')) updateWatchlistUI();
+        }
+
+        function updateModalBtn() {
+            const isSaved = watchlist.some(i => i.id === activeShowId);
+            const btn = document.getElementById('watchlistBtn');
+            const icon = document.getElementById('watchlistBtnIcon');
+            const text = document.getElementById('watchlistBtnText');
+
+            if (isSaved) {
+                btn.className = 'w-full bg-cineSurface text-white font-headers text-3xl py-4 skewed-elem border-2 border-white/20 hover:border-vibrantCyan hover:text-vibrantCyan transition-colors';
+                icon.className = 'fa-solid fa-check text-vibrantCyan';
+                text.textContent = 'TRACKING';
+            } else {
+                btn.className = 'w-full bg-neonOrange text-white font-headers text-3xl py-4 skewed-elem hover:bg-white hover:text-neonOrange transition-all shadow-[8px_8px_0px_rgba(255,69,0,0.3)] hover:shadow-none hover:translate-x-1 hover:translate-y-1';
+                icon.className = 'fa-solid fa-crosshairs';
+                text.textContent = 'ADD TARGET';
+            }
+        }
+
+        function updateWatchlistUI() {
+            document.getElementById('watchlistCount').textContent = `${watchlist.length} TARGETS ACQUIRED`;
+            const grid = document.getElementById('watchlistGrid'); grid.innerHTML = '';
+            
+            if (watchlist.length === 0) {
+                document.getElementById('watchlistEmpty').classList.remove('hidden');
+                grid.classList.add('hidden');
+                return;
+            }
+            
+            document.getElementById('watchlistEmpty').classList.add('hidden');
+            grid.classList.remove('hidden');
+
+            [...watchlist].reverse().forEach(show => {
+                currentShows[show.id] = show;
+                const card = document.createElement('div');
+                card.className = 'w-full aspect-[2/3] relative rounded-sm overflow-hidden cursor-pointer skewed-elem group bg-cineSurface border-2 border-white/10 hover:border-neonOrange shadow-lg';
+                card.onclick = () => openModal(show.id);
+                card.innerHTML = `
+                    <div class="absolute top-3 right-3 z-10 bg-black/90 backdrop-blur-sm px-3 py-1 border border-vibrantCyan text-vibrantCyan unskew font-headers text-xl flex items-center gap-2">
+                        <i class="fa-solid fa-satellite-dish"></i> TRACKING
+                    </div>
+                    <img src="${getImg(show)}" class="w-full h-full object-cover unskew scale-[1.15] group-hover:scale-[1.25] transition-transform duration-700">
+                    <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black via-black/80 to-transparent pt-12 pb-4 px-4 unskew">
+                        <h3 class="font-headers text-2xl uppercase leading-tight">${show.name}</h3>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function showToast(msg, isAdd) {
+            const t = document.getElementById('toast');
+            t.innerHTML = `<span class="unskew uppercase flex items-center gap-3" id="toastMsg"><i class="fa-solid ${isAdd ? 'fa-satellite-dish' : 'fa-ban'}"></i> ${msg}</span>`;
+            
+            if(isAdd) {
+                t.classList.add('bg-vibrantCyan', 'text-cineCharcoal');
+                t.classList.remove('bg-red-500', 'text-white');
+            } else {
+                t.classList.add('bg-red-500', 'text-white');
+                t.classList.remove('bg-vibrantCyan', 'text-cineCharcoal');
+            }
+
+            t.style.transform = 'translate(-50%, 0)'; t.style.opacity = '1';
+            setTimeout(() => { t.style.transform = 'translate(-50%, -40px)'; t.style.opacity = '0'; }, 2500);
+        }
+    </script>
+</body>
+</html>

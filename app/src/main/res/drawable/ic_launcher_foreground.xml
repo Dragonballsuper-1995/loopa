@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Infinity loop stroke — white, refined 2.5px stroke -->
+    <path
+        android:strokeColor="#F0EDE8"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M34,54C34,62 42,66 54,54C66,42 74,46 74,54C74,62 66,66 54,54C42,42 34,46 34,54Z" />
+
+    <!-- Loopa Amber play arrow — #E8A87C -->
+    <path
+        android:fillColor="#E8A87C"
+        android:pathData="M71,49.5L78,54L71,58.5Z" />
+
+</vector>

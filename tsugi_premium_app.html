@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tsugi - Premium Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cineCharcoal: '#0a0a0a',
+                        cineSurface: '#161616',
+                        neonOrange: '#FF4500',
+                        vibrantCyan: '#00E5FF'
+                    },
+                    fontFamily: {
+                        headers: ['Bebas Neue', 'sans-serif'],
+                        body: ['Manrope', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #000; color: #fff; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Tsugi Specific Styles */
+        .skewed-card { transform: skewX(-3deg); transition: transform 0.3s; }
+        .skewed-card:hover { transform: skewX(-3deg) scale(1.02); }
+        .unskew { transform: skewX(3deg); } /* reverse skew for content */
+        
+        #detailModal { transition: opacity 0.3s ease; }
+        #modalContent { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: translateY(100%); }
+        #detailModal.active { opacity: 1; pointer-events: auto; }
+        #detailModal.active #modalContent { transform: translateY(0); }
+    </style>
+</head>
+<body class="flex justify-center items-center min-h-screen selection:bg-neonOrange selection:text-white">
+
+    <!-- Mobile App Container -->
+    <div class="w-full max-w-md h-[100dvh] sm:h-[850px] bg-cineCharcoal relative overflow-hidden sm:rounded-[40px] sm:border-[4px] border-gray-900 shadow-2xl flex flex-col font-body">
+        
+        <!-- Tab 1: Home -->
+        <main id="tab-home" class="flex-1 overflow-y-auto no-scrollbar pb-24 relative active-tab h-full">
+            <!-- Header -->
+            <header class="absolute top-0 w-full px-6 pt-12 pb-4 flex justify-between items-center z-20 bg-gradient-to-b from-cineCharcoal to-transparent">
+                <h1 class="font-headers text-4xl tracking-wider text-white">TSUGI<span class="text-neonOrange">.</span></h1>
+            </header>
+
+            <!-- Hero Section -->
+            <div id="hero-section" class="relative w-full h-[65%] min-h-[450px]">
+                <div class="absolute inset-0 animate-pulse bg-cineSurface"></div>
+            </div>
+
+            <!-- Content Rows -->
+            <div class="px-5 pt-8 space-y-10 pb-10">
+                <section>
+                    <div class="flex items-end justify-between mb-3 border-l-4 border-vibrantCyan pl-3">
+                        <h2 class="font-headers text-3xl leading-none">ACTION & SCIFI</h2>
+                    </div>
+                    <div class="flex gap-4 overflow-x-auto no-scrollbar snap-x pb-2" id="row-action">
+                        <div class="w-36 h-52 bg-cineSurface rounded shrink-0 animate-pulse skewed-card"></div>
+                    </div>
+                </section>
+                <section>
+                    <div class="flex items-end justify-between mb-3 border-l-4 border-neonOrange pl-3">
+                        <h2 class="font-headers text-3xl leading-none">ANIME HITS</h2>
+                    </div>
+                    <div class="flex gap-4 overflow-x-auto no-scrollbar snap-x pb-2" id="row-anime">
+                        <div class="w-36 h-52 bg-cineSurface rounded shrink-0 animate-pulse skewed-card"></div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Tab 2: Search -->
+        <main id="tab-search" class="flex-1 overflow-y-auto no-scrollbar pb-24 hidden h-full px-5 pt-12">
+            <h1 class="font-headers text-5xl mb-6 text-white tracking-wide">RADAR</h1>
+            <div class="relative w-full mb-8 skewed-card">
+                <input type="text" id="searchInput" placeholder="SEARCH DIRECTIVE..." 
+                    class="w-full bg-cineSurface text-white rounded py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-neonOrange font-bold tracking-wider placeholder-gray-600 border border-white/5 unskew uppercase">
+                <i class="fa-solid fa-search text-vibrantCyan absolute left-4 top-1/2 -translate-y-1/2 unskew"></i>
+            </div>
+            <div id="searchResults" class="grid grid-cols-2 gap-4 pb-10"></div>
+        </main>
+
+        <!-- Tab 3: Watchlist -->
+        <main id="tab-watchlist" class="flex-1 overflow-y-auto no-scrollbar pb-24 hidden h-full px-5 pt-12">
+            <h1 class="font-headers text-5xl mb-2 tracking-wide">UP NEXT</h1>
+            <p class="text-vibrantCyan font-bold mb-8 uppercase text-sm" id="watchlistCount">0 TARGETS ACQUIRED</p>
+            <div id="watchlistGrid" class="grid grid-cols-2 gap-4 pb-10"></div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="absolute bottom-0 w-full bg-cineSurface/90 backdrop-blur-lg border-t border-white/5 px-8 py-5 flex justify-between items-center z-40 pb-8 sm:pb-5">
+            <button onclick="switchTab('home')" id="nav-home" class="text-neonOrange scale-110 transition-all font-headers text-xl tracking-wider">HOME</button>
+            <button onclick="switchTab('search')" id="nav-search" class="text-gray-500 hover:text-white transition-all font-headers text-xl tracking-wider">RADAR</button>
+            <button onclick="switchTab('watchlist')" id="nav-watchlist" class="text-gray-500 hover:text-white transition-all font-headers text-xl tracking-wider">UP NEXT</button>
+        </nav>
+
+        <!-- Detail Modal -->
+        <div id="detailModal" class="absolute inset-0 z-50 opacity-0 pointer-events-none flex flex-col justify-end">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
+            <div id="modalContent" class="relative w-full h-[85%] bg-cineCharcoal border-t-4 border-neonOrange flex flex-col overflow-hidden">
+                <div class="absolute top-4 right-4 z-20" onclick="closeModal()">
+                    <div class="w-10 h-10 bg-black/50 backdrop-blur rounded flex justify-center items-center text-white cursor-pointer hover:bg-neonOrange"><i class="fa-solid fa-xmark"></i></div>
+                </div>
+                <div class="flex-1 overflow-y-auto no-scrollbar pb-10">
+                    <div class="relative w-full h-72 bg-gray-900" id="modalImageContainer"></div>
+                    <div class="px-6 relative -top-6">
+                        <div class="bg-cineCharcoal w-fit px-4 py-1 border-l-4 border-vibrantCyan mb-2 shadow-lg">
+                            <span class="font-headers text-2xl" id="modalRating">--</span>
+                        </div>
+                        <h2 class="font-headers text-5xl leading-none mb-2 uppercase" id="modalTitle">Loading...</h2>
+                        <div class="flex gap-2 mb-6 text-xs font-bold text-gray-400 uppercase tracking-wider" id="modalGenres"></div>
+                        <button id="watchlistBtn" onclick="toggleCurrentWatchlist()" class="w-full bg-neonOrange text-white font-headers text-2xl py-3 skewed-card mb-8 hover:bg-white hover:text-neonOrange">
+                            <div class="unskew flex items-center justify-center gap-2"><i class="fa-solid fa-plus" id="watchlistBtnIcon"></i> <span id="watchlistBtnText">ADD TARGET</span></div>
+                        </button>
+                        <div class="text-sm text-gray-300 leading-relaxed font-medium" id="modalSummary"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast" class="absolute top-10 left-1/2 -translate-x-1/2 bg-vibrantCyan text-cineCharcoal px-6 py-2 skewed-card font-headers text-xl transform -translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2">
+            <span class="unskew uppercase" id="toastMsg">Action Confirmed</span>
+        </div>
+    </div>
+
+    <script>
+        let currentShows = {}; 
+        let activeShowId = null;
+        let watchlist = JSON.parse(localStorage.getItem('tsugi_watchlist')) || [];
+
+        const getImg = (s) => s.image ? s.image.original || s.image.medium : `https://placehold.co/400x600/161616/FF4500?text=${encodeURIComponent(s.name)}`;
+
+        window.onload = () => { fetchHomeData(); updateWatchlistUI(); };
+
+        function switchTab(tabId) {
+            ['home', 'search', 'watchlist'].forEach(id => {
+                document.getElementById(`tab-${id}`).classList.add('hidden');
+                document.getElementById(`nav-${id}`).classList.remove('text-neonOrange', 'scale-110');
+                document.getElementById(`nav-${id}`).classList.add('text-gray-500');
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabId}`).classList.add('text-neonOrange', 'scale-110');
+            document.getElementById(`nav-${tabId}`).classList.remove('text-gray-500');
+            if (tabId === 'watchlist') updateWatchlistUI();
+        }
+
+        async function fetchHomeData() {
+            try {
+                const [action, anime, hero] = await Promise.all([
+                    fetch('https://api.tvmaze.com/search/shows?q=action').then(r=>r.json()),
+                    fetch('https://api.tvmaze.com/search/shows?q=anime').then(r=>r.json()),
+                    fetch('https://api.tvmaze.com/search/shows?q=cyberpunk').then(r=>r.json())
+                ]);
+                renderRow('row-action', action); renderRow('row-anime', anime);
+                if(hero.length) renderHero(hero[0].show);
+            } catch (e) {}
+        }
+
+        function renderRow(containerId, dataArray) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            dataArray.slice(0, 8).forEach(item => {
+                const show = item.show; currentShows[show.id] = show;
+                const card = document.createElement('div');
+                card.className = 'w-[140px] shrink-0 cursor-pointer snap-start skewed-card group';
+                card.onclick = () => openModal(show.id);
+                card.innerHTML = `
+                    <div class="w-full aspect-[2/3] rounded overflow-hidden relative bg-cineSurface border border-white/10 group-hover:border-neonOrange transition-colors">
+                        <img src="${getImg(show)}" class="w-full h-full object-cover unskew scale-110 group-hover:scale-125 transition-transform duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                        <div class="absolute bottom-2 left-2 unskew"><h3 class="font-headers text-xl text-white leading-none truncate w-28">${show.name}</h3></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderHero(show) {
+            currentShows[show.id] = show;
+            document.getElementById('hero-section').innerHTML = `
+                <img src="${getImg(show)}" class="absolute inset-0 w-full h-full object-cover opacity-60">
+                <div class="absolute inset-0 bg-gradient-to-t from-cineCharcoal via-cineCharcoal/50 to-transparent"></div>
+                <div class="absolute bottom-0 left-0 w-full p-6 pb-10">
+                    <span class="bg-vibrantCyan text-cineCharcoal font-bold text-[10px] px-2 py-1 skewed-card inline-block mb-3 uppercase">FEATURED DIRECTIVE</span>
+                    <h1 class="font-headers text-6xl leading-none mb-2 text-white shadow-black drop-shadow-lg uppercase">${show.name}</h1>
+                    <button onclick="openModal(${show.id})" class="bg-neonOrange text-white px-8 py-2 skewed-card font-headers text-2xl hover:bg-white hover:text-neonOrange transition-colors mt-2"><span class="unskew inline-block">INITIATE</span></button>
+                </div>
+            `;
+        }
+
+        let st;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const q = e.target.value.trim();
+            const res = document.getElementById('searchResults');
+            if(q.length > 0) {
+                res.innerHTML = '<div class="col-span-2 text-center py-10 text-vibrantCyan font-headers text-2xl">SCANNING...</div>';
+                clearTimeout(st); st = setTimeout(() => fetchSearch(q), 500);
+            } else res.innerHTML = '';
+        });
+
+        async function fetchSearch(q) {
+            try {
+                const data = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`).then(r=>r.json());
+                const res = document.getElementById('searchResults'); res.innerHTML = '';
+                if(!data.length) return res.innerHTML = `<div class="col-span-2 text-center py-10 text-gray-500 font-headers text-2xl">NO TARGETS FOUND</div>`;
+                data.forEach(item => {
+                    const show = item.show; currentShows[show.id] = show;
+                    const card = document.createElement('div');
+                    card.className = 'w-full aspect-[2/3] relative rounded overflow-hidden cursor-pointer skewed-card group bg-cineSurface border border-white/5 hover:border-vibrantCyan';
+                    card.onclick = () => openModal(show.id);
+                    card.innerHTML = `<img src="${getImg(show)}" class="w-full h-full object-cover unskew scale-110"><div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center unskew"><i class="fa-solid fa-play text-4xl text-neonOrange"></i></div>`;
+                    res.appendChild(card);
+                });
+            } catch(e) {}
+        }
+
+        function openModal(id) {
+            const show = currentShows[id]; activeShowId = id;
+            document.getElementById('modalImageContainer').innerHTML = `<img src="${getImg(show)}" class="w-full h-full object-cover opacity-70"><div class="absolute inset-0 bg-gradient-to-t from-cineCharcoal to-transparent"></div>`;
+            document.getElementById('modalTitle').textContent = show.name;
+            document.getElementById('modalRating').textContent = show.rating?.average ? show.rating.average.toFixed(1) : 'NR';
+            document.getElementById('modalGenres').innerHTML = show.genres.map(g => `<span class="bg-white/10 px-2 py-1">${g}</span>`).join('');
+            document.getElementById('modalSummary').innerHTML = show.summary || 'CLASSIFIED.';
+            updateModalBtn();
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('detailModal').classList.remove('active'); activeShowId = null; }
+
+        function toggleCurrentWatchlist() {
+            if(!activeShowId) return;
+            const idx = watchlist.findIndex(i => i.id === activeShowId);
+            if(idx === -1) { watchlist.push(currentShows[activeShowId]); showToast("TARGET ACQUIRED"); } 
+            else { watchlist.splice(idx, 1); showToast("TARGET DROPPED"); }
+            localStorage.setItem('tsugi_watchlist', JSON.stringify(watchlist));
+            updateModalBtn(); if(!document.getElementById('tab-watchlist').classList.contains('hidden')) updateWatchlistUI();
+        }
+
+        function updateModalBtn() {
+            const isSaved = watchlist.some(i => i.id === activeShowId);
+            const btn = document.getElementById('watchlistBtn');
+            btn.className = isSaved ? 'w-full bg-cineSurface text-white font-headers text-2xl py-3 skewed-card mb-8 border border-white/20' : 'w-full bg-neonOrange text-white font-headers text-2xl py-3 skewed-card mb-8 hover:bg-white hover:text-neonOrange';
+            document.getElementById('watchlistBtnIcon').className = isSaved ? 'fa-solid fa-check text-vibrantCyan' : 'fa-solid fa-plus';
+            document.getElementById('watchlistBtnText').textContent = isSaved ? 'TRACKING' : 'ADD TARGET';
+        }
+
+        function updateWatchlistUI() {
+            document.getElementById('watchlistCount').textContent = `${watchlist.length} TARGETS ACQUIRED`;
+            const grid = document.getElementById('watchlistGrid'); grid.innerHTML = '';
+            [...watchlist].reverse().forEach(show => {
+                currentShows[show.id] = show;
+                const card = document.createElement('div');
+                card.className = 'w-full aspect-[2/3] relative rounded overflow-hidden cursor-pointer skewed-card group bg-cineSurface border border-white/10 hover:border-neonOrange';
+                card.onclick = () => openModal(show.id);
+                card.innerHTML = `<div class="absolute top-2 right-2 z-10 w-8 h-8 bg-black/80 rounded-full flex justify-center items-center text-vibrantCyan unskew"><i class="fa-solid fa-check"></i></div><img src="${getImg(show)}" class="w-full h-full object-cover unskew scale-110">`;
+                grid.appendChild(card);
+            });
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            t.style.transform = 'translate(-50%, 0)'; t.style.opacity = '1';
+            setTimeout(() => { t.style.transform = 'translate(-50%, -20px)'; t.style.opacity = '0'; }, 2000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>loopa — Your Personal Media Universe</title>
+    <meta name="description" content="loopa is your personal media tracker. Beautifully log everything you watch — movies, series, anime — and let AI curate your next obsession.">
+    
+    <!-- OpenGraph & SEO Meta Tags -->
+    <meta property="og:title" content="loopa — Your Personal Media Universe">
+    <meta property="og:description" content="loopa is your personal media tracker. Beautifully log everything you watch and let AI curate your next obsession.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://loopa.app">
+    <meta property="og:image" content="https://loopa.app/og-image.jpg">
+    
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="loopa — Your Personal Media Universe">
+    <meta name="twitter:description" content="loopa is your personal media tracker. Beautifully log everything you watch and let AI curate your next obsession.">
+    <meta name="twitter:image" content="https://loopa.app/og-image.jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%23E8A87C%22>L</text></svg>">
+    <!-- Supabase JS v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        loopBase:    '#0F0E0C',
+                        loopSurface: '#1A1915',
+                        loopRaised:  '#242320',
+                        loopAmber:   '#E8A87C',
+                        loopAmberStrong: '#D4845A',
+                        loopAmberSubtle: '#2A1F17',
+                        textPrimary:   '#F0EDE8',
+                        textSecondary: '#A09990',
+                        textMuted:     '#5C574F',
+                        loopSuccess:   '#7AB87A',
+                        loopError:     '#C87070',
+                    },
+                    fontFamily: {
+                        sans: ['"DM Sans"', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'sm':  '6px',
+                        'md':  '10px',
+                        'lg':  '14px',
+                        'xl':  '20px',
+                        '2xl': '28px',
+                    },
+                    boxShadow: {
+                        'amber': '0 0 0 1px rgba(232,168,124,0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* ── Loopa Design System ──────────────────────────────────────────────── */
+        * { -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background-color: #0F0E0C;
+            color: #F0EDE8;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        /* Selection */
+        ::selection { background-color: rgba(232,168,124,0.25); color: #F0EDE8; }
+
+        /* Scrollbars */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Frosted Glass — warm version */
+        .frosted-glass {
+            background-color: rgba(26, 25, 21, 0.82) !important;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            border: 1px solid rgba(240, 237, 232, 0.08) !important;
+        }
+
+        /* Modal transitions */
+        #detailModal, #authModal { transition: opacity 0.25s ease; }
+        #modalContent, #authContent {
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: scale(0.97) translateY(8px);
+        }
+        #detailModal.active, #authModal.active { opacity: 1; pointer-events: auto; }
+        #detailModal.active #modalContent, #authModal.active #authContent {
+            transform: scale(1) translateY(0);
+        }
+
+        /* Active nav indicator */
+        .nav-btn { position: relative; transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            background: #E8A87C;
+            border-radius: 9999px;
+            transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .nav-btn.active-nav::after { width: 70%; }
+        .nav-btn.active-nav { color: #F0EDE8 !important; }
+
+        /* Card hover */
+        .media-card { transition: border-color 150ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+        .media-card:hover { border-color: rgba(232,168,124,0.35); }
+        .media-card:hover .poster-img { transform: scale(1.05); }
+        .poster-img { transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Amber glow on focused inputs */
+        .loop-input:focus { border-color: rgba(232,168,124,0.6); outline: none; box-shadow: 0 0 0 3px rgba(232,168,124,0.08); }
+
+        /* Status badge */
+        .status-badge-watching { color: #E8A87C; border-color: rgba(232,168,124,0.4); }
+        .status-badge-watched  { color: #7AB87A; border-color: rgba(122,184,122,0.4); }
+        .status-badge-planned  { color: #A09990; border-color: rgba(160,153,144,0.3); }
+
+        /* Shimmer skeleton */
+        @keyframes shimmer {
+            0%   { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #1A1915 25%, #242320 50%, #1A1915 75%);
+            background-size: 400px 100%;
+            animation: shimmer 1.4s ease-in-out infinite;
+        }
+
+        /* Toast slide */
+        #toast { transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Pill button base */
+        .btn-primary {
+            background: #E8A87C;
+            color: #0F0E0C;
+            font-weight: 600;
+            border-radius: 9999px;
+            padding: 12px 28px;
+            transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-primary:hover { background: #D4845A; transform: scale(1.02); }
+        .btn-primary:active { transform: scale(0.98); }
+
+        .btn-secondary {
+            background: transparent;
+            color: #F0EDE8;
+            font-weight: 500;
+            border-radius: 9999px;
+            border: 1px solid rgba(240,237,232,0.15);
+            padding: 12px 28px;
+            transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-secondary:hover { background: rgba(240,237,232,0.06); border-color: rgba(240,237,232,0.25); }
+
+        /* Filter pill */
+        .filter-pill {
+            background: #1A1915;
+            color: #A09990;
+            border: 1px solid rgba(240,237,232,0.08);
+            border-radius: 9999px;
+            padding: 8px 20px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 150ms ease;
+        }
+        .filter-pill:hover { color: #F0EDE8; border-color: rgba(240,237,232,0.2); background: #242320; }
+        .filter-pill.active { background: rgba(232,168,124,0.12); color: #E8A87C; border-color: rgba(232,168,124,0.35); }
+
+        /* Section accent line */
+        .section-accent { width: 3px; height: 1.3em; background: #E8A87C; border-radius: 9999px; display: inline-block; flex-shrink: 0; }
+
+        /* Hero gradient */
+        .hero-gradient-base { background: linear-gradient(to top, #0F0E0C 0%, rgba(15,14,12,0.7) 50%, transparent 100%); }
+        .hero-gradient-side { background: linear-gradient(to right, #0F0E0C 0%, rgba(15,14,12,0.5) 40%, transparent 100%); }
+
+        /* Status selector button */
+        .status-btn { border-radius: 9999px; padding: 8px 16px; font-size: 14px; font-weight: 500; transition: all 150ms ease; border: 1px solid rgba(240,237,232,0.1); color: #A09990; background: #1A1915; }
+        .status-btn:hover { color: #F0EDE8; border-color: rgba(240,237,232,0.25); }
+        .status-btn.active-status { background: rgba(232,168,124,0.14); color: #E8A87C; border-color: rgba(232,168,124,0.4); }
+
+        /* Smooth page fade in */
+        .page-fade { animation: pageFadeIn 0.4s ease forwards; }
+        @keyframes pageFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen overflow-x-hidden">
+
+    <!-- ── Auth Modal ─────────────────────────────────────────────────────────── -->
+    <div id="authModal" class="fixed inset-0 z-[100] opacity-0 pointer-events-none flex justify-center items-center px-4 bg-loopBase/90 backdrop-blur-md">
+        <div id="authContent" class="relative w-full max-w-sm frosted-glass rounded-2xl overflow-hidden p-8">
+
+            <!-- Logo -->
+            <div class="flex items-center justify-center mb-8">
+                <svg viewBox="0 0 160 48" class="w-36 h-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(-14, -18) scale(0.72)">
+                        <path d="M34,54C34,62 42,66 54,54C66,42 74,46 74,54C74,62 66,66 54,54C42,42 34,46 34,54Z"
+                              stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                        <path d="M71,49.5L78,54L71,58.5Z" fill="#E8A87C"/>
+                    </g>
+                    <text x="52" y="33" fill="#F0EDE8" font-family="'DM Sans', sans-serif" font-size="22" font-weight="800" letter-spacing="-0.5">loopa<tspan fill="#E8A87C">.</tspan></text>
+                </svg>
+            </div>
+
+            <p class="text-textSecondary text-sm text-center mb-8">Sign in to your collection</p>
+
+            <div class="space-y-4">
+                <div>
+                    <input type="email" id="authEmail" placeholder="Email address"
+                        class="loop-input w-full bg-loopRaised border border-white/10 rounded-md text-textPrimary py-3.5 px-4 text-sm font-medium transition-colors placeholder-textMuted">
+                </div>
+                <div>
+                    <input type="password" id="authPassword" placeholder="Password"
+                        class="loop-input w-full bg-loopRaised border border-white/10 rounded-md text-textPrimary py-3.5 px-4 text-sm font-medium transition-colors placeholder-textMuted">
+                </div>
+
+                <button id="btnLogin" class="btn-primary w-full text-center mt-2" style="padding:14px 28px;font-size:15px;">
+                    Sign in
+                </button>
+
+                <button id="btnSignup" class="btn-secondary w-full text-center" style="font-size:15px;">
+                    Create account
+                </button>
+
+                <button id="btnGuest" class="w-full text-textMuted hover:text-textSecondary text-sm font-medium mt-2 text-center block transition-colors py-2">
+                    Continue as guest
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── App Shell ──────────────────────────────────────────────────────────── -->
+    <div id="appContainer" class="flex-1 w-full flex flex-col opacity-0 transition-opacity duration-500">
+
+        <!-- Top Navigation -->
+        <header class="w-full frosted-glass sticky top-0 z-40 px-5 lg:px-8">
+            <div class="max-w-[1600px] mx-auto flex items-center justify-between h-16">
+
+                <!-- Logo + Nav -->
+                <div class="flex items-center gap-6 lg:gap-10 overflow-x-auto no-scrollbar">
+                    <!-- Logo -->
+                    <div id="mainLogoContainer" class="shrink-0 cursor-pointer flex items-center">
+                        <svg viewBox="0 0 160 48" class="h-8 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <g transform="translate(-14, -18) scale(0.72)">
+                                <path d="M34,54C34,62 42,66 54,54C66,42 74,46 74,54C74,62 66,66 54,54C42,42 34,46 34,54Z"
+                                      stroke="#F0EDE8" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                                <path d="M71,49.5L78,54L71,58.5Z" fill="#E8A87C"/>
+                            </g>
+                            <text x="52" y="33" fill="#F0EDE8" font-family="'DM Sans', sans-serif" font-size="22" font-weight="800" letter-spacing="-0.5">loopa<tspan fill="#E8A87C">.</tspan></text>
+                        </svg>
+                    </div>
+
+                    <!-- Nav items -->
+                    <nav class="flex items-center gap-1 shrink-0">
+                        <button class="nav-btn active-nav px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors" data-nav="home">Home</button>
+                        <button class="nav-btn px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors" data-nav="search">Discover</button>
+                        <button class="nav-btn px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors" data-nav="watchlist">My List</button>
+                        <button class="nav-btn px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors" data-nav="ai">For You</button>
+                    </nav>
+                </div>
+
+                <!-- User -->
+                <div class="flex items-center gap-3 shrink-0 relative">
+                    <div id="userDropdownTrigger"
+                         class="flex items-center gap-2 px-3.5 py-2 bg-loopSurface border border-white/10 rounded-full cursor-pointer hover:border-white/20 transition-colors">
+                        <div class="w-5 h-5 rounded-full bg-loopAmberSubtle border border-loopAmber/30 flex items-center justify-center">
+                            <i class="fa-solid fa-user text-loopAmber" style="font-size:8px;"></i>
+                        </div>
+                        <span id="userHandle" class="text-xs font-semibold text-textPrimary">Guest</span>
+                        <i class="fa-solid fa-chevron-down text-[8px] text-textMuted"></i>
+                    </div>
+
+                    <!-- Settings Dropdown -->
+                    <div id="settingsDropdown" class="hidden absolute right-0 top-full mt-2 w-64 frosted-glass rounded-xl z-[150] overflow-hidden">
+                        <div class="p-4 space-y-3">
+                            <!-- Account info -->
+                            <div class="pb-3 border-b border-white/[0.06]">
+                                <p class="text-[10px] text-textMuted font-semibold tracking-wider uppercase mb-1">Account</p>
+                                <p id="dropdownEmail" class="text-textPrimary font-semibold text-sm truncate">Guest</p>
+                                <p id="dropdownSyncTime" class="text-xs text-textMuted mt-0.5">Never synced</p>
+                            </div>
+
+                            <!-- Sync -->
+                            <button id="btnDropdownSync"
+                                    class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-loopRaised text-sm font-medium text-textSecondary hover:text-textPrimary flex items-center gap-3 transition-colors">
+                                <i class="fa-solid fa-rotate text-loopAmber text-xs w-4"></i> Sync Data
+                            </button>
+
+                            <!-- Notifications -->
+                            <div class="flex items-center justify-between px-3 py-2.5 rounded-lg">
+                                <span class="text-sm font-medium text-textSecondary flex items-center gap-3">
+                                    <i class="fa-solid fa-bell text-xs w-4 text-textMuted"></i> Notifications
+                                </span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="notificationToggle" class="sr-only peer" checked>
+                                    <div class="w-8 h-4.5 bg-loopRaised border border-white/10 rounded-full peer
+                                        peer-checked:bg-loopAmberSubtle peer-checked:border-loopAmber/30
+                                        after:content-[''] after:absolute after:top-[3px] after:left-[3px]
+                                        after:bg-textMuted after:rounded-full after:h-[12px] after:w-[12px]
+                                        after:transition-all peer-checked:after:translate-x-[14px] peer-checked:after:bg-loopAmber">
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Logout -->
+                            <button id="btnSignOut"
+                                    class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-loopError/10 text-sm font-medium text-loopError flex items-center gap-3 transition-colors">
+                                <i class="fa-solid fa-power-off text-xs w-4"></i> Sign out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── Main Content ──────────────────────────────────────────────────── -->
+        <div class="flex-1 relative flex flex-col">
+
+            <!-- Tab 1: Home / Dashboard -->
+            <main id="tab-home" class="flex-1 w-full pb-20 active-tab">
+                <div id="hero-section" class="relative w-full h-[52vh] md:h-[620px]">
+                    <div class="absolute inset-0 bg-loopSurface"></div>
+                </div>
+
+                <div class="max-w-[1600px] mx-auto px-5 lg:px-8 pt-10 md:pt-14 space-y-12 md:space-y-16">
+
+                    <section>
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="section-accent"></span>
+                            <h2 class="text-2xl font-bold text-textPrimary">Trending</h2>
+                        </div>
+                        <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x" id="row-trending"></div>
+                    </section>
+
+                    <section>
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="section-accent"></span>
+                            <h2 class="text-2xl font-bold text-textPrimary">Anime</h2>
+                        </div>
+                        <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x" id="row-anime"></div>
+                    </section>
+
+                    <section>
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="section-accent"></span>
+                            <h2 class="text-2xl font-bold text-textPrimary">Popular Movies</h2>
+                        </div>
+                        <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x" id="row-movies"></div>
+                    </section>
+
+                    <section>
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="section-accent"></span>
+                            <h2 class="text-2xl font-bold text-textPrimary">Popular TV</h2>
+                        </div>
+                        <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x" id="row-tv"></div>
+                    </section>
+
+                </div>
+            </main>
+
+            <!-- Tab 2: Discover (Search) -->
+            <main id="tab-search" class="flex-1 w-full pb-20 hidden max-w-[1600px] mx-auto px-5 lg:px-8 pt-10">
+                <h1 class="text-4xl md:text-5xl font-bold text-textPrimary mb-2">Discover</h1>
+                <p class="text-textSecondary mb-8">Find movies, shows, and anime</p>
+
+                <!-- Search box -->
+                <div class="relative w-full max-w-2xl mb-8">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-textMuted text-sm"></i>
+                    <input type="text" id="searchInput" placeholder="Search titles…"
+                        class="loop-input w-full bg-loopSurface border border-white/10 rounded-xl text-textPrimary py-4 pl-11 pr-5 text-sm font-medium transition-colors placeholder-textMuted">
+                </div>
+
+                <!-- Filter pills -->
+                <div class="flex flex-wrap gap-2 mb-10" id="searchFilters">
+                    <button class="filter-pill active" data-sf="all">All</button>
+                    <button class="filter-pill" data-sf="movie">Movies</button>
+                    <button class="filter-pill" data-sf="tv">TV Shows</button>
+                    <button class="filter-pill" data-sf="anime">Anime</button>
+                </div>
+
+                <div id="searchState" class="text-textMuted py-20 text-base text-center">Start typing to search…</div>
+                <div id="searchResults" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-5 pb-10"></div>
+            </main>
+
+            <!-- Tab 3: My List (Watchlist) -->
+            <main id="tab-watchlist" class="flex-1 w-full pb-20 hidden max-w-[1600px] mx-auto px-5 lg:px-8 pt-10">
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-bold text-textPrimary">My List</h1>
+                        <p class="text-textSecondary text-sm mt-1.5" id="watchlistCount">0 titles tracked</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2" id="wlFilters">
+                        <button class="filter-pill active" data-wf="all">All</button>
+                        <button class="filter-pill" data-wf="Watching">Watching</button>
+                        <button class="filter-pill" data-wf="To Watch">Planned</button>
+                        <button class="filter-pill" data-wf="Watched">Completed</button>
+                    </div>
+                </div>
+
+                <div id="wlEmptyState" class="hidden py-24 text-center border border-dashed border-white/[0.08] rounded-xl bg-loopSurface/40">
+                    <i class="fa-regular fa-film text-4xl text-textMuted mb-4 block"></i>
+                    <p class="text-textMuted text-base font-medium">Your list is empty</p>
+                    <p class="text-textMuted/60 text-sm mt-1">Start adding titles from Discover</p>
+                </div>
+                <div id="watchlistGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-5 pb-10"></div>
+            </main>
+
+            <!-- Tab 4: For You (AI) -->
+            <main id="tab-ai" class="w-full hidden max-w-[1200px] mx-auto px-5 lg:px-8 pt-6 pb-6 flex flex-col h-[calc(100dvh-64px)] overflow-hidden">
+                <div class="flex justify-between items-end mb-6 shrink-0">
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-bold text-textPrimary">AI Assistant</h1>
+                        <p class="text-textSecondary text-sm mt-1.5">Chat with Gemini to find your next target</p>
+                    </div>
+                    <button id="btnAiClearChat" class="bg-loopSurface hover:bg-loopRaised border border-white/10 rounded-full w-10 h-10 flex items-center justify-center text-textSecondary hover:text-textPrimary transition-colors">
+                        <i class="fa-solid fa-arrows-rotate text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Chat Log Area -->
+                <div id="aiChatLog" class="flex-1 w-full max-w-4xl mx-auto overflow-y-auto no-scrollbar flex flex-col gap-6 pb-6">
+                    <!-- Initial Welcome Message -->
+                    <div class="flex flex-col gap-2 w-full max-w-4xl animate-fade-in-up">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber"><i class="fa-solid fa-sparkles text-xs"></i></div>
+                            <span class="text-sm font-bold text-textPrimary">Loopa AI</span>
+                        </div>
+                        <div class="bg-loopSurface/60 border border-white/5 rounded-2xl rounded-tl-none p-4 text-textPrimary text-sm leading-relaxed inline-block self-start">
+                            Hello! I have access to your watchlist. What kind of movie, show, or anime are you in the mood for today?
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Input Area -->
+                <div class="w-full shrink-0 relative mt-2 mb-10 max-w-4xl mx-auto">
+                    <input type="text" id="aiChatInput" placeholder="e.g. 'I want a scary sci-fi movie like Alien'" 
+                        class="loop-input w-full bg-loopSurface border border-white/10 rounded-full text-textPrimary py-4 pl-6 pr-16 text-sm font-medium transition-all placeholder-textMuted focus:border-loopAmber/50 focus:ring-1 focus:ring-loopAmber/50 shadow-lg">
+                    <button id="btnAiSend" class="absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-loopAmber flex items-center justify-center text-loopBase hover:scale-105 transition-transform shadow-md">
+                        <i class="fa-solid fa-arrow-up text-base"></i>
+                    </button>
+                </div>
+            </main>
+
+        </div>
+    </div>
+
+    <!-- ── Detail Modal ────────────────────────────────────────────────────────── -->
+    <div id="detailModal" class="fixed inset-0 z-50 opacity-0 pointer-events-none flex justify-center items-center px-4 bg-loopBase/70 backdrop-blur-md">
+        <div id="modalContent" class="relative w-full max-w-5xl h-[88vh] md:h-[78vh] min-h-[500px] frosted-glass rounded-2xl flex flex-col md:flex-row overflow-hidden">
+
+            <!-- Close -->
+            <button id="btnModalClose"
+                    class="absolute top-4 right-4 w-9 h-9 bg-loopRaised hover:bg-loopSurface border border-white/10 rounded-full text-textSecondary hover:text-textPrimary flex items-center justify-center z-20 transition-colors">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+
+            <!-- Left: Poster -->
+            <div class="w-full md:w-[38%] h-52 md:h-full relative overflow-hidden bg-loopSurface shrink-0">
+                <div id="modalImageContainer" class="absolute inset-0"></div>
+                <div class="absolute inset-0 hero-gradient-base md:hidden"></div>
+                <div class="absolute inset-0 hero-gradient-side hidden md:block"></div>
+            </div>
+
+            <!-- Right: Details -->
+            <div class="w-full md:w-[62%] h-full p-6 md:p-10 flex flex-col overflow-y-auto no-scrollbar">
+
+                <!-- Tags row -->
+                <div class="flex items-center gap-2 flex-wrap mb-4">
+                    <span class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopAmberSubtle text-loopAmber border border-loopAmber/20">Tracking</span>
+                    <span class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10" id="modalRating">--</span>
+                    <span class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10" id="modalYear">----</span>
+                    <span class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10" id="modalType">—</span>
+                </div>
+
+                <h2 class="text-3xl md:text-5xl font-bold text-textPrimary leading-tight mb-3" id="modalTitle">Loading…</h2>
+                <div class="flex flex-wrap gap-2 mb-8 text-xs font-medium text-textSecondary" id="modalGenres"></div>
+
+                <!-- Watchlist Actions -->
+                <div id="modalActions" class="mb-8">
+                    <button id="watchlistBtn" class="btn-primary w-full mb-4 text-sm font-semibold flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus" id="watchlistBtnIcon"></i>
+                        <span id="watchlistBtnText">Add to List</span>
+                    </button>
+
+                    <!-- Status Selector -->
+                    <div id="statusSelector" class="hidden flex gap-2 mb-4 flex-wrap">
+                        <button class="status-btn flex-1" data-status="Watching">Watching</button>
+                        <button class="status-btn flex-1" data-status="To Watch">Planned</button>
+                        <button class="status-btn flex-1" data-status="Watched">Completed</button>
+                    </div>
+
+                    <!-- Progress & Rating -->
+                    <div id="progressSection" class="hidden bg-loopSurface border border-white/[0.07] rounded-xl p-5 mt-2">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm font-semibold text-textSecondary">Progress</span>
+                            <div class="flex items-center gap-3">
+                                <button id="btnProgSub" class="w-7 h-7 bg-loopRaised text-textSecondary rounded-full hover:text-textPrimary flex items-center justify-center transition-colors text-xs">
+                                    <i class="fa-solid fa-minus"></i>
+                                </button>
+                                <span class="text-textPrimary font-semibold text-sm w-12 text-center" id="progDisplay">E 1</span>
+                                <button id="btnProgAdd" class="w-7 h-7 bg-loopRaised text-textSecondary rounded-full hover:text-loopAmber flex items-center justify-center transition-colors text-xs">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center border-t border-white/[0.06] pt-4">
+                            <span class="text-sm font-semibold text-textSecondary">Your Rating</span>
+                            <div class="flex gap-1.5 text-xl" id="starRating"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-3 mb-8" id="modalStats"></div>
+
+                <!-- Synopsis -->
+                <h3 class="text-sm font-semibold text-textSecondary mb-3 uppercase tracking-wider">Synopsis</h3>
+                <div class="text-sm text-textSecondary leading-relaxed" id="modalSummary"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Toast ──────────────────────────────────────────────────────────────── -->
+    <div id="toast"
+         class="fixed top-20 left-1/2 -translate-x-1/2 px-5 py-3 rounded-full text-sm font-semibold transform -translate-y-10 opacity-0 z-[200] flex items-center gap-2 pointer-events-none shadow-lg border">
+        <span id="toastMsg"></span>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js?v=4"></script>
+</body>
+</html>

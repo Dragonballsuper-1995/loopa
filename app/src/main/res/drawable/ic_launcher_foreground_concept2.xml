@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Back Skewed Card -->
+    <path
+        android:strokeColor="#4DFFFFFF"
+        android:strokeWidth="1.5"
+        android:fillColor="#050508"
+        android:pathData="M34,24H62L58,72H30Z" />
+    <!-- Middle Skewed Card -->
+    <path
+        android:strokeColor="#99FFFFFF"
+        android:strokeWidth="1.5"
+        android:fillColor="#050508"
+        android:pathData="M41.6,28H69.6L65.4,76H37.4Z" />
+    <!-- Front Skewed Card (Orange Gradient) -->
+    <path
+        android:fillColor="#FF4500"
+        android:pathData="M49.2,32H77.2L73,80H45Z" />
+</vector>

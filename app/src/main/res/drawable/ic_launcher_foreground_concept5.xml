@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Infinity loop -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M34,54C34,62 42,66 54,54C66,42 74,46 74,54C74,62 66,66 54,54C42,42 34,46 34,54Z" />
+    <!-- Gradient Play arrow -->
+    <path
+        android:fillColor="#FF4500"
+        android:pathData="M72,48L80,54L72,60Z" />
+</vector>
