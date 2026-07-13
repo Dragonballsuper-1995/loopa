@@ -281,12 +281,13 @@ const UI = {
         container.innerHTML = `
             <img id="hero-bg-img" src="${backdrop}"
                  class="absolute inset-0 w-full h-full object-cover opacity-40 transition-opacity duration-500">
+            <div class="absolute inset-0 hero-gradient-top"></div>
             <div class="absolute inset-0 hero-gradient-base"></div>
             <div class="absolute inset-0 hero-gradient-side hidden md:block"></div>
 
-            <div id="hero-content-wrapper" class="absolute bottom-0 left-0 right-0 max-w-[1600px] mx-auto px-5 lg:px-8 pb-10 md:pb-14 flex flex-col transition-opacity duration-300">
+            <div id="hero-content-wrapper" class="absolute bottom-0 left-0 right-0 max-w-[1600px] mx-auto px-5 lg:px-8 pb-8 md:pb-10 flex flex-col transition-opacity duration-300">
                 <div id="hero-tracking-container">${trackingHtml}</div>
-                <h1 id="hero-title" class="font-bold text-4xl md:text-6xl lg:text-7xl leading-tight mb-5 text-white max-w-3xl">${item.title}</h1>
+                <h1 id="hero-title" class="font-bold text-3xl md:text-5xl lg:text-6xl leading-tight mb-4 text-white max-w-3xl">${item.title}</h1>
                 <div class="flex gap-3">
                     <button id="hero-init-btn" class="btn-primary text-sm flex items-center gap-2">
                         <i class="fa-solid fa-circle-play"></i> View Details

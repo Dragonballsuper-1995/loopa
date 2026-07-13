@@ -7,7 +7,7 @@ const App = {
     s: {
         user: null,
         isGuest: false,
-        view: 'home',
+        view: 'search',
         watchlist: [],
         searchResults: [],
         searchFilter: 'all',
@@ -86,7 +86,7 @@ const App = {
             );
         }
         
-        this.navigateTo('home');
+        this.navigateTo('search');
     },
 
     _updateSyncTime() {
@@ -195,7 +195,19 @@ const App = {
                 clearTimeout(this.s.searchDebounce);
                 const grid = document.getElementById('searchResults');
                 const state = document.getElementById('searchState');
+                const browseContent = document.getElementById('radar-browse-content');
+                const resultsContainer = document.getElementById('search-results-container');
                 
+                if (q.length === 0) {
+                    if (browseContent) browseContent.classList.remove('hidden');
+                    if (resultsContainer) resultsContainer.classList.add('hidden');
+                    this.s.searchResults = [];
+                    return;
+                } else {
+                    if (browseContent) browseContent.classList.add('hidden');
+                    if (resultsContainer) resultsContainer.classList.remove('hidden');
+                }
+
                 if (q.length < 2) {
                     if (grid) grid.innerHTML = '';
                     if (state) {
@@ -292,14 +304,16 @@ const App = {
 
     // ── Navigation ────────────────────────────────────────────────────────────
     navigateTo(view) {
-        if (view !== 'home') {
+        if (view !== 'search') {
             clearInterval(this.s.heroInterval);
         }
         this.s.view = view;
-        ['home', 'search', 'watchlist', 'ai'].forEach(v => {
-            document.getElementById(`tab-${v}`).classList.add('hidden');
+        ['search', 'watchlist', 'ai'].forEach(v => {
+            const el = document.getElementById(`tab-${v}`);
+            if (el) el.classList.add('hidden');
         });
-        document.getElementById(`tab-${view}`).classList.remove('hidden');
+        const activeEl = document.getElementById(`tab-${view}`);
+        if (activeEl) activeEl.classList.remove('hidden');
 
         document.querySelectorAll('.nav-btn').forEach(btn => {
             const isActive = btn.dataset.nav === view;
@@ -314,7 +328,15 @@ const App = {
             }
         });
 
-        if (view === 'home') this._loadDashboard();
+        if (view === 'search') {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) searchInput.value = '';
+            const browseContent = document.getElementById('radar-browse-content');
+            const resultsContainer = document.getElementById('search-results-container');
+            if (browseContent) browseContent.classList.remove('hidden');
+            if (resultsContainer) resultsContainer.classList.add('hidden');
+            this._loadDashboard();
+        }
         if (view === 'watchlist') this._loadTerminal();
         if (view === 'ai' && !this.s.aiLoaded) this._loadAI();
     },

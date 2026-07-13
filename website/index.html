@@ -344,6 +344,10 @@
         }
 
         /* Hero gradient */
+        .hero-gradient-top {
+            background: linear-gradient(to bottom, #0F0E0C 0%, rgba(15, 14, 12, 0.55) 60%, transparent 100%);
+        }
+
         .hero-gradient-base {
             background: linear-gradient(to top, #0F0E0C 0%, rgba(15, 14, 12, 0.7) 50%, transparent 100%);
         }
@@ -453,10 +457,7 @@
                     <nav class="flex items-center gap-1 shrink-0">
                         <button
                             class="nav-btn active-nav px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors"
-                            data-nav="home">Home</button>
-                        <button
-                            class="nav-btn px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors"
-                            data-nav="search">Discover</button>
+                            data-nav="search">Radar</button>
                         <button
                             class="nav-btn px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors"
                             data-nav="watchlist">My List</button>
@@ -469,6 +470,13 @@
                 <!-- User -->
                 <!-- User & Sync -->
                 <div class="flex items-center gap-4 shrink-0 relative">
+                    <!-- Glassmorphic Header Search Bar with animated expand on focus -->
+                    <div class="relative w-44 sm:w-60 md:w-72 transition-all duration-300 focus-within:w-56 sm:focus-within:w-72 md:focus-within:w-96" id="headerSearchContainer">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-textMuted text-xs"></i>
+                        <input type="text" id="searchInput" placeholder="Search targets..."
+                            class="loop-input w-full bg-loopSurface/60 border border-white/10 rounded-full text-textPrimary py-1.5 pl-8 pr-4 text-xs font-semibold transition-all focus:border-loopAmber/40 focus:bg-loopSurface/90 placeholder-textMuted/80 outline-none">
+                    </div>
+
                     <!-- Sync Button Moved Here -->
                     <button id="btnDropdownSync" class="flex items-center gap-2 px-3.5 py-1.5 bg-loopSurface border border-white/10 rounded-full hover:border-loopAmber/40 transition-colors text-textSecondary hover:text-loopAmber group">
                         <i class="fa-solid fa-rotate text-[10px] group-hover:rotate-180 transition-transform duration-500"></i>
@@ -560,122 +568,114 @@
         <!-- ── Main Content ──────────────────────────────────────────────────── -->
         <div class="flex-1 relative flex flex-col">
 
-            <!-- Tab 1: Home / Dashboard -->
-            <main id="tab-home" class="flex-1 w-full pb-20 active-tab">
-                <div id="hero-section" class="relative w-full h-[52vh] md:h-[620px]">
-                    <div class="absolute inset-0 bg-loopSurface"></div>
+            <!-- Tab 2: Radar (Search & Browse) -->
+            <main id="tab-search" class="flex-1 w-full pb-20 hidden relative">
+                <!-- Search results block (hidden by default, shown when user types) -->
+                <div id="search-results-container" class="hidden max-w-[1600px] mx-auto px-5 lg:px-8 pt-10">
+                    <!-- Filter pills -->
+                    <div class="flex flex-wrap gap-2 mb-10" id="searchFilters">
+                        <button class="filter-pill active" data-sf="all">All</button>
+                        <button class="filter-pill" data-sf="movie">Movies</button>
+                        <button class="filter-pill" data-sf="tv">TV Shows</button>
+                        <button class="filter-pill" data-sf="anime">Anime</button>
+                    </div>
+
+                    <div id="searchState" class="text-textMuted py-20 text-base text-center">Start typing to search…</div>
+                    <div id="searchResults"
+                        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-5 pb-10">
+                    </div>
                 </div>
 
-                <div class="max-w-[1600px] mx-auto px-5 lg:px-8 pt-10 md:pt-14 space-y-12 md:space-y-16">
+                <!-- Curated browse content (Type-to-Reveal: visible by default, hidden when searching) -->
+                <div id="radar-browse-content" class="w-full">
+                    <!-- Hero Section (Full width) -->
+                    <div id="hero-section" class="relative w-full h-[40vh] md:h-[450px]">
+                        <div class="absolute inset-0 bg-loopSurface"></div>
+                    </div>
 
-                    <section>
-                        <div class="flex items-center justify-between mb-6 px-12">
-                            <div class="flex items-center gap-3">
-                                <span class="section-accent"></span>
-                                <h2 class="text-2xl font-bold text-textPrimary">Trending</h2>
+                    <!-- Curated rows -->
+                    <div class="max-w-[1600px] mx-auto px-5 lg:px-8 pt-10 md:pt-14 space-y-12 md:space-y-16">
+                        <section>
+                            <div class="flex items-center justify-between mb-6 px-12">
+                                <div class="flex items-center gap-3">
+                                    <span class="section-accent"></span>
+                                    <h2 class="text-2xl font-bold text-textPrimary">Trending</h2>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-trending', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-trending', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button class="header-nav-btn" onclick="App.scrollRow('row-trending', 'left')">
-                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                                </button>
-                                <button class="header-nav-btn" onclick="App.scrollRow('row-trending', 'right')">
-                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                                </button>
+                            <div class="scroll-fade-container">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-trending">
+                                </div>
                             </div>
-                        </div>
-                        <div class="scroll-fade-container">
-                            <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-trending">
-                            </div>
-                        </div>
-                    </section>
+                        </section>
 
-                    <section>
-                        <div class="flex items-center justify-between mb-6 px-12">
-                            <div class="flex items-center gap-3">
-                                <span class="section-accent"></span>
-                                <h2 class="text-2xl font-bold text-textPrimary">Anime</h2>
+                        <section>
+                            <div class="flex items-center justify-between mb-6 px-12">
+                                <div class="flex items-center gap-3">
+                                    <span class="section-accent"></span>
+                                    <h2 class="text-2xl font-bold text-textPrimary">Anime</h2>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-anime', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-anime', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button class="header-nav-btn" onclick="App.scrollRow('row-anime', 'left')">
-                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                                </button>
-                                <button class="header-nav-btn" onclick="App.scrollRow('row-anime', 'right')">
-                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                                </button>
+                            <div class="scroll-fade-container">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-anime"></div>
                             </div>
-                        </div>
-                        <div class="scroll-fade-container">
-                            <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-anime"></div>
-                        </div>
-                    </section>
+                        </section>
 
-                    <section>
-                        <div class="flex items-center justify-between mb-6 px-12">
-                            <div class="flex items-center gap-3">
-                                <span class="section-accent"></span>
-                                <h2 class="text-2xl font-bold text-textPrimary">Popular Movies</h2>
+                        <section>
+                            <div class="flex items-center justify-between mb-6 px-12">
+                                <div class="flex items-center gap-3">
+                                    <span class="section-accent"></span>
+                                    <h2 class="text-2xl font-bold text-textPrimary">Popular Movies</h2>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-movies', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-movies', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button class="header-nav-btn" onclick="App.scrollRow('row-movies', 'left')">
-                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                                </button>
-                                <button class="header-nav-btn" onclick="App.scrollRow('row-movies', 'right')">
-                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                                </button>
+                            <div class="scroll-fade-container">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-movies"></div>
                             </div>
-                        </div>
-                        <div class="scroll-fade-container">
-                            <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-movies"></div>
-                        </div>
-                    </section>
+                        </section>
 
-                    <section>
-                        <div class="flex items-center justify-between mb-6 px-12">
-                            <div class="flex items-center gap-3">
-                                <span class="section-accent"></span>
-                                <h2 class="text-2xl font-bold text-textPrimary">Popular TV</h2>
+                        <section>
+                            <div class="flex items-center justify-between mb-6 px-12">
+                                <div class="flex items-center gap-3">
+                                    <span class="section-accent"></span>
+                                    <h2 class="text-2xl font-bold text-textPrimary">Popular TV</h2>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-tv', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-tv', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button class="header-nav-btn" onclick="App.scrollRow('row-tv', 'left')">
-                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                                </button>
-                                <button class="header-nav-btn" onclick="App.scrollRow('row-tv', 'right')">
-                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                                </button>
+                            <div class="scroll-fade-container">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-tv"></div>
                             </div>
-                        </div>
-                        <div class="scroll-fade-container">
-                            <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-tv"></div>
-                        </div>
-                    </section>
-
-                </div>
-            </main>
-
-            <!-- Tab 2: Discover (Search) -->
-            <main id="tab-search" class="flex-1 w-full pb-20 hidden max-w-[1600px] mx-auto px-5 lg:px-8 pt-10">
-                <h1 class="text-4xl md:text-5xl font-bold text-textPrimary mb-2">Discover</h1>
-                <p class="text-textSecondary mb-8">Find movies, shows, and anime</p>
-
-                <!-- Search box -->
-                <div class="relative w-full max-w-2xl mb-8">
-                    <i
-                        class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-textMuted text-sm"></i>
-                    <input type="text" id="searchInput" placeholder="Search titles…"
-                        class="loop-input w-full bg-loopSurface border border-white/10 rounded-xl text-textPrimary py-4 pl-11 pr-5 text-sm font-medium transition-colors placeholder-textMuted">
-                </div>
-
-                <!-- Filter pills -->
-                <div class="flex flex-wrap gap-2 mb-10" id="searchFilters">
-                    <button class="filter-pill active" data-sf="all">All</button>
-                    <button class="filter-pill" data-sf="movie">Movies</button>
-                    <button class="filter-pill" data-sf="tv">TV Shows</button>
-                    <button class="filter-pill" data-sf="anime">Anime</button>
-                </div>
-
-                <div id="searchState" class="text-textMuted py-20 text-base text-center">Start typing to search…</div>
-                <div id="searchResults"
-                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-5 pb-10">
+                        </section>
+                    </div>
                 </div>
             </main>
 
