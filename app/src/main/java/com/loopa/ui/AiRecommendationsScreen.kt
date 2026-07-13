@@ -38,7 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.ArrowUpward
 import kotlinx.coroutines.delay
 
@@ -125,7 +125,7 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
                             }
                         } else {
                             Box(modifier = Modifier.size(24.dp).background(Loopa.Surface, CircleShape).border(1.dp, Loopa.Amber.copy(alpha=0.3f), CircleShape), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Loopa.Amber, modifier = Modifier.size(14.dp))
+                                Icon(Icons.Filled.AutoFixHigh, contentDescription = null, tint = Loopa.Amber, modifier = Modifier.size(14.dp))
                             }
                             Spacer(Modifier.width(8.dp))
                             Text("Loopa AI", style = MaterialTheme.typography.labelMedium, color = Loopa.TextPrimary, fontWeight = FontWeight.Bold)
@@ -195,7 +195,7 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) {
                         Box(modifier = Modifier.size(24.dp).background(Loopa.Surface, CircleShape).border(1.dp, Loopa.Amber.copy(alpha=0.3f), CircleShape), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Loopa.Amber, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Filled.AutoFixHigh, contentDescription = null, tint = Loopa.Amber, modifier = Modifier.size(14.dp))
                         }
                         Spacer(Modifier.width(12.dp))
                         Text("Thinking...", color = Loopa.Amber, style = MaterialTheme.typography.labelMedium)

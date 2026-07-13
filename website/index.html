@@ -105,6 +105,64 @@
             border: 1px solid rgba(240, 237, 232, 0.08) !important;
         }
 
+        /* Super Frosted & Readable Dropdown */
+        .dropdown-frosted {
+            background-color: rgba(18, 17, 14, 0.95) !important;
+            backdrop-filter: blur(40px) !important;
+            -webkit-backdrop-filter: blur(40px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.02) inset !important;
+        }
+
+        /* Horizontal Scroll Edge Fade */
+        .scroll-fade-container {
+            position: relative;
+            width: 100%;
+        }
+        .scroll-fade-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 48px;
+            background: linear-gradient(to right, #0F0E0C 10%, transparent);
+            pointer-events: none;
+            z-index: 10;
+        }
+        .scroll-fade-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 48px;
+            background: linear-gradient(to left, #0F0E0C 10%, transparent);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Category Header Navigation Buttons */
+        .header-nav-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: rgba(26, 25, 21, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #F0EDE8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .header-nav-btn:hover {
+            background-color: rgba(232, 168, 124, 0.95);
+            color: #0F0E0C;
+            border-color: #E8A87C;
+            transform: scale(1.1);
+        }
+
         /* Modal transitions */
         #detailModal,
         #authModal {
@@ -409,7 +467,15 @@
                 </div>
 
                 <!-- User -->
-                <div class="flex items-center gap-3 shrink-0 relative">
+                <!-- User & Sync -->
+                <div class="flex items-center gap-4 shrink-0 relative">
+                    <!-- Sync Button Moved Here -->
+                    <button id="btnDropdownSync" class="flex items-center gap-2 px-3.5 py-1.5 bg-loopSurface border border-white/10 rounded-full hover:border-loopAmber/40 transition-colors text-textSecondary hover:text-loopAmber group">
+                        <i class="fa-solid fa-rotate text-[10px] group-hover:rotate-180 transition-transform duration-500"></i>
+                        <span class="text-xs font-semibold">Sync Data</span>
+                    </button>
+
+                    <!-- Dropdown Trigger -->
                     <div id="userDropdownTrigger"
                         class="flex items-center gap-2 px-3.5 py-2 bg-loopSurface border border-white/10 rounded-full cursor-pointer hover:border-white/20 transition-colors">
                         <div
@@ -422,44 +488,69 @@
 
                     <!-- Settings Dropdown -->
                     <div id="settingsDropdown"
-                        class="hidden absolute right-0 top-full mt-2 w-64 frosted-glass rounded-xl z-[150] overflow-hidden">
-                        <div class="p-4 space-y-3">
-                            <!-- Account info -->
-                            <div class="pb-3 border-b border-white/[0.06]">
-                                <p class="text-[10px] text-textMuted font-semibold tracking-wider uppercase mb-1">
-                                    Account</p>
-                                <p id="dropdownEmail" class="text-textPrimary font-semibold text-sm truncate">Guest</p>
-                                <p id="dropdownSyncTime" class="text-xs text-textMuted mt-0.5">Never synced</p>
-                            </div>
-
-                            <!-- Sync -->
-                            <button id="btnDropdownSync"
-                                class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-loopRaised text-sm font-medium text-textSecondary hover:text-textPrimary flex items-center gap-3 transition-colors">
-                                <i class="fa-solid fa-rotate text-loopAmber text-xs w-4"></i> Sync Data
-                            </button>
-
-                            <!-- Notifications -->
-                            <div class="flex items-center justify-between px-3 py-2.5 rounded-lg">
-                                <span class="text-sm font-medium text-textSecondary flex items-center gap-3">
-                                    <i class="fa-solid fa-bell text-xs w-4 text-textMuted"></i> Notifications
-                                </span>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="notificationToggle" class="sr-only peer" checked>
-                                    <div
-                                        class="w-8 h-4.5 bg-loopRaised border border-white/10 rounded-full peer
-                                        peer-checked:bg-loopAmberSubtle peer-checked:border-loopAmber/30
-                                        after:content-[''] after:absolute after:top-[3px] after:left-[3px]
-                                        after:bg-textMuted after:rounded-full after:h-[12px] after:w-[12px]
-                                        after:transition-all peer-checked:after:translate-x-[14px] peer-checked:after:bg-loopAmber">
+                        class="hidden absolute right-0 top-full mt-2 w-72 dropdown-frosted rounded-xl z-[150] overflow-hidden">
+                        <div class="p-5 space-y-5">
+                            
+                            <!-- Account & Data -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-1 h-3.5 bg-loopAmber rounded-full"></div>
+                                    <p class="text-[11px] text-textSecondary font-bold tracking-wider uppercase">Account & Data</p>
+                                </div>
+                                <div class="bg-black/35 rounded-lg p-3 space-y-3 border border-white/[0.03]">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium text-textSecondary">Email</span>
+                                        <span id="dropdownEmail" class="text-xs text-textPrimary font-medium truncate max-w-[140px]">Guest</span>
                                     </div>
-                                </label>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium text-textSecondary">Last Synced</span>
+                                        <span id="dropdownSyncTime" class="text-xs text-textPrimary font-medium">Never synced</span>
+                                    </div>
+                                    <button id="btnSignOut"
+                                        class="w-full text-left pt-3 mt-1 border-t border-white/5 text-sm font-medium text-loopError hover:text-red-400 transition-colors flex items-center gap-2">
+                                        <i class="fa-solid fa-power-off w-4 text-center"></i> Sign Out
+                                    </button>
+                                </div>
                             </div>
 
-                            <!-- Logout -->
-                            <button id="btnSignOut"
-                                class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-loopError/10 text-sm font-medium text-loopError flex items-center gap-3 transition-colors">
-                                <i class="fa-solid fa-power-off text-xs w-4"></i> Sign out
-                            </button>
+                            <!-- Preferences -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-1 h-3.5 bg-loopAmber rounded-full"></div>
+                                    <p class="text-[11px] text-textSecondary font-bold tracking-wider uppercase">Preferences</p>
+                                </div>
+                                <div class="bg-black/35 rounded-lg p-3 border border-white/[0.03]">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium text-textSecondary flex items-center gap-2">
+                                            <i class="fa-solid fa-bell text-textMuted w-4 text-center"></i> Notifications
+                                        </span>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="notificationToggle" class="sr-only peer" checked>
+                                            <div class="w-9 h-5 bg-loopRaised border border-white/10 rounded-full peer peer-checked:bg-loopAmberSubtle peer-checked:border-loopAmber/30 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-textMuted peer-checked:after:bg-loopAmber after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Support & About -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-1 h-3.5 bg-loopAmber rounded-full"></div>
+                                    <p class="text-[11px] text-textSecondary font-bold tracking-wider uppercase">Support & About</p>
+                                </div>
+                                <div class="bg-black/35 rounded-lg p-1.5 space-y-1 border border-white/[0.03]">
+                                    <button class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
+                                        <i class="fa-solid fa-circle-question w-4 text-center text-textMuted"></i> Help & Feedback
+                                    </button>
+                                    <button class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
+                                        <i class="fa-solid fa-shield-halved w-4 text-center text-textMuted"></i> Privacy Policy
+                                    </button>
+                                    <button class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
+                                        <i class="fa-solid fa-info-circle w-4 text-center text-textMuted"></i> About Loopa
+                                    </button>
+                                </div>
+                            </div>
+                            
                         </div>
                     </div>
                 </div>
@@ -478,36 +569,84 @@
                 <div class="max-w-[1600px] mx-auto px-5 lg:px-8 pt-10 md:pt-14 space-y-12 md:space-y-16">
 
                     <section>
-                        <div class="flex items-center gap-3 mb-6">
-                            <span class="section-accent"></span>
-                            <h2 class="text-2xl font-bold text-textPrimary">Trending</h2>
+                        <div class="flex items-center justify-between mb-6 px-12">
+                            <div class="flex items-center gap-3">
+                                <span class="section-accent"></span>
+                                <h2 class="text-2xl font-bold text-textPrimary">Trending</h2>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="header-nav-btn" onclick="App.scrollRow('row-trending', 'left')">
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                </button>
+                                <button class="header-nav-btn" onclick="App.scrollRow('row-trending', 'right')">
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x" id="row-trending">
+                        <div class="scroll-fade-container">
+                            <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-trending">
+                            </div>
                         </div>
                     </section>
 
                     <section>
-                        <div class="flex items-center gap-3 mb-6">
-                            <span class="section-accent"></span>
-                            <h2 class="text-2xl font-bold text-textPrimary">Anime</h2>
+                        <div class="flex items-center justify-between mb-6 px-12">
+                            <div class="flex items-center gap-3">
+                                <span class="section-accent"></span>
+                                <h2 class="text-2xl font-bold text-textPrimary">Anime</h2>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="header-nav-btn" onclick="App.scrollRow('row-anime', 'left')">
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                </button>
+                                <button class="header-nav-btn" onclick="App.scrollRow('row-anime', 'right')">
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x" id="row-anime"></div>
+                        <div class="scroll-fade-container">
+                            <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-anime"></div>
+                        </div>
                     </section>
 
                     <section>
-                        <div class="flex items-center gap-3 mb-6">
-                            <span class="section-accent"></span>
-                            <h2 class="text-2xl font-bold text-textPrimary">Popular Movies</h2>
+                        <div class="flex items-center justify-between mb-6 px-12">
+                            <div class="flex items-center gap-3">
+                                <span class="section-accent"></span>
+                                <h2 class="text-2xl font-bold text-textPrimary">Popular Movies</h2>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="header-nav-btn" onclick="App.scrollRow('row-movies', 'left')">
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                </button>
+                                <button class="header-nav-btn" onclick="App.scrollRow('row-movies', 'right')">
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x" id="row-movies"></div>
+                        <div class="scroll-fade-container">
+                            <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-movies"></div>
+                        </div>
                     </section>
 
                     <section>
-                        <div class="flex items-center gap-3 mb-6">
-                            <span class="section-accent"></span>
-                            <h2 class="text-2xl font-bold text-textPrimary">Popular TV</h2>
+                        <div class="flex items-center justify-between mb-6 px-12">
+                            <div class="flex items-center gap-3">
+                                <span class="section-accent"></span>
+                                <h2 class="text-2xl font-bold text-textPrimary">Popular TV</h2>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="header-nav-btn" onclick="App.scrollRow('row-tv', 'left')">
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                </button>
+                                <button class="header-nav-btn" onclick="App.scrollRow('row-tv', 'right')">
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x" id="row-tv"></div>
+                        <div class="scroll-fade-container">
+                            <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-tv"></div>
+                        </div>
                     </section>
 
                 </div>
@@ -586,10 +725,10 @@
                     <!-- Initial Welcome Message -->
                     <div class="flex flex-col gap-2 w-full max-w-4xl animate-fade-in-up">
                         <div class="flex items-center gap-3">
-                            <div
-                                class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber">
-                                <i class="fa-solid fa-sparkles text-xs"></i></div>
-                            <span class="text-sm font-bold text-textPrimary">Loopa AI</span>
+                            <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber shrink-0">
+                                <i class="fa-solid fa-wand-magic-sparkles text-[10px] drop-shadow-[0_0_8px_rgba(232,168,124,0.6)]"></i>
+                            </div>
+                            <span class="text-sm font-bold text-textPrimary tracking-wide">Loopa AI</span>
                         </div>
                         <div
                             class="bg-loopSurface/60 border border-white/5 rounded-2xl rounded-tl-none p-4 text-textPrimary text-sm leading-relaxed inline-block self-start">
@@ -672,7 +811,7 @@
                     <!-- Progress & Rating -->
                     <div id="progressSection"
                         class="hidden bg-loopSurface border border-white/[0.07] rounded-xl p-5 mt-2">
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex justify-between items-center mb-4" id="episodeProgressContainer">
                             <span class="text-sm font-semibold text-textSecondary">Progress</span>
                             <div class="flex items-center gap-3">
                                 <button id="btnProgSub"
@@ -690,6 +829,17 @@
                         <div class="flex justify-between items-center border-t border-white/[0.06] pt-4">
                             <span class="text-sm font-semibold text-textSecondary">Your Rating</span>
                             <div class="flex gap-1.5 text-xl" id="starRating"></div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Notes -->
+                    <div id="notesSection" class="hidden bg-loopSurface border border-white/[0.07] rounded-xl p-5 mt-2">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-sm font-semibold text-textSecondary">Personal Notes</span>
+                        </div>
+                        <textarea id="personalNotesInput" class="w-full bg-loopBase border border-white/10 rounded-lg p-3 text-sm text-textPrimary placeholder-textMuted focus:outline-none focus:border-loopAmber/50" placeholder="Add a note..." rows="3"></textarea>
+                        <div class="flex justify-end mt-3">
+                            <button id="btnSaveNotes" class="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-2">Save</button>
                         </div>
                     </div>
                 </div>
@@ -710,11 +860,16 @@
         <span id="toastMsg"></span>
     </div>
 
-    <script src="js/config.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/supabase.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/app.js?v=4"></script>
+    <!-- Custom Context Menu -->
+    <div id="contextMenu" class="hidden fixed z-[9999] bg-loopSurface/95 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl py-1.5 w-48 text-sm opacity-0 transition-opacity duration-200 pointer-events-none text-textPrimary">
+        <!-- Injected by JS -->
+    </div>
+
+    <script src="js/config.js?v=5"></script>
+    <script src="js/api.js?v=5"></script>
+    <script src="js/supabase.js?v=5"></script>
+    <script src="js/ui.js?v=5"></script>
+    <script src="js/app.js?v=5"></script>
 
     <!-- Firebase SDK (Modular) -->
     <script type="module">

@@ -34,7 +34,12 @@ const App = {
                 this.s.user = session.user;
                 this._boot();
             }
-            if (event === 'SIGNED_OUT') location.reload();
+            if (event === 'SIGNED_OUT') {
+                this.s.user = null;
+                document.getElementById('appContainer').classList.add('opacity-0');
+                document.getElementById('authModal').classList.add('active');
+                setTimeout(() => document.getElementById('authContent').style.transform = 'translateY(0)', 10);
+            }
         });
 
         this._bindAll();
@@ -137,11 +142,21 @@ const App = {
             });
         }
 
+        
+        // Context Menu outside click
+        document.addEventListener('click', (e) => {
+            const cm = document.getElementById('contextMenu');
+            if (cm && !cm.contains(e.target)) {
+                cm.classList.remove('opacity-100');
+                cm.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => cm.classList.add('hidden'), 200);
+            }
+        });
+
         // Dropdown Sync DB Action
         const bds = document.getElementById('btnDropdownSync');
         if (bds) {
             bds.addEventListener('click', async () => {
-                dropdown.classList.add('hidden');
                 if (this.s.isGuest) {
                     UI.toast('AUTH REQUIRED', 'error');
                     return;
@@ -413,7 +428,7 @@ const App = {
                 document.getElementById('aiChatLog').innerHTML = `
                     <div class="flex flex-col gap-2 w-full max-w-4xl animate-fade-in-up">
                         <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber"><i class="fa-solid fa-sparkles text-xs"></i></div>
+                            <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber"><i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i></div>
                             <span class="text-sm font-bold text-textPrimary">Loopa AI</span>
                         </div>
                         <div class="bg-loopSurface/60 border border-white/5 rounded-2xl rounded-tl-none p-4 text-textPrimary text-sm leading-relaxed inline-block self-start">
@@ -439,7 +454,7 @@ const App = {
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'flex items-center gap-3 self-start max-w-4xl animate-fade-in-up mt-2 mb-2';
         loadingDiv.innerHTML = `
-            <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber"><i class="fa-solid fa-sparkles text-xs"></i></div>
+            <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber"><i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i></div>
             <div class="flex items-center gap-1 bg-loopSurface/60 rounded-2xl rounded-tl-none px-4 py-3 h-[42px]">
                 <div class="w-2 h-2 bg-loopAmber/50 rounded-full animate-bounce"></div>
                 <div class="w-2 h-2 bg-loopAmber/50 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
@@ -514,10 +529,12 @@ const App = {
         document.getElementById('detailModal').classList.add('active');
 
         try {
-            const full = await API.fetchDetails(item.id, item.mediaType);
-            if (full) {
-                this.s.drawerItem = { ...item, ...full };
-                UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
+            if (item.id > 0) {
+                const full = await API.fetchDetails(item.id, item.mediaType);
+                if (full) {
+                    this.s.drawerItem = { ...item, ...full };
+                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
+                }
             }
         } catch {}
     },
@@ -533,10 +550,12 @@ const App = {
         document.getElementById('detailModal').classList.add('active');
 
         try {
-            const full = await API.fetchDetails(dbItem.id, dbItem.media_type);
-            if (full) {
-                this.s.drawerItem = { ...basic, ...full };
-                UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
+            if (dbItem.id > 0) {
+                const full = await API.fetchDetails(dbItem.id, dbItem.media_type);
+                if (full) {
+                    this.s.drawerItem = { ...basic, ...full };
+                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
+                }
             }
         } catch {}
     },
@@ -615,6 +634,20 @@ const App = {
         } catch {}
     },
 
+    async updateNotes(notes) {
+        const e = this.s.drawerDBEntry;
+        if (!e || this.s.isGuest) return;
+        try {
+            await SBList.update(this.s.user.id, e.id, e.media_type, { personal_notes: notes });
+            e.personal_notes = notes;
+            const idx = this.s.watchlist.findIndex(w => w.id === e.id && w.media_type === e.media_type);
+            if (idx >= 0) this.s.watchlist[idx].personal_notes = notes;
+            UI.toast('NOTES SAVED');
+        } catch (err) {
+            UI.toast('FAILED TO SAVE NOTES', 'error');
+        }
+    },
+
     likeRecommendation(title) {
         const liked = JSON.parse(localStorage.getItem('oracle_liked_titles') || '[]');
         if (!liked.includes(title)) {
@@ -631,6 +664,90 @@ const App = {
             localStorage.setItem('oracle_disliked_titles', JSON.stringify(disliked));
         }
         UI.toast('Removed from recommendations');
+    },
+
+    showContextMenu(e, item, inList) {
+        const cm = document.getElementById('contextMenu');
+        if (!cm) return;
+
+        cm.innerHTML = '';
+        
+        const dbItem = this.s.watchlist.find(d => String(d.tmdb_id) === String(item.id) || String(d.id) === String(item.id));
+        const actualInList = inList || !!dbItem;
+        const actualItem = dbItem || item;
+        const listName = actualItem.list_name || '';
+
+        // View Details
+        const btnDetails = document.createElement('div');
+        btnDetails.className = 'px-4 py-2 hover:bg-loopRaised cursor-pointer flex items-center gap-3 transition-colors';
+        btnDetails.innerHTML = '<i class="fa-solid fa-circle-info w-4 text-center text-textMuted"></i> <span>View Details</span>';
+        btnDetails.onclick = () => { this.closeContextMenu(); actualInList ? this.openDrawerFromDB(actualItem) : this.openDrawer(item); };
+        cm.appendChild(btnDetails);
+
+        if (!actualInList && !this.s.isGuest) {
+            const btnAdd = document.createElement('div');
+            btnAdd.className = 'px-4 py-2 hover:bg-loopRaised cursor-pointer flex items-center gap-3 transition-colors';
+            btnAdd.innerHTML = '<i class="fa-solid fa-plus w-4 text-center text-loopAmber"></i> <span>Add to Watchlist</span>';
+            btnAdd.onclick = () => { this.closeContextMenu(); this.addToWatchlist(item, 'To Watch'); };
+            cm.appendChild(btnAdd);
+        } else if (actualInList && !this.s.isGuest) {
+            if (listName !== 'Watched') {
+                const btnWatched = document.createElement('div');
+                btnWatched.className = 'px-4 py-2 hover:bg-loopRaised cursor-pointer flex items-center gap-3 transition-colors';
+                btnWatched.innerHTML = '<i class="fa-solid fa-check w-4 text-center text-loopSuccess"></i> <span>Mark as Watched</span>';
+                btnWatched.onclick = () => { 
+                    this.closeContextMenu(); 
+                    this.s.drawerDBEntry = actualItem; // Temporarily set for updateStatus
+                    this.updateStatus('Watched'); 
+                    this.s.drawerDBEntry = null;
+                };
+                cm.appendChild(btnWatched);
+            }
+
+            const btnRemove = document.createElement('div');
+            btnRemove.className = 'px-4 py-2 hover:bg-loopRaised cursor-pointer flex items-center gap-3 transition-colors text-loopError';
+            btnRemove.innerHTML = '<i class="fa-solid fa-trash w-4 text-center"></i> <span>Remove from Watchlist</span>';
+            btnRemove.onclick = () => { this.closeContextMenu(); this.removeFromWatchlist(actualItem.id, actualItem.media_type || actualItem.mediaType); };
+            cm.appendChild(btnRemove);
+        }
+
+        cm.classList.remove('hidden');
+        
+        // Calculate position
+        const rect = cm.getBoundingClientRect();
+        let x = e.clientX;
+        let y = e.clientY;
+        
+        if (x + 192 > window.innerWidth) x = window.innerWidth - 192 - 8;
+        if (y + cm.offsetHeight > window.innerHeight) y = window.innerHeight - cm.offsetHeight - 8;
+
+        cm.style.left = `${x}px`;
+        cm.style.top = `${y}px`;
+
+        // Force reflow before animating
+        void cm.offsetWidth;
+        cm.classList.remove('opacity-0', 'pointer-events-none');
+        cm.classList.add('opacity-100');
+    },
+
+    closeContextMenu() {
+        const cm = document.getElementById('contextMenu');
+        if (cm) {
+            cm.classList.remove('opacity-100');
+            cm.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => cm.classList.add('hidden'), 200);
+        }
+    },
+
+    scrollRow(id, dir) {
+        const row = document.getElementById(id);
+        if (row) {
+            const amount = row.clientWidth * 0.75;
+            row.scrollBy({
+                left: dir === 'left' ? -amount : amount,
+                behavior: 'smooth'
+            });
+        }
     }
 };
 

@@ -115,13 +115,19 @@ const SBList = {
 
     /** Delete a row */
     async remove(userId, id, mediaType) {
-        const { error } = await getDB()
+        const { data, error } = await getDB()
             .from(CONFIG.DB_TABLE)
             .delete()
             .eq('id',         id)
             .eq('user_id',    userId)
-            .eq('media_type', mediaType);
+            .eq('media_type', mediaType)
+            .select();
+            
         if (error) throw error;
+        if (!data || data.length === 0) {
+            console.error("Delete failed: 0 rows affected. Please check your Supabase RLS DELETE policy.");
+            throw new Error("Failed to delete item from database. Ensure RLS policies allow DELETE.");
+        }
     },
 
     /** Returns the row if present, null otherwise */

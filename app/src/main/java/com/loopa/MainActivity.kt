@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -125,6 +125,7 @@ fun MediaTrackerApp(
 
   LaunchedEffect(isGuestMode, sessionStatus) {
       if (!isGuestMode && sessionStatus is io.github.jan.supabase.auth.status.SessionStatus.Authenticated) {
+          viewModel.startRealtime()
           while (true) {
               try {
                   viewModel.syncData()

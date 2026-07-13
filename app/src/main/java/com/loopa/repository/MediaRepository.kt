@@ -137,10 +137,52 @@ class MediaRepository(private val mediaItemDao: MediaItemDao) {
 
     suspend fun insertMediaItem(item: MediaItemEntity) {
         mediaItemDao.insertMediaItem(item)
+        try {
+            val user = NetworkModule.supabase.auth.currentUserOrNull()
+            if (user != null) {
+                val remoteItem = com.loopa.model.RemoteMediaItem(
+                    id = item.id,
+                    userId = user.id,
+                    title = item.title,
+                    imageUrl = item.imageUrl,
+                    date = item.date,
+                    score = item.score,
+                    listName = item.listName,
+                    mediaType = item.mediaType,
+                    currentSeason = item.currentSeason,
+                    currentEpisode = item.currentEpisode,
+                    totalEpisodes = item.totalEpisodes,
+                    totalSeasons = item.totalSeasons,
+                    progressString = item.progressString,
+                    userRating = item.userRating,
+                    personalNotes = item.personalNotes
+                )
+                NetworkModule.supabase.postgrest["media_items"].upsert(remoteItem)
+            }
+        } catch (e: Exception) {
+            // Ignore if offline
+        }
     }
 
     suspend fun deleteMediaItem(id: Int, mediaType: String) {
         mediaItemDao.deleteMediaItem(id, mediaType)
+        try {
+            val user = NetworkModule.supabase.auth.currentUserOrNull()
+            if (user != null) {
+                NetworkModule.supabase.postgrest["media_items"]
+                    .delete {
+                        select() // request returned rows
+                        filter {
+                            eq("id", id)
+                            eq("user_id", user.id)
+                            eq("media_type", mediaType)
+                        }
+                    }
+                // Note: If no rows are returned, it likely means the RLS policy is blocking the delete.
+            }
+        } catch (e: Exception) {
+            // Ignore if offline
+        }
     }
 
     suspend fun syncWithRemote() = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -161,27 +203,15 @@ class MediaRepository(private val mediaItemDao: MediaItemDao) {
         val localMap = localItems.associateBy { "${it.id}_${it.mediaType}" }
         val remoteMap = remoteItems.associateBy { "${it.id}_${it.mediaType}" }
         
-        val toUpload = localItems.filter { "${it.id}_${it.mediaType}" !in remoteMap }.map {
-            com.loopa.model.RemoteMediaItem(
-                id = it.id,
-                userId = user.id,
-                title = it.title,
-                imageUrl = it.imageUrl,
-                date = it.date,
-                score = it.score,
-                listName = it.listName,
-                mediaType = it.mediaType,
-                currentSeason = it.currentSeason,
-                currentEpisode = it.currentEpisode,
-                totalEpisodes = it.totalEpisodes,
-                totalSeasons = it.totalSeasons,
-                progressString = it.progressString,
-                userRating = it.userRating,
-                personalNotes = it.personalNotes
-            )
+        // Remote is the source of truth for deletions and updates in this naive sync.
+        // Delete any local items that are no longer in the remote DB.
+        val toDelete = localItems.filter { "${it.id}_${it.mediaType}" !in remoteMap }
+        toDelete.forEach {
+            mediaItemDao.deleteMediaItem(it.id, it.mediaType)
         }
         
-        val toDownload = remoteItems.filter { "${it.id}_${it.mediaType}" !in localMap }.map {
+        // Download all remote items and replace local ones to sync updates (e.g. progress, notes)
+        val toDownload = remoteItems.map {
             com.loopa.db.MediaItemEntity(
                 id = it.id,
                 title = it.title,
@@ -198,13 +228,6 @@ class MediaRepository(private val mediaItemDao: MediaItemDao) {
                 userRating = it.userRating,
                 personalNotes = it.personalNotes
             )
-        }
-        
-        // Upload to Supabase
-        if (toUpload.isNotEmpty()) {
-            retryWithBackoff {
-                NetworkModule.supabase.postgrest["media_items"].upsert(toUpload)
-            }
         }
         
         // Save to Room DB
@@ -228,7 +251,15 @@ class MediaRepository(private val mediaItemDao: MediaItemDao) {
             realtime.connect()
             channel.subscribe()
             
-            changeFlow.collect {
+            changeFlow.collect { action ->
+                if (action is io.github.jan.supabase.realtime.PostgresAction.Delete) {
+                    val idStr = action.oldRecord["id"]?.toString()
+                    val id = idStr?.toDoubleOrNull()?.toInt()
+                    val mediaType = action.oldRecord["media_type"]?.toString()
+                    if (id != null && mediaType != null) {
+                        mediaItemDao.deleteMediaItem(id, mediaType)
+                    }
+                }
                 // Whenever a change happens remotely, sync with remote to update local DB
                 syncWithRemote()
             }

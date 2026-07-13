@@ -188,6 +188,9 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     init {
         fetchHomeData()
         fetchAiRecommendations()
+    }
+
+    fun startRealtime() {
         viewModelScope.launch {
             repository.observeRealtimeChanges()
         }

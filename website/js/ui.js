@@ -42,7 +42,7 @@ const UI = {
         } else {
             div.innerHTML = `
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber"><i class="fa-solid fa-sparkles text-xs"></i></div>
+                    <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber"><i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i></div>
                     <span class="text-sm font-bold text-textPrimary">Loopa AI</span>
                 </div>
                 <div class="bg-loopSurface/60 border border-white/5 rounded-2xl rounded-tl-none p-4 text-textPrimary text-sm leading-relaxed inline-block">
@@ -117,21 +117,34 @@ const UI = {
     posterCardRow(item, onClick) {
         const src = item.posterUrl || item.image_url || this._fallbackPoster(item.title);
         const type = item.mediaType || item.media_type || '';
+        const synopsis = item.overview || item.synopsis || item.description || '';
+        const synopsisHTML = synopsis ? `
+            <div class="absolute inset-0 bg-loopSurface/95 backdrop-blur-sm p-3 text-[11px] text-white/90 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-500 z-20 pointer-events-none text-left flex flex-col justify-start">
+                <div class="line-clamp-[10] w-full text-ellipsis overflow-hidden">${synopsis}</div>
+            </div>
+        ` : '';
 
         const el = document.createElement('div');
-        el.className = 'w-[160px] md:w-[200px] shrink-0 cursor-pointer snap-start group';
+        el.className = 'w-[160px] md:w-[200px] shrink-0 cursor-pointer snap-start group relative';
         el.innerHTML = `
             <div class="media-card w-full aspect-[2/3] rounded-lg overflow-hidden relative bg-loopSurface border border-white/[0.07]">
                 <img src="${src}" alt="${item.title}" loading="lazy"
-                     class="poster-img w-full h-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                <div class="absolute bottom-0 left-0 right-0 p-3">
+                     class="poster-img w-full h-full object-cover relative z-10">
+                ${synopsisHTML}
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none group-hover:opacity-0 transition-opacity duration-300 delay-500"></div>
+                <div class="absolute bottom-0 left-0 right-0 p-3 z-10 pointer-events-none group-hover:opacity-0 transition-opacity duration-300 delay-500">
                     <span class="text-[9px] font-semibold tracking-wider uppercase ${this._typeBadgeClass(type)} block mb-1">${type}</span>
                     <h3 class="text-sm font-semibold text-white leading-tight line-clamp-2">${item.title}</h3>
                 </div>
             </div>
         `;
         el.addEventListener('click', () => onClick(item));
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (typeof App !== 'undefined' && typeof App.showContextMenu === 'function') {
+                App.showContextMenu(e, item, false); // inList = false for row (usually trending/search)
+            }
+        });
         this._applyTiltEffect(el.querySelector('.media-card'));
         return el;
     },
@@ -153,6 +166,13 @@ const UI = {
             `;
         }
 
+        const synopsis = item.overview || item.synopsis || item.description || '';
+        const synopsisHTML = synopsis ? `
+            <div class="absolute inset-0 bg-loopSurface/95 backdrop-blur-sm p-4 text-xs text-white/90 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-500 z-30 pointer-events-none text-left flex flex-col justify-start">
+                <div class="line-clamp-[12] w-full text-ellipsis overflow-hidden">${synopsis}</div>
+            </div>
+        ` : '';
+
         const overlayActionIcon = isAI ? 'fa-solid fa-sparkles' :
                                   inList ? 'fa-solid fa-pen-to-square' :
                                   'fa-solid fa-plus';
@@ -162,14 +182,21 @@ const UI = {
         el.innerHTML = `
             ${statusBadge}
             <img src="${src}" alt="${item.title}" loading="lazy"
-                 class="poster-img w-full h-full object-cover">
-            <div class="absolute inset-0 bg-loopBase/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center p-4 text-center">
+                 class="poster-img w-full h-full object-cover relative z-10">
+            ${synopsisHTML}
+            <div class="absolute inset-0 bg-loopBase/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center p-4 text-center z-20 group-hover:delay-0 group-hover:group-hover:delay-[500ms]:opacity-0">
                 <i class="${overlayActionIcon} text-loopAmber text-3xl mb-3"></i>
                 <h3 class="text-sm font-semibold text-white leading-snug line-clamp-3">${item.title}</h3>
                 ${type ? `<span class="text-[9px] font-semibold text-textMuted mt-1 uppercase tracking-wider">${type}</span>` : ''}
             </div>
         `;
         el.addEventListener('click', () => onClick(item));
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (typeof App !== 'undefined' && typeof App.showContextMenu === 'function') {
+                App.showContextMenu(e, item, inList);
+            }
+        });
         this._applyTiltEffect(el);
 
         if (isAI && item.reason) {
@@ -382,12 +409,12 @@ const UI = {
 
             // Progress (TV / Anime)
             if (type === 'tv' || type === 'anime') {
-                document.getElementById('progressSection').classList.remove('hidden');
+                document.getElementById('episodeProgressContainer').classList.remove('hidden');
                 document.getElementById('progDisplay').textContent = `E ${dbEntry.current_episode || 0}`;
                 document.getElementById('btnProgAdd').onclick = () => App.updateProgress('episode', 1);
                 document.getElementById('btnProgSub').onclick = () => App.updateProgress('episode', -1);
             } else {
-                document.getElementById('progressSection').classList.add('hidden');
+                document.getElementById('episodeProgressContainer').classList.add('hidden');
             }
 
             // Rating stars — always show for listed items
@@ -400,12 +427,22 @@ const UI = {
                 return `<i class="fa-solid fa-star cursor-pointer transition-colors ${active ? 'text-loopAmber' : 'text-loopRaised hover:text-textMuted'}" onclick="App.setRating(${val})"></i>`;
             }).join('');
 
+            // Notes Section
+            document.getElementById('notesSection').classList.remove('hidden');
+            document.getElementById('personalNotesInput').value = dbEntry.personal_notes || '';
+            const saveBtn = document.getElementById('btnSaveNotes');
+            saveBtn.onclick = () => {
+                const notes = document.getElementById('personalNotesInput').value;
+                App.updateNotes(notes);
+            };
+
         } else {
             wlBtn.className = 'btn-primary w-full mb-4 text-sm font-semibold flex items-center justify-center gap-2';
             wlBtn.innerHTML = '<i class="fa-solid fa-plus"></i> <span>Add to List</span>';
             wlBtn.onclick = () => App.addToWatchlist(item, 'To Watch');
             document.getElementById('statusSelector').classList.add('hidden');
             document.getElementById('progressSection').classList.add('hidden');
+            document.getElementById('notesSection').classList.add('hidden');
         }
     },
 
