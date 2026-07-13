@@ -7,15 +7,15 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:752063756580:android:26f4785705e2bdc129dbb1",
+        "mobilesdk_app_id": "1:752063756580:android:8cd64aa440ea93ec29dbb1",
         "android_client_info": {
-          "package_name": "com.example"
+          "package_name": "com.loopa"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBN3DjgjxOSYsGb6GdgrV7fSiT0HB1Fw5o"
+          "current_key": "AIzaSyAE3TDDelpbUtoyJQpDN-1uPXKb7CrqSbs"
         }
       ],
       "services": {
