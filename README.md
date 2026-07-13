@@ -10,9 +10,9 @@
   
   *A cross-platform, AI-powered media tracking universe.*
 
-  [**Explore the Web App (Live)**](https://loopa-4e92d.web.app/) | [**Download Android APK**](https://github.com/Dragonballsuper-1995/loopa/releases)
+  [**Explore the Web App**](https://loopa1.netlify.app/) | [**Download Android APK**](https://github.com/Dragonballsuper-1995/loopa/releases)
   
-  *Mirrors: [Netlify](https://loopa1.netlify.app/) | [Vercel](https://loopa1.vercel.app/) | [GitHub Pages](https://dragonballsuper-1995.github.io/loopa/)*
+  *Mirrors: [Firebase](https://loopa-4e92d.web.app/) | [Vercel](https://loopa1.vercel.app/) | [GitHub Pages](https://dragonballsuper-1995.github.io/loopa/)*
 </div>
 
 <br>
