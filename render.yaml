@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: loopa-website
+    env: static
+    buildCommand: ""
+    staticPublishPath: ./website
