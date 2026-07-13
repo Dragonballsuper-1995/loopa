@@ -10,7 +10,7 @@
   
   *A cross-platform, AI-powered media tracking universe.*
 
-  [**Explore the Web App (Live)**](https://placeholder-website-link.com) | [**Download Android APK**](https://github.com/Dragonballsuper-1995/loopa/releases/download/v1.0.0/loopa.apk)
+  [**Explore the Web App (Live)**](https://placeholder-website-link.com) | [**Download Android APK**](https://github.com/Dragonballsuper-1995/loopa/releases)
 </div>
 
 <br>
@@ -19,7 +19,7 @@
 
 ## ⚡ What is Loopa?
 
-**Loopa** (formerly known as ContentGram / Tsugi) is a modern, premium application designed to help you beautifully log everything you watch—Movies, TV Shows, and Anime—and let a conversational AI curate your next obsession. 
+**Loopa** is a modern, premium application designed to help you beautifully log everything you watch—Movies, TV Shows, and Anime—and let a conversational AI curate your next obsession. 
 
 Featuring a highly stylized **cyberpunk, brutalist design**, Loopa strips away standard rounded-corner templates in favor of a dynamic, edge-forward UI with **skewed parallelograms, neon-accented glows, and 3D parallax hover effects**. 
 
