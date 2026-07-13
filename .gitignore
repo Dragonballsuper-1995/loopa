@@ -23,11 +23,13 @@ app/build/
 # Design References and Screenshots
 loop_website_screenshots/
 references/
-tsugi_screenshots/
+loopa_screenshots/
 gemini_free_models.md
 groq_free_models.md
 openrouter_free_models.md
-TSUGI_DESIGN.md
-tsugi_desktop_prototype.html
-tsugi_premium_app.html
+LOOPA_DESIGN.md
+loopa_desktop_prototype.html
+loopa_premium_app.html
 CONTEXT.md
+website_headings_screenshots/
+app_headings_screenshots/

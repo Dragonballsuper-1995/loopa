@@ -40,7 +40,7 @@ object NetworkModule {
 
     val tmdbApi: TmdbApiService by lazy {
         Retrofit.Builder()
-            .baseUrl("https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/")
+            .baseUrl("https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/")
             .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()

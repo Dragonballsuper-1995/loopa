@@ -78,9 +78,9 @@ fun LoopSectionHeader(
     }
 }
 
-// Compatibility shim — existing code using TsugiSectionHeader still works
+// Compatibility shim — existing code using LoopaSectionHeader still works
 @Composable
-fun TsugiSectionHeader(
+fun LoopaSectionHeader(
     title: String,
     accentColor: Color = Loopa.Amber,
     subtitle: String? = null,

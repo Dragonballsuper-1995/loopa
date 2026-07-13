@@ -91,7 +91,7 @@ fun HomeScreen(
                     if (item != null) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             val imageUrl = (item.backdropPath ?: item.posterPath)?.let {
-                                "https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w780$it"
+                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w780$it"
                             }
                             if (imageUrl != null) {
                                 AsyncImage(
@@ -202,7 +202,7 @@ fun HomeScreen(
                     ) {
                         items(state.trending.take(10)) { movie ->
                             val imageUrl = movie.posterPath?.let {
-                                "https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
+                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
                             }
                             HomePosterCard(
                                 title = movie.title ?: movie.name ?: "Unknown",
@@ -233,7 +233,7 @@ fun HomeScreen(
                 ) {
                     items(popularMovies.take(10)) { movie ->
                         val imageUrl = movie.posterPath?.let {
-                            "https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
+                            "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
                         }
                         HomePosterCard(
                             title = movie.title ?: "Unknown",
@@ -261,7 +261,7 @@ fun HomeScreen(
                 ) {
                     items(popularTv.take(10)) { tv ->
                         val imageUrl = tv.posterPath?.let {
-                            "https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
+                            "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
                         }
                         HomePosterCard(
                             title = tv.name ?: tv.title ?: "Unknown",
@@ -322,8 +322,8 @@ fun HomeScreen(
         activeTrackMovie?.let { movie ->
             val title = movie.title ?: movie.name ?: "Unknown Title"
             val imageUrl = if (movie.mediaType == "anime") movie.posterPath else {
-                movie.backdropPath?.let { "https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it" }
-                    ?: movie.posterPath?.let { "https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it" }
+                movie.backdropPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it" }
+                    ?: movie.posterPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it" }
             }
             val date = movie.releaseDate ?: movie.firstAirDate ?: "Unknown Date"
             val mediaTypeStr = when (movie.mediaType) { "tv" -> "SERIES"; "movie" -> "MOVIE"; "anime" -> "ANIME"; else -> "MEDIA" }
@@ -349,8 +349,8 @@ fun HomeScreen(
         hoverMovie?.let { movie ->
             val title = movie.title ?: movie.name ?: "Unknown"
             val imageUrl = if (movie.mediaType == "anime") movie.posterPath else {
-                movie.backdropPath?.let { "https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it" }
-                    ?: movie.posterPath?.let { "https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it" }
+                movie.backdropPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it" }
+                    ?: movie.posterPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it" }
             }
             val date = movie.releaseDate ?: movie.firstAirDate
             val mediaTypeVal = movie.mediaType ?: "movie"

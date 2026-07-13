@@ -405,29 +405,29 @@ fun LoopPosterCard(
     }
 }
 
-// ── Compatibility shims for code that still uses Tsugi* names ────────────────
+// ── Compatibility shims for code that still uses Loopa* names ────────────────
 @Composable
-fun TsugiButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, isSecondary: Boolean = false) =
+fun LoopaButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, isSecondary: Boolean = false) =
     LoopButton(text = text, onClick = onClick, modifier = modifier, isSecondary = isSecondary)
 
 @Composable
-fun TsugiBadge(text: String, modifier: Modifier = Modifier, color: Color = Loopa.TextSecondary) =
+fun LoopaBadge(text: String, modifier: Modifier = Modifier, color: Color = Loopa.TextSecondary) =
     LoopBadge(text = text, modifier = modifier, textColor = color, borderColor = color.copy(0.4f))
 
 @Composable
-fun TsugiCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) =
+fun LoopaCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) =
     LoopCard(modifier = modifier, onClick = onClick, content = content)
 
 @Composable
-fun TsugiDialogContainer(modifier: Modifier = Modifier, accentColor: Color = Loopa.Amber, content: @Composable () -> Unit) =
+fun LoopaDialogContainer(modifier: Modifier = Modifier, accentColor: Color = Loopa.Amber, content: @Composable () -> Unit) =
     LoopDialogContainer(modifier = modifier, content = content)
 
 @Composable
-fun TsugiEmptyState(message: String, modifier: Modifier = Modifier) =
+fun LoopaEmptyState(message: String, modifier: Modifier = Modifier) =
     LoopEmptyState(message = message, modifier = modifier)
 
 @Composable
-fun TsugiPosterCard(
+fun LoopaPosterCard(
     title: String, imageUrl: String?, mediaType: String, onClick: () -> Unit,
     modifier: Modifier = Modifier, onLongPress: (() -> Unit)? = null, onRelease: (() -> Unit)? = null,
     score: Double? = null, statusLabel: String? = null, statusColor: Color = Loopa.Amber, progressText: String? = null

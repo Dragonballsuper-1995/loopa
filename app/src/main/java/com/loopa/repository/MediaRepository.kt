@@ -442,7 +442,7 @@ class MediaRepository(private val mediaItemDao: MediaItemDao) {
                             }
 
                             if (posterPath != null && posterPath.isNotEmpty()) {
-                                rec.copy(imageUrl = "https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$posterPath")
+                                rec.copy(imageUrl = "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$posterPath")
                             } else {
                                 rec
                             }

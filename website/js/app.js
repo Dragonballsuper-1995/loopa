@@ -1,6 +1,6 @@
 /**
- * Tsugi Web — Application Controller
- * Manages state and integrates API, Supabase, and UI for the Tsugi design.
+ * Loopa Web — Application Controller
+ * Manages state and integrates API, Supabase, and UI for the Loopa design.
  */
 
 const App = {
@@ -280,7 +280,7 @@ const App = {
 
     _enterGuest() {
         this.s.isGuest = true;
-        this.s.user = { id: 'guest', email: 'guest@tsugi' };
+        this.s.user = { id: 'guest', email: 'guest@loopa' };
         this._boot();
         UI.toast('GUEST PROTOCOL ACTIVE');
     },

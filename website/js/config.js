@@ -5,10 +5,10 @@
 const CONFIG = {
     // TMDB
     TMDB_KEY:      'd639fb83cba55b0d87df18a1e80ad88f',
-    TMDB_BASE:     'https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/3',
-    TMDB_IMG_500:  'https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500',
-    TMDB_IMG_780:  'https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w780',
-    TMDB_IMG_ORIG: 'https://tsugi-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/original',
+    TMDB_BASE:     'https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/3',
+    TMDB_IMG_500:  'https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500',
+    TMDB_IMG_780:  'https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w780',
+    TMDB_IMG_ORIG: 'https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/original',
 
     // Jikan (MyAnimeList) — no key required
     JIKAN_BASE: 'https://api.jikan.moe/v4',

@@ -84,6 +84,6 @@ fun LoopToastHost(toastFlow: SharedFlow<String>) {
     }
 }
 
-// Compatibility shim — TsugiToastHost still works
+// Compatibility shim — LoopaToastHost still works
 @Composable
-fun TsugiToastHost(toastFlow: SharedFlow<String>) = LoopToastHost(toastFlow)
+fun LoopaToastHost(toastFlow: SharedFlow<String>) = LoopToastHost(toastFlow)

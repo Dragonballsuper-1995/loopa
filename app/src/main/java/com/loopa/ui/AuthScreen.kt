@@ -322,7 +322,7 @@ fun LoopTextField(
 
 // Compatibility shim
 @Composable
-fun TsugiTextField(
+fun LoopaTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
