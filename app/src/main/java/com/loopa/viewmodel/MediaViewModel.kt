@@ -332,11 +332,11 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                         .post(reqBody)
                         .build()
                     val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.loopa.network.NetworkModule.okHttpClient.newCall(req).execute() }
-                    val corrected = response.body?.string()?.trim()
-                    if (!corrected.isNullOrEmpty() && corrected != "[]") {
-                        // AI proxy returns JSON array if it falls back to recommendation mode? No, we sent a plain string.
-                        // Actually, our proxy just returns text. If it's a JSON array, it's weird.
-                        actualQuery = corrected
+                    if (response.isSuccessful) {
+                        val corrected = response.body?.string()?.trim()
+                        if (!corrected.isNullOrEmpty() && corrected != "[]" && !corrected.contains("error", ignoreCase = true)) {
+                            actualQuery = corrected
+                        }
                     }
                 } catch (e: Exception) {
                     // ignore and fallback to original

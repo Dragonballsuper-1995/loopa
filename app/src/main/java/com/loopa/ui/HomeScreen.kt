@@ -110,8 +110,11 @@ fun HomeScreen(
                                     .background(
                                         Brush.verticalGradient(
                                             colorStops = arrayOf(
-                                                0.0f to Color.Transparent,
-                                                0.55f to Loopa.Base.copy(alpha = 0.6f),
+                                                0.0f to Loopa.Base,
+                                                0.22f to Loopa.Base.copy(alpha = 0.5f),
+                                                0.35f to Color.Transparent,
+                                                0.65f to Color.Transparent,
+                                                0.82f to Loopa.Base.copy(alpha = 0.5f),
                                                 1.0f to Loopa.Base
                                             )
                                         )
