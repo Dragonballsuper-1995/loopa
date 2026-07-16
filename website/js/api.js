@@ -23,10 +23,13 @@ const API = {
 
     async _tmdb(endpoint, params = {}) {
         const url = new URL(`${CONFIG.TMDB_BASE}${endpoint}`);
-        url.searchParams.set('api_key', CONFIG.TMDB_KEY);
         url.searchParams.set('language', 'en-US');
         Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-        const res = await fetch(url.toString());
+        const res = await fetch(url.toString(), {
+            headers: {
+                'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
+            }
+        });
         if (!res.ok) throw new Error(`TMDB ${res.status} on ${endpoint}`);
         return res.json();
     },
@@ -203,7 +206,10 @@ const API = {
             console.log('Attempting AI recommendation via Cloudflare Proxy...');
             const res = await fetch(CONFIG.AI_PROXY_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
+                },
                 body: JSON.stringify({ prompt }),
             });
             

@@ -193,6 +193,11 @@ const App = {
             searchInput.addEventListener('input', e => {
                 const q = e.target.value.trim();
                 clearTimeout(this.s.searchDebounce);
+
+                if (this.s.view !== 'search' && q.length > 0) {
+                    this.navigateTo('search', true);
+                }
+
                 const grid = document.getElementById('searchResults');
                 const state = document.getElementById('searchState');
                 const browseContent = document.getElementById('radar-browse-content');
@@ -262,6 +267,63 @@ const App = {
         
         const detailModalBg = document.getElementById('detailModalBg');
         if (detailModalBg) detailModalBg.addEventListener('click', () => this.closeDrawer());
+
+        // Auth inputs Enter key listener
+        const authEmail = document.getElementById('authEmail');
+        const authPassword = document.getElementById('authPassword');
+        const handleAuthEnter = (e) => {
+            if (e.key === 'Enter') {
+                this._login();
+            }
+        };
+        if (authEmail) authEmail.addEventListener('keypress', handleAuthEnter);
+        if (authPassword) authPassword.addEventListener('keypress', handleAuthEnter);
+
+        // Global Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Escape key handler
+            if (e.key === 'Escape') {
+                // 1. Close Detail Modal if active
+                const detailModal = document.getElementById('detailModal');
+                if (detailModal && detailModal.classList.contains('active')) {
+                    this.closeDrawer();
+                }
+                // 2. Close Context Menu if visible
+                const cm = document.getElementById('contextMenu');
+                if (cm && !cm.classList.contains('hidden')) {
+                    this.closeContextMenu();
+                }
+                // 3. Clear and blur Search Input if focused
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput && document.activeElement === searchInput) {
+                    searchInput.value = '';
+                    searchInput.blur();
+                    searchInput.dispatchEvent(new Event('input'));
+                }
+            }
+
+            // "/" key to focus Search Input
+            if (e.key === '/') {
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput && document.activeElement !== searchInput) {
+                    const activeTag = document.activeElement.tagName;
+                    if (activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
+                        e.preventDefault();
+                        searchInput.focus();
+                        searchInput.select();
+                    }
+                }
+            }
+
+            // Ctrl/Cmd + Enter to save personal notes inside Detail Modal
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                const notesInput = document.getElementById('personalNotesInput');
+                if (notesInput && document.activeElement === notesInput) {
+                    const btnSaveNotes = document.getElementById('btnSaveNotes');
+                    if (btnSaveNotes) btnSaveNotes.click();
+                }
+            }
+        });
     },
 
     // ── Auth ──────────────────────────────────────────────────────────────────
@@ -303,7 +365,7 @@ const App = {
     },
 
     // ── Navigation ────────────────────────────────────────────────────────────
-    navigateTo(view) {
+    navigateTo(view, fromSearchInput = false) {
         if (view !== 'search') {
             clearInterval(this.s.heroInterval);
         }
@@ -317,25 +379,19 @@ const App = {
 
         document.querySelectorAll('.nav-btn').forEach(btn => {
             const isActive = btn.dataset.nav === view;
-            if (isActive) {
-                btn.classList.add('bg-neonOrange', 'text-white');
-                btn.classList.remove('bg-transparent', 'text-gray-400', 'hover:bg-white/10', 'hover:text-white', 'hover:text-vibrantCyan');
-            } else {
-                btn.classList.remove('bg-neonOrange', 'text-white');
-                btn.classList.add('bg-transparent', 'text-gray-400', 'hover:bg-white/10');
-                if (btn.dataset.nav === 'ai') btn.classList.add('hover:text-vibrantCyan');
-                else btn.classList.add('hover:text-white');
-            }
+            btn.classList.toggle('active-nav', isActive);
         });
 
         if (view === 'search') {
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) searchInput.value = '';
-            const browseContent = document.getElementById('radar-browse-content');
-            const resultsContainer = document.getElementById('search-results-container');
-            if (browseContent) browseContent.classList.remove('hidden');
-            if (resultsContainer) resultsContainer.classList.add('hidden');
-            this._loadDashboard();
+            if (!fromSearchInput) {
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) searchInput.value = '';
+                const browseContent = document.getElementById('radar-browse-content');
+                const resultsContainer = document.getElementById('search-results-container');
+                if (browseContent) browseContent.classList.remove('hidden');
+                if (resultsContainer) resultsContainer.classList.add('hidden');
+                this._loadDashboard();
+            }
         }
         if (view === 'watchlist') this._loadTerminal();
         if (view === 'ai' && !this.s.aiLoaded) this._loadAI();

@@ -1,15 +1,88 @@
 export default {
   async fetch(request, env, ctx) {
     // Add CORS headers so web and android apps can fetch this API
+    const allowedOrigins = [
+      'https://loopa.app',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5500',
+      'http://localhost:5500'
+    ];
+    const url = new URL(request.url);
+    const isTmdbImage = url.pathname.startsWith('/tmdb/t/p/');
+    const origin = request.headers.get('Origin');
+    const activeOrigin = isTmdbImage ? '*' : (allowedOrigins.includes(origin) ? origin : 'https://loopa.app');
+
     const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': activeOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Loopa-Client-Key',
     };
 
     // Handle OPTIONS requests for CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });
+    }
+
+    // For all non-OPTIONS requests, validate client authorization key (bypass for public TMDB images)
+    if (!isTmdbImage) {
+      const clientKey = request.headers.get('X-Loopa-Client-Key');
+      if (clientKey !== env.LOOPA_CLIENT_KEY) {
+        return new Response(JSON.stringify({ error: 'Unauthorized Client Request' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+    }
+
+    // --- Proxy TMDB Requests Securely ---
+    if (url.pathname.startsWith('/tmdb/')) {
+      if (request.method !== 'GET') {
+        return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+          status: 405,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      const subpath = url.pathname.replace(/^\/tmdb\//, '');
+      const isImage = subpath.startsWith('t/p/');
+      const targetHost = isImage ? 'https://image.tmdb.org/' : 'https://api.themoviedb.org/';
+      const targetUrl = new URL(targetHost + subpath);
+      
+      // Copy search parameters
+      url.searchParams.forEach((value, key) => {
+        targetUrl.searchParams.set(key, value);
+      });
+      
+      // Inject TMDB API Key from environment secrets (images don't require an API key)
+      if (!isImage) {
+        targetUrl.searchParams.set('api_key', env.TMDB_API_KEY || env.TMDB_KEY);
+      }
+
+      try {
+        const headers = {};
+        if (!isImage) {
+          headers['Accept'] = 'application/json';
+        }
+        const tmdbRes = await fetch(targetUrl.toString(), {
+          method: 'GET',
+          headers: headers
+        });
+
+        const data = await tmdbRes.arrayBuffer();
+        return new Response(data, {
+          status: tmdbRes.status,
+          headers: {
+            'Content-Type': tmdbRes.headers.get('Content-Type') || (isImage ? 'image/jpeg' : 'application/json'),
+            ...corsHeaders
+          }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: 'Failed to proxy TMDB request', details: err.message }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
     }
 
     if (request.method !== 'POST') {

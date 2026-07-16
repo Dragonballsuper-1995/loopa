@@ -26,9 +26,9 @@ android {
   signingConfigs {
     create("release") {
       storeFile = file("${rootDir}/app/release.keystore")
-      storePassword = "loopa123"
-      keyAlias = "loopa"
-      keyPassword = "loopa123"
+      storePassword = (project.findProperty("RELEASE_STORE_PASSWORD") ?: System.getenv("RELEASE_STORE_PASSWORD") ?: "loopa123").toString()
+      keyAlias = (project.findProperty("RELEASE_KEY_ALIAS") ?: System.getenv("RELEASE_KEY_ALIAS") ?: "loopa").toString()
+      keyPassword = (project.findProperty("RELEASE_KEY_PASSWORD") ?: System.getenv("RELEASE_KEY_PASSWORD") ?: "loopa123").toString()
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")

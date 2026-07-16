@@ -33,14 +33,22 @@ object NetworkModule {
         .build()
 
     val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val original = chain.request()
+            val requestBuilder = original.newBuilder()
+                .header("X-Loopa-Client-Key", com.loopa.app.BuildConfig.LOOPA_CLIENT_KEY)
+            val request = requestBuilder.build()
+            chain.proceed(request)
+        }
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         })
         .build()
 
     val tmdbApi: TmdbApiService by lazy {
+        val proxyBase = com.loopa.app.BuildConfig.AI_PROXY_URL.trimEnd('/') + "/tmdb/"
         Retrofit.Builder()
-            .baseUrl("https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/")
+            .baseUrl(proxyBase)
             .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
