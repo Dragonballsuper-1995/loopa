@@ -195,7 +195,7 @@ fun MediaTrackerApp(
                   AiRecommendationsScreen(viewModel = viewModel)
                 }
                 composable("discover") {
-                  DiscoverScreen(navController = navController, viewModel = viewModel)
+                  DiscoverScreen(navController = navController, viewModel = viewModel, hazeState = hazeState)
                 }
                 composable("settings") {
                   SettingsScreen(
@@ -923,10 +923,11 @@ fun TimelineRangeSlider(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: MediaViewModel = viewModel()) {
+fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: MediaViewModel = viewModel(), hazeState: dev.chrisbanes.haze.HazeState? = null) {
     var query by remember { mutableStateOf("") }
     var hoverMovie by remember { mutableStateOf<TmdbMovie?>(null) }
     val searchState by viewModel.searchState.collectAsState()
+    val searchSuggestions by viewModel.searchSuggestionsState.collectAsState()
     
     var showFilterSheet by remember { mutableStateOf(false) }
     var selectedMediaType by remember { mutableStateOf("All") }
@@ -954,11 +955,107 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
             viewModel.search("")
         }
     }
+    
+    val localHazeState = remember { dev.chrisbanes.haze.HazeState() }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // 1. The Scrollable Content
+        Box(modifier = Modifier.fillMaxSize().hazeSource(state = localHazeState)) {
+            if (query.isBlank()) {
+                HomeScreen(navController = navController, viewModel = viewModel)
+            } else {
+                when (val state = searchState) {
+                    is MediaUiState.Loading -> {
+                        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, top = 160.dp, end = 16.dp, bottom = 160.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(6) {
+                                RecommendationCardSkeleton()
+                            }
+                        }
+                    }
+                    is MediaUiState.Error -> {
+                        Box(modifier = Modifier.fillMaxSize().padding(top = 160.dp), contentAlignment = Alignment.TopCenter) {
+                            Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+                        }
+                    }
+                    is MediaUiState.InsufficientData -> {}
+                    is MediaUiState.Success -> {
+                        val filteredList = state.trending.filter { movie ->
+                            val typeMatch = when (selectedMediaType) {
+                                "Movies" -> movie.mediaType == "movie"
+                                "TV Shows" -> movie.mediaType == "tv"
+                                "Anime" -> movie.genreIds?.contains(16) == true
+                                else -> true
+                            }
+                            val date = movie.releaseDate ?: movie.firstAirDate ?: ""
+                            val year = if (date.length >= 4) date.substring(0, 4).toIntOrNull() ?: 0 else 0
+                            val yearMatch = year == 0 || year in releaseYearRange.start.toInt()..releaseYearRange.endInclusive.toInt()
+                            val studioMatch = if (selectedStudio == "All") true else movie.overview?.contains(selectedStudio, ignoreCase = true) == true
+                            val genreMatch = if (selectedGenres.isEmpty()) true else movie.genreIds?.any { it in selectedGenres } == true
+                            
+                            typeMatch && yearMatch && studioMatch && genreMatch
+                        }.let { list ->
+                            when (selectedSortBy) {
+                                "Rating (High to Low)" -> list.sortedByDescending { it.voteAverage ?: 0.0 }
+                                "Newest First" -> list.sortedByDescending { it.releaseDate ?: it.firstAirDate ?: "" }
+                                else -> list
+                            }
+                        }
+
+                        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, top = 160.dp, end = 16.dp, bottom = 160.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(filteredList.size) { index ->
+                                val movie = filteredList[index]
+                                RecommendationCard(
+                                    movie = movie,
+                                    onLongPress = { hoverMovie = it },
+                                    onRelease = { hoverMovie = null }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Search bar with progressive blur overlaid on top
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 180.dp)
+                .align(Alignment.TopCenter)
+                .then(
+                    if (true) {
+                        Modifier.hazeEffect(state = localHazeState) {
+                            blurRadius = 24.dp
+                            progressive = dev.chrisbanes.haze.HazeProgressive.verticalGradient(
+                                startIntensity = 1f,
+                                endIntensity = 0f
+                            )
+                        }
+                    } else Modifier
+                )
+                .background(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color(0xF50F0E0C),
+                            0.38f to Color(0xCC0F0E0C),
+                            0.55f to Color(0x730F0E0C),
+                            0.75f to Color(0x0D0F0E0C),
+                            1.0f to Color.Transparent
+                        )
+                    )
+                )
                 .windowInsetsPadding(WindowInsets.statusBars)
         ) {
             Spacer(modifier = Modifier.height(10.dp))
@@ -1072,76 +1169,7 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 1. The Scrollable Content (Box occupies remaining weight, Hero section is intact below search bar)
-            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                if (query.isBlank()) {
-                    HomeScreen(navController = navController, viewModel = viewModel)
-                } else {
-                    when (val state = searchState) {
-                        is MediaUiState.Loading -> {
-                            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 160.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(6) {
-                                    RecommendationCardSkeleton()
-                                }
-                            }
-                        }
-                        is MediaUiState.Error -> {
-                            Box(modifier = Modifier.fillMaxSize().padding(top = 16.dp), contentAlignment = Alignment.Center) {
-                                Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
-                            }
-                        }
-                        is MediaUiState.InsufficientData -> {}
-                        is MediaUiState.Success -> {
-                            val filteredList = state.trending.filter { movie ->
-                                val typeMatch = when (selectedMediaType) {
-                                    "Movies" -> movie.mediaType == "movie"
-                                    "TV Shows" -> movie.mediaType == "tv"
-                                    "Anime" -> movie.genreIds?.contains(16) == true
-                                    else -> true
-                                }
-                                val date = movie.releaseDate ?: movie.firstAirDate ?: ""
-                                val year = if (date.length >= 4) date.substring(0, 4).toIntOrNull() ?: 0 else 0
-                                val yearMatch = year == 0 || year in releaseYearRange.start.toInt()..releaseYearRange.endInclusive.toInt()
-                                val studioMatch = if (selectedStudio == "All") true else movie.overview?.contains(selectedStudio, ignoreCase = true) == true
-                                val genreMatch = if (selectedGenres.isEmpty()) true else movie.genreIds?.any { it in selectedGenres } == true
-                                
-                                typeMatch && yearMatch && studioMatch && genreMatch
-                            }.let { list ->
-                                when (selectedSortBy) {
-                                    "Rating (High to Low)" -> list.sortedByDescending { it.voteAverage ?: 0.0 }
-                                    "Newest First" -> list.sortedByDescending { it.releaseDate ?: it.firstAirDate ?: "" }
-                                    else -> list
-                                }
-                            }
-
-                            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 160.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(filteredList.size) { index ->
-                                    val movie = filteredList[index]
-                                    RecommendationCard(
-                                        movie = movie,
-                                        onLongPress = { hoverMovie = it },
-                                        onRelease = { hoverMovie = null }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
 
     // ── Hover Preview Overlay ──
@@ -1273,7 +1301,7 @@ fun RadarSearchBar(
             .height(50.dp)
             .shadow(elevation, com.loopa.ui.Loopa.PillShape)
             .onFocusChanged { isFocused = it.isFocused },
-        color = Color(0xDD161512),
+        color = Color(0x66161512),
         shape = com.loopa.ui.Loopa.PillShape,
         border = BorderStroke(
             width = 1.dp,

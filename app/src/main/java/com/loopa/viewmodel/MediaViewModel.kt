@@ -182,12 +182,61 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchState = MutableStateFlow<MediaUiState>(MediaUiState.Success(emptyList()))
     val searchState: StateFlow<MediaUiState> = _searchState.asStateFlow()
 
+    private val _searchSuggestionsState = MutableStateFlow<List<TmdbMovie>>(emptyList())
+    val searchSuggestionsState: StateFlow<List<TmdbMovie>> = _searchSuggestionsState.asStateFlow()
+
     private val _recommendationState = MutableStateFlow<MediaUiState>(MediaUiState.Loading)
     val recommendationState: StateFlow<MediaUiState> = _recommendationState.asStateFlow()
 
     init {
         fetchHomeData()
         fetchAiRecommendations()
+        
+        viewModelScope.launch {
+            savedMediaItems.collect { reindexSearchEngine() }
+        }
+        viewModelScope.launch {
+            _popularMovies.collect { reindexSearchEngine() }
+        }
+        viewModelScope.launch {
+            _popularTv.collect { reindexSearchEngine() }
+        }
+        viewModelScope.launch {
+            _topAnime.collect { reindexSearchEngine() }
+        }
+    }
+
+    fun reindexSearchEngine() {
+        com.loopa.search.SearchEngine.clearIndex()
+        com.loopa.search.SearchEngine.indexMediaItemEntities(savedMediaItems.value)
+        val trendingState = _uiState.value
+        if (trendingState is MediaUiState.Success) {
+            com.loopa.search.SearchEngine.indexMediaItems(trendingState.trending)
+        }
+        val searchTrending = _searchState.value
+        if (searchTrending is MediaUiState.Success) {
+            com.loopa.search.SearchEngine.indexMediaItems(searchTrending.trending)
+        }
+        com.loopa.search.SearchEngine.indexMediaItems(_popularMovies.value)
+        com.loopa.search.SearchEngine.indexMediaItems(_popularTv.value)
+        
+        val animeList = _topAnime.value.map { anime ->
+            TmdbMovie(
+                id = anime.malId,
+                title = anime.title,
+                name = null,
+                overview = anime.synopsis,
+                posterPath = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl,
+                backdropPath = null,
+                voteAverage = anime.score,
+                releaseDate = null,
+                firstAirDate = null,
+                mediaType = "anime",
+                popularity = 0.0,
+                genreIds = null
+            )
+        }
+        com.loopa.search.SearchEngine.indexMediaItems(animeList)
     }
 
     fun startRealtime() {
@@ -293,6 +342,13 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     private var searchJob: kotlinx.coroutines.Job? = null
 
     fun search(query: String) {
+        // Instantly query Trie suggestions (0ms latency for prefix/fuzzy local matches)
+        if (query.isNotBlank()) {
+            _searchSuggestionsState.value = com.loopa.search.SearchEngine.getSuggestions(query)
+        } else {
+            _searchSuggestionsState.value = emptyList()
+        }
+
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             if (query.isNotBlank()) kotlinx.coroutines.delay(500)
@@ -319,27 +375,44 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
             }
             
             var actualQuery = query
-            val proxyUrl = BuildConfig.AI_PROXY_URL
-            if (proxyUrl.isNotEmpty() && proxyUrl != "YOUR_CLOUDFLARE_WORKER_URL" && query.length >= 3) {
-                try {
-                    val prompt = "Correct any typos in this movie/TV show search query: '$query'. Return ONLY the corrected title, nothing else. If it's correct, return it as is."
-                    val jsonBody = org.json.JSONObject().apply {
-                        put("prompt", prompt)
-                    }
-                    val reqBody = okhttp3.RequestBody.create("application/json".toMediaType(), jsonBody.toString())
-                    val req = okhttp3.Request.Builder()
-                        .url(proxyUrl)
-                        .post(reqBody)
-                        .build()
-                    val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.loopa.network.NetworkModule.okHttpClient.newCall(req).execute() }
-                    if (response.isSuccessful) {
-                        val corrected = response.body?.string()?.trim()
-                        if (!corrected.isNullOrEmpty() && corrected != "[]" && !corrected.contains("error", ignoreCase = true)) {
-                            actualQuery = corrected
+            
+            // Check if we have cached correction
+            val cached = com.loopa.search.SearchEngine.getCachedCorrection(query)
+            if (cached != null) {
+                actualQuery = cached
+            } else {
+                val proxyUrl = BuildConfig.AI_PROXY_URL
+                if (proxyUrl.isNotEmpty() && proxyUrl != "YOUR_CLOUDFLARE_WORKER_URL" && query.length >= 3) {
+                    try {
+                        val prompt = "Correct any typos, spelling errors, or incomplete conceptual names in this media search query (movies, TV shows, anime): '$query'. Return ONLY a JSON object in this format: {\"correctedQuery\":\"<corrected title>\",\"mediaType\":\"movie\"|\"tv\"|\"anime\"|\"all\"}. Return nothing else. Do not include markdown code block formatting."
+                        val jsonBody = org.json.JSONObject().apply {
+                            put("prompt", prompt)
                         }
+                        val reqBody = okhttp3.RequestBody.create("application/json".toMediaType(), jsonBody.toString())
+                        val req = okhttp3.Request.Builder()
+                            .url(proxyUrl)
+                            .post(reqBody)
+                            .build()
+                        val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.loopa.network.NetworkModule.okHttpClient.newCall(req).execute() }
+                        if (response.isSuccessful) {
+                            var text = response.body?.string()?.trim() ?: ""
+                            text = text.replace("```json", "").replace("```", "").trim()
+                            if (text.isNotEmpty() && text.startsWith("{")) {
+                                try {
+                                    val parsed = org.json.JSONObject(text)
+                                    val corrected = parsed.optString("correctedQuery")
+                                    if (!corrected.isNullOrEmpty()) {
+                                        actualQuery = corrected
+                                        com.loopa.search.SearchEngine.cacheCorrection(query, actualQuery)
+                                    }
+                                } catch (e: Exception) {
+                                    // Parse failed, fallback
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // ignore and fallback to original
                     }
-                } catch (e: Exception) {
-                    // ignore and fallback to original
                 }
             }
 
@@ -348,7 +421,42 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                     _searchState.value = MediaUiState.Error(e.localizedMessage ?: "Unknown error occurred")
                 }
                 .collect { movies ->
-                    _searchState.value = MediaUiState.Success(movies)
+                    // Merge TMDB remote results and local index suggestions (watchlist/caching matches)
+                    val localHits = com.loopa.search.SearchEngine.getSuggestions(query, 4)
+                    val mergedList = mutableListOf<TmdbMovie>()
+                    val seenKeys = mutableSetOf<String>()
+
+                    val normalizedQ = query.lowercase(java.util.Locale.getDefault()).trim()
+                    val normalizedAQ = actualQuery.lowercase(java.util.Locale.getDefault()).trim()
+
+                    // 1. Exact local matches first
+                    for (item in localHits) {
+                        val title = (item.title ?: item.name ?: "").lowercase(java.util.Locale.getDefault()).trim()
+                        if (title == normalizedQ || title == normalizedAQ) {
+                            val key = "${item.id}_${item.mediaType ?: "movie"}"
+                            if (seenKeys.add(key)) {
+                                mergedList.add(item)
+                            }
+                        }
+                    }
+
+                    // 2. Remote API results
+                    for (item in movies) {
+                        val key = "${item.id}_${item.mediaType ?: "movie"}"
+                        if (seenKeys.add(key)) {
+                            mergedList.add(item)
+                        }
+                    }
+
+                    // 3. Other local suggestions (fuzzy matches)
+                    for (item in localHits) {
+                        val key = "${item.id}_${item.mediaType ?: "movie"}"
+                        if (seenKeys.add(key)) {
+                            mergedList.add(item)
+                        }
+                    }
+
+                    _searchState.value = MediaUiState.Success(mergedList)
                 }
         }
     }

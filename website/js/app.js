@@ -17,6 +17,12 @@ const App = {
         searchDebounce: null,
         aiLoaded: false,
         aiRecommendations: [],
+        suggestionIndex: -1,
+        currentSuggestions: [],
+        trendingList: [],
+        animeList: [],
+        moviesList: [],
+        tvList: [],
     },
 
     async init() {
@@ -224,7 +230,9 @@ const App = {
                 }
                 if (state) state.classList.add('hidden');
                 if (grid) grid.innerHTML = UI.skeletonGrid(8);
-                this.s.searchDebounce = setTimeout(() => this._doSearch(q), 420);
+                this.s.searchDebounce = setTimeout(() => {
+                    this._doSearch(q);
+                }, 420);
             });
         }
 
@@ -410,6 +418,11 @@ const App = {
         ]);
 
         const t = trending.status === 'fulfilled' ? trending.value : [];
+        this.s.trendingList = t;
+        this.s.animeList = anime.status === 'fulfilled' ? anime.value : [];
+        this.s.moviesList = movies.status === 'fulfilled' ? movies.value : [];
+        this.s.tvList = tv.status === 'fulfilled' ? tv.value : [];
+
         if (wl.status === 'fulfilled') {
             this.s.watchlist = wl.value;
             if (!this.s.isGuest) {
@@ -417,6 +430,8 @@ const App = {
                 this._updateSyncTime();
             }
         }
+
+        this._reindexSearch();
 
         const heroItems = t.filter(i => i.backdropUrl || i.posterUrl).slice(0, 5);
         const watching = this.s.watchlist.find(i => i.list_name === 'Watching');
@@ -439,14 +454,99 @@ const App = {
 
     async _doSearch(q) {
         try {
-            const res = await API.searchAll(q);
-            this.s.searchResults = res;
-            const list = this.s.searchFilter === 'all' ? res : res.filter(i => i.mediaType === this.s.searchFilter);
+            let actualQuery = q;
+            
+            // Check if we have a cached correction
+            const cached = LoopaSearchEngine.getCachedCorrection(q);
+            if (cached) {
+                actualQuery = cached;
+                console.log(`[SearchEngine] Using cached correction for '${q}' -> '${actualQuery}'`);
+            } else if (q.length >= 3 && CONFIG.AI_PROXY_URL) {
+                // Call Gemini via AI Proxy to optimize/correct query
+                try {
+                    const prompt = `Correct any typos, spelling errors, or incomplete conceptual names in this media search query (movies, TV shows, anime): '${q}'. Return ONLY a JSON object in this format: {"correctedQuery":"<corrected title>","mediaTypeHint":"movie"|"tv"|"anime"|"all"}. Return nothing else. Do not include markdown code block formatting. Examples: "Mohabatein" -> {"correctedQuery":"Mohabbatein","mediaTypeHint":"movie"}, "Moha" -> {"correctedQuery":"Mohabbatein","mediaTypeHint":"movie"}, "Doraemon Japan" -> {"correctedQuery":"Doraemon: Nobita and the Birth of Japan","mediaTypeHint":"anime"}.`;
+                    
+                    const res = await fetch(CONFIG.AI_PROXY_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
+                        },
+                        body: JSON.stringify({ prompt })
+                    });
+                    
+                    if (res.ok) {
+                        let text = await res.text();
+                        text = text.replace(/```json?/g, '').replace(/```/g, '').trim();
+                        try {
+                            const parsed = JSON.parse(text);
+                            if (parsed.correctedQuery) {
+                                actualQuery = parsed.correctedQuery;
+                                LoopaSearchEngine.cacheCorrection(q, actualQuery);
+                                console.log(`[SearchEngine] Gemini corrected '${q}' -> '${actualQuery}'`);
+                            }
+                        } catch (e) {
+                            console.warn('[SearchEngine] Failed to parse query correction response:', text);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[SearchEngine] Gemini query correction failed, falling back to original:', e.message);
+                }
+            }
+
+            // Perform remote API search
+            let res = await API.searchAll(actualQuery);
+            
+            // Also fetch fuzzy matches from local index to merge (Personalization / Offline index search)
+            const localHits = LoopaSearchEngine.getSuggestions(q, 4);
+            
+            // Merge results: keep unique IDs, and prioritize watchlist matches
+            const merged = [];
+            const seen = new Set();
+            
+            const normalizedQ = q.toLowerCase().trim();
+            const normalizedAQ = actualQuery.toLowerCase().trim();
+
+            // 1. Exact local matches first
+            localHits.forEach(item => {
+                const title = item.title.toLowerCase().trim();
+                if (title === normalizedQ || title === normalizedAQ) {
+                    const key = item.id + '_' + item.mediaType;
+                    if (!seen.has(key)) {
+                        merged.push(item);
+                        seen.add(key);
+                    }
+                }
+            });
+            
+            // 2. Remote API results
+            res.forEach(item => {
+                const key = item.id + '_' + item.mediaType;
+                if (!seen.has(key)) {
+                    merged.push(item);
+                    seen.add(key);
+                }
+            });
+
+            // 3. Other local fuzzy matches
+            localHits.forEach(item => {
+                const key = item.id + '_' + item.mediaType;
+                if (!seen.has(key)) {
+                    merged.push(item);
+                    seen.add(key);
+                }
+            });
+
+            this.s.searchResults = merged;
+            const list = this.s.searchFilter === 'all' ? merged : merged.filter(i => i.mediaType === this.s.searchFilter);
             UI.renderSearchGrid(list);
         } catch (err) {
             document.getElementById('searchResults').innerHTML = '';
-            document.getElementById('searchState').classList.remove('hidden');
-            document.getElementById('searchState').innerHTML = `<p class="font-headers text-xl text-red-500">ERROR: ${err.message}</p>`;
+            const state = document.getElementById('searchState');
+            if (state) {
+                state.classList.remove('hidden');
+                state.innerHTML = `<p class="font-headers text-xl text-red-500">ERROR: ${err.message}</p>`;
+            }
         }
     },
 
@@ -457,6 +557,7 @@ const App = {
             this.s.watchlist = await SBList.getAll(this.s.user.id);
             localStorage.setItem('lastSyncTime', Date.now());
             this._updateSyncTime();
+            this._reindexSearch();
             this._updateWLUI();
         } catch (err) {
             UI.toast('SYNC FAILED', 'error');
@@ -467,6 +568,50 @@ const App = {
         document.getElementById('watchlistCount').textContent = `${this.s.watchlist.length} TARGETS ACQUIRED`;
         const list = this.s.wlFilter === 'all' ? this.s.watchlist : this.s.watchlist.filter(i => i.list_name === this.s.wlFilter);
         UI.renderWatchlistGrid(list);
+    },
+
+    _reindexSearch() {
+        if (!window.LoopaSearchEngine) return;
+        LoopaSearchEngine.clearIndex();
+        
+        if (this.s.trendingList) LoopaSearchEngine.indexMediaItems(this.s.trendingList);
+        if (this.s.animeList) LoopaSearchEngine.indexMediaItems(this.s.animeList);
+        if (this.s.moviesList) LoopaSearchEngine.indexMediaItems(this.s.moviesList);
+        if (this.s.tvList) LoopaSearchEngine.indexMediaItems(this.s.tvList);
+        
+        if (this.s.watchlist && this.s.watchlist.length > 0) {
+            const normalizedWL = this.s.watchlist.map(dbItem => ({
+                id: dbItem.id,
+                mediaType: dbItem.media_type,
+                title: dbItem.title,
+                posterUrl: dbItem.image_url,
+                backdropUrl: dbItem.image_url,
+                year: dbItem.date ? String(dbItem.date).substring(0, 4) : '',
+                score: dbItem.score,
+                synopsis: dbItem.personal_notes || '',
+                genres: [],
+                totalEpisodes: dbItem.total_episodes || 0,
+                totalSeasons: dbItem.total_seasons || 0,
+                status: dbItem.list_name,
+                inWatchlist: true
+            }));
+            LoopaSearchEngine.indexMediaItems(normalizedWL);
+        }
+    },
+
+    _selectSuggestion(item) {
+        const searchInput = document.getElementById('searchInput');
+        const suggestionsDropdown = document.getElementById('searchSuggestionsDropdown');
+        if (searchInput) searchInput.value = item.title;
+        if (suggestionsDropdown) suggestionsDropdown.classList.add('hidden');
+        
+        // Populate view-search state
+        const browseContent = document.getElementById('radar-browse-content');
+        const resultsContainer = document.getElementById('search-results-container');
+        if (browseContent) browseContent.classList.add('hidden');
+        if (resultsContainer) resultsContainer.classList.remove('hidden');
+        
+        this.openDrawer(item);
     },
 
     async _loadAI() {
@@ -650,6 +795,7 @@ const App = {
             this.s.drawerDBEntry = this.s.watchlist.find(w => w.id === item.id && w.media_type === item.mediaType);
             UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
             this._updateWLUI();
+            this._reindexSearch();
             UI.toast('TARGET ACQUIRED');
         } catch (e) { UI.toast('SYSTEM ERROR', 'error'); }
     },
@@ -662,6 +808,7 @@ const App = {
             this.s.drawerDBEntry = null;
             UI.renderDrawer(this.s.drawerItem, null);
             this._updateWLUI();
+            this._reindexSearch();
             UI.toast('TARGET PURGED');
         } catch (e) { UI.toast('SYSTEM ERROR', 'error'); }
     },
