@@ -355,8 +355,9 @@ fun MyListsScreen(
     val savedItems by viewModel.savedMediaItems.collectAsState()
     val statsState by statsViewModel.statsState.collectAsState()
     
-    val filteredItems = remember(savedItems, selectedTab, listQuery) {
-        viewModel.getFilteredLocalItems(savedItems, selectedTab, listQuery)
+    var filteredItems by remember { mutableStateOf<List<com.loopa.db.MediaItemEntity>>(emptyList()) }
+    LaunchedEffect(savedItems, selectedTab, listQuery) {
+        filteredItems = viewModel.getFilteredLocalItems(savedItems, selectedTab, listQuery)
     }
     
     var isSyncing by remember { mutableStateOf(false) }

@@ -1,0 +1,11 @@
+{
+  "name": "loopa-website",
+  "version": "1.0.0",
+  "description": "Loopa website performance optimization tools",
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./website/css/styles.css -o ./website/css/output.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

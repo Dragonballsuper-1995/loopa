@@ -19,4 +19,10 @@ interface WatchedEpisodeDao {
 
     @Query("DELETE FROM watched_episodes WHERE mediaId = :mediaId AND mediaType = :mediaType")
     suspend fun deleteAllForMedia(mediaId: Int, mediaType: String)
+
+    @Query("SELECT * FROM watched_episodes")
+    suspend fun getAllWatchedEpisodesSync(): List<WatchedEpisodeEntity>
+
+    @Query("DELETE FROM watched_episodes")
+    suspend fun deleteAllWatchedEpisodes()
 }

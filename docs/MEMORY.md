@@ -2,26 +2,25 @@
 
 *This document acts as our session-to-session state tracker to preserve context, track milestones, and maintain focus on immediate next steps without hallucination or token waste.*
 
-## Current Phase: NEXT EPOCH PLANNING
-**Status**: IN PROGRESS
-**Date**: July 23, 2026
+## Current Phase: DEEP OPTIMIZATION & V.1.2.0 RELEASE
+**Status**: COMPLETE
+**Date**: July 28, 2026
 
-The initial 3-Phase Unification Implementation Plan (Schema Hardening, Visual Parity, Feature Acceleration) is now **100% COMPLETE**. The Android and Web clients are fully synchronized with offline-first LWW conflict resolution and a unified design system.
+The massive deep-optimization phase for Loopa v1.2.0 across both the Android app and the Web Dashboard is now **100% COMPLETE**. Major technical debt regarding Jetpack Compose rendering stutter, Cloudflare caching, and offline sync mechanics has been fully resolved. 
 
 ### Completed Milestones
-- [x] Initial Cross-Platform Architecture Audit.
-- [x] Setup of the `docs/` directory (`CONTEXT.md`, `DESIGN.md`, `ARCHITECTURE.md`, `MEMORY.md`).
-- [x] **Phase 1**: Database Schema & Sync Protocol Hardening (`updated_at`, Room PendingOp Queue).
-- [x] **Phase 2**: Visual Design System Synchronization (DM Sans, token alignment).
-- [x] **Phase 3**: Feature Parity Acceleration (AI Schema, Jikan Search, Guest Mode).
-
-### Active Tasks & Immediate Next Steps
-- **Brainstorming & Roadmap Definition**: Determine the next major feature set for Loopa (e.g., Social features, AI insights, Analytics, PWA support, Notifications).
+- [x] **Web Optimization**: Removed heavy Tailwind CDN compiler script and introduced static build process (`output.css`).
+- [x] **Web Offline Mode**: Fully integrated `sw.js` Service Worker with stale-while-revalidate caching.
+- [x] **Web Virtualization**: Added IntersectionObserver for progressive Watchlist DOM rendering, enabling butter-smooth scrolling.
+- [x] **Android UI Overhaul**: Migrated Jetpack Compose layouts to `LazyColumn`. Extracted heavy `while(true)` background loops from the Hero Carousel.
+- [x] **Android Sync Bugs Resolved**: `MediaRepository.kt` now correctly pulls `watched_episodes` via PostgREST to ensure episode progress perfectly matches the website on launch.
+- [x] **Android Scroll Stutter Fixed**: Resolved massive recomposition stuttering in `LoopaComponents.kt` by locking `pointerInput(Unit)` and updating callback references via `rememberUpdatedState()`.
+- [x] **V.1.2.0 Release**: Codebase cleansed of deprecated prompt docs and APK compiled and staged for GitHub release.
 
 ### Key Technical Decisions & Rationales
-- **Offline-First LWW**: Validated and working across both platforms.
-- **Supabase Realtime**: Efficient, targeted row-level updates are active.
-- **Design Tokens**: Perfect parity achieved across Tailwind (Web) and Jetpack Compose (Android).
+- **Static Assets over CDN**: Tailwind CSS compilation now occurs at build time rather than runtime to aggressively cut Time-to-First-Byte (TTFB).
+- **Compose Recomposition Hygiene**: Avoided `java.lang.IllegalArgumentException: Key was already used` crashes by relying on index-based fallbacks instead of strictly unique IDs from the occasionally duplicating TMDB API responses.
+- **Background Sync Scaling**: Replaced blocking delays in network requests (e.g. AI posters, sync loops) with `Dispatchers.Default` and `async / awaitAll` concurrent batches.
 
 ## Next Session Goal
-Define the feature roadmap for Loopa v2 and begin drafting the implementation plan for the chosen features.
+Begin exploring major feature expansions for V.2.0 (e.g. enhanced Social loops, PWA optimizations, or deeper Gemini AI analysis).

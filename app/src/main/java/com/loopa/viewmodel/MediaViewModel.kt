@@ -243,37 +243,43 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private var searchIndexJob: kotlinx.coroutines.Job? = null
+
     fun reindexSearchEngine() {
-        com.loopa.search.SearchEngine.clearIndex()
-        com.loopa.search.SearchEngine.indexMediaItemEntities(savedMediaItems.value)
-        val trendingState = _uiState.value
-        if (trendingState is MediaUiState.Success) {
-            com.loopa.search.SearchEngine.indexMediaItems(trendingState.trending)
+        searchIndexJob?.cancel()
+        searchIndexJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            kotlinx.coroutines.delay(300)
+            com.loopa.search.SearchEngine.clearIndex()
+            com.loopa.search.SearchEngine.indexMediaItemEntities(savedMediaItems.value)
+            val trendingState = _uiState.value
+            if (trendingState is MediaUiState.Success) {
+                com.loopa.search.SearchEngine.indexMediaItems(trendingState.trending)
+            }
+            val searchTrending = _searchState.value
+            if (searchTrending is MediaUiState.Success) {
+                com.loopa.search.SearchEngine.indexMediaItems(searchTrending.trending)
+            }
+            com.loopa.search.SearchEngine.indexMediaItems(_popularMovies.value)
+            com.loopa.search.SearchEngine.indexMediaItems(_popularTv.value)
+            
+            val animeList = _topAnime.value.map { anime ->
+                TmdbMovie(
+                    id = anime.malId,
+                    title = anime.title,
+                    name = null,
+                    overview = anime.synopsis,
+                    posterPath = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl,
+                    backdropPath = null,
+                    voteAverage = anime.score,
+                    releaseDate = null,
+                    firstAirDate = null,
+                    mediaType = "anime",
+                    popularity = 0.0,
+                    genreIds = null
+                )
+            }
+            com.loopa.search.SearchEngine.indexMediaItems(animeList)
         }
-        val searchTrending = _searchState.value
-        if (searchTrending is MediaUiState.Success) {
-            com.loopa.search.SearchEngine.indexMediaItems(searchTrending.trending)
-        }
-        com.loopa.search.SearchEngine.indexMediaItems(_popularMovies.value)
-        com.loopa.search.SearchEngine.indexMediaItems(_popularTv.value)
-        
-        val animeList = _topAnime.value.map { anime ->
-            TmdbMovie(
-                id = anime.malId,
-                title = anime.title,
-                name = null,
-                overview = anime.synopsis,
-                posterPath = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl,
-                backdropPath = null,
-                voteAverage = anime.score,
-                releaseDate = null,
-                firstAirDate = null,
-                mediaType = "anime",
-                popularity = 0.0,
-                genreIds = null
-            )
-        }
-        com.loopa.search.SearchEngine.indexMediaItems(animeList)
     }
 
     fun startRealtime() {
@@ -348,39 +354,44 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
             if (missing.isEmpty()) return@launch
             android.util.Log.d("MediaViewModel", "[Sync] Hydrating ${missing.size} legacy items for stats...")
             
-            for (item in missing) {
-                var finalRuntime: Int? = null
-                var finalGenres: String? = null
-                var finalDirector: String? = null
-                try {
-                    if (item.mediaType == "anime") {
-                        val detail = com.loopa.network.NetworkModule.jikanApi.getAnimeDetails(item.id).data
-                        finalGenres = detail.genres?.joinToString(", ") { it.name }
-                    } else if (item.mediaType == "movie") {
-                        val detail = com.loopa.network.NetworkModule.tmdbApi.getMovieDetails(item.id, com.loopa.app.BuildConfig.TMDB_API_KEY)
-                        finalRuntime = detail.runtime
-                        finalGenres = detail.genres?.joinToString(", ") { it.name }
-                        finalDirector = detail.credits?.crew?.firstOrNull { it.job == "Director" }?.name
-                    } else if (item.mediaType == "tv") {
-                        val detail = com.loopa.network.NetworkModule.tmdbApi.getTvDetails(item.id, com.loopa.app.BuildConfig.TMDB_API_KEY)
-                        finalRuntime = detail.episodeRunTime?.firstOrNull()
-                        finalGenres = detail.genres?.joinToString(", ") { it.name }
-                        finalDirector = detail.createdBy?.firstOrNull()?.name
+            val chunks = missing.chunked(5)
+            for (chunk in chunks) {
+                chunk.map { item ->
+                    async {
+                        var finalRuntime: Int? = null
+                        var finalGenres: String? = null
+                        var finalDirector: String? = null
+                        try {
+                            if (item.mediaType == "anime") {
+                                val detail = com.loopa.network.NetworkModule.jikanApi.getAnimeDetails(item.id).data
+                                finalGenres = detail.genres?.joinToString(", ") { it.name }
+                            } else if (item.mediaType == "movie") {
+                                val detail = com.loopa.network.NetworkModule.tmdbApi.getMovieDetails(item.id, com.loopa.app.BuildConfig.TMDB_API_KEY)
+                                finalRuntime = detail.runtime
+                                finalGenres = detail.genres?.joinToString(", ") { it.name }
+                                finalDirector = detail.credits?.crew?.firstOrNull { it.job == "Director" }?.name
+                            } else if (item.mediaType == "tv") {
+                                val detail = com.loopa.network.NetworkModule.tmdbApi.getTvDetails(item.id, com.loopa.app.BuildConfig.TMDB_API_KEY)
+                                finalRuntime = detail.episodeRunTime?.firstOrNull()
+                                finalGenres = detail.genres?.joinToString(", ") { it.name }
+                                finalDirector = detail.createdBy?.firstOrNull()?.name
+                            }
+                            
+                            val updatedItem = item.copy(
+                                runtime = finalRuntime,
+                                genres = finalGenres,
+                                directorStudio = finalDirector,
+                                // We do not bump updatedAt here to avoid triggering false sync loops 
+                                // unless we specifically want to push to remote. The repository handles 
+                                // the RemoteMediaItem update and sync queueing.
+                            )
+                            repository.insertMediaItem(updatedItem)
+                        } catch (e: Exception) {
+                            android.util.Log.e("MediaViewModel", "Failed to hydrate item ${item.id}: ${e.message}")
+                        }
                     }
-                    
-                    val updatedItem = item.copy(
-                        runtime = finalRuntime,
-                        genres = finalGenres,
-                        directorStudio = finalDirector,
-                        // We do not bump updatedAt here to avoid triggering false sync loops 
-                        // unless we specifically want to push to remote. The repository handles 
-                        // the RemoteMediaItem update and sync queueing.
-                    )
-                    repository.insertMediaItem(updatedItem)
-                    kotlinx.coroutines.delay(500)
-                } catch (e: Exception) {
-                    android.util.Log.e("MediaViewModel", "Failed to hydrate item ${item.id}: ${e.message}")
-                }
+                }.awaitAll()
+                kotlinx.coroutines.delay(500)
             }
             android.util.Log.d("MediaViewModel", "[Sync] Hydration complete.")
         }
@@ -393,16 +404,16 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putLong("last_sync_time", currentTime).apply()
     }
 
-    fun getFilteredLocalItems(items: List<MediaItemEntity>, tabIndex: Int, query: String): List<MediaItemEntity> {
+    suspend fun getFilteredLocalItems(items: List<MediaItemEntity>, tabIndex: Int, query: String): List<MediaItemEntity> = withContext(kotlinx.coroutines.Dispatchers.Default) {
         val typeFiltered = when (tabIndex) {
             1 -> items.filter { it.mediaType == "movie" }
             2 -> items.filter { it.mediaType == "tv" }
             3 -> items.filter { it.mediaType == "anime" }
             else -> items
         }
-        if (query.isBlank()) return typeFiltered
+        if (query.isBlank()) return@withContext typeFiltered
         
-        return typeFiltered.filter { fuzzyMatch(query, it.title) }
+        typeFiltered.filter { fuzzyMatch(query, it.title) }
     }
     
     private fun fuzzyMatch(query: String, text: String): Boolean {

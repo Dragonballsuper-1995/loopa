@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
@@ -276,6 +277,10 @@ fun LoopPosterCard(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
     )
 
+    val currentOnClick = rememberUpdatedState(onClick)
+    val currentOnLongPress = rememberUpdatedState(onLongPress)
+    val currentOnRelease = rememberUpdatedState(onRelease)
+
     Box(
         modifier = modifier
             .scale(scale)
@@ -283,21 +288,21 @@ fun LoopPosterCard(
             .clip(Loopa.CardShape)
             .background(Loopa.Surface)
             .border(1.dp, Loopa.Border, Loopa.CardShape)
-            .pointerInput(onClick, onLongPress, onRelease) {
+            .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { 
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onClick() 
+                        currentOnClick.value() 
                     },
                     onLongPress = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onLongPress?.invoke() 
+                        currentOnLongPress.value?.invoke() 
                     },
                     onPress = {
                         isPressed = true
                         try { awaitRelease() } finally { 
                             isPressed = false
-                            onRelease?.invoke() 
+                            currentOnRelease.value?.invoke() 
                         }
                     }
                 )

@@ -23,4 +23,6 @@ app/build/
 
 # Design References and Screenshots
 platform_references/
-references/
+references/ 
+node_modules/
+website/css/output.css

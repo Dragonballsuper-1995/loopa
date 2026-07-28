@@ -361,10 +361,44 @@ const UI = {
         }
         empty.classList.add('hidden');
         grid.innerHTML = '';
-        items.forEach(dbItem => {
-            const card = this.posterCardGrid(dbItem, true, item => App.openDrawerFromDB(dbItem));
-            grid.appendChild(card);
-        });
+
+        let currentIndex = 0;
+        const chunkSize = 20;
+
+        // Create sentinel element for IntersectionObserver
+        const sentinel = document.createElement('div');
+        sentinel.className = 'w-full h-10 col-span-full';
+
+        const loadNextChunk = () => {
+            const chunk = items.slice(currentIndex, currentIndex + chunkSize);
+            // Remove sentinel temporarily to append actual items correctly
+            if (sentinel.parentNode === grid) {
+                grid.removeChild(sentinel);
+            }
+            
+            chunk.forEach(dbItem => {
+                const card = this.posterCardGrid(dbItem, true, item => App.openDrawerFromDB(dbItem));
+                grid.appendChild(card);
+            });
+            
+            currentIndex += chunkSize;
+
+            // Re-append sentinel if there are more items
+            if (currentIndex < items.length) {
+                grid.appendChild(sentinel);
+            }
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadNextChunk();
+            }
+        }, { rootMargin: '200px' });
+        
+        observer.observe(sentinel);
+
+        // Load first chunk
+        loadNextChunk();
     },
 
     renderAIGrid(items) {

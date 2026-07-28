@@ -130,7 +130,6 @@ class MediaRepository(
         
         parsedTitles.mapIndexed { index, title ->
             async {
-                kotlinx.coroutines.delay(index * 500L)
                 try {
                     val cacheKey = "search_tmdb_$title"
                     val cachedPoster = ApiCache.get<String>(cacheKey)
@@ -261,6 +260,7 @@ class MediaRepository(
         val user = NetworkModule.supabase.auth.currentUserOrNull()
             ?: throw Exception("User not logged in")
 
+        // ── 1. Sync Media Items ──────────────────────────────────────────
         val remoteItems = retryWithBackoff {
             NetworkModule.supabase.postgrest["media_items"]
                 .select()
@@ -284,6 +284,39 @@ class MediaRepository(
                 (remote.updatedAt ?: "") >= (local.updatedAt ?: "")
             if (shouldApply) {
                 mediaItemDao.insertMediaItem(remote.toEntity())
+            }
+        }
+
+        // ── 2. Sync Watched Episodes ──────────────────────────────────────
+        val remoteEpisodes = retryWithBackoff {
+            NetworkModule.supabase.postgrest["watched_episodes"]
+                .select()
+                .decodeList<RemoteWatchedEpisode>()
+        }
+        val localEpisodes = watchedEpisodeDao.getAllWatchedEpisodesSync()
+        val remoteEpisodeMap = remoteEpisodes.associateBy { "${it.mediaId}_${it.mediaType}_${it.seasonNumber}_${it.episodeNumber}" }
+        
+        // Delete local episodes removed from the server
+        localEpisodes
+            .filter { "${it.mediaId}_${it.mediaType}_${it.seasonNumber}_${it.episodeNumber}" !in remoteEpisodeMap }
+            .forEach { watchedEpisodeDao.deleteWatchedEpisode(it.mediaId, it.mediaType, it.seasonNumber, it.episodeNumber) }
+            
+        // Upsert remote episodes using watchedAt timestamp comparison
+        val localEpisodeMap = localEpisodes.associateBy { "${it.mediaId}_${it.mediaType}_${it.seasonNumber}_${it.episodeNumber}" }
+        remoteEpisodes.forEach { remote ->
+            val key = "${remote.mediaId}_${remote.mediaType}_${remote.seasonNumber}_${remote.episodeNumber}"
+            val local = localEpisodeMap[key]
+            val shouldApply = local == null || (remote.watchedAt) >= (local.watchedAt)
+            if (shouldApply) {
+                watchedEpisodeDao.insertWatchedEpisode(
+                    com.loopa.db.WatchedEpisodeEntity(
+                        mediaId = remote.mediaId,
+                        mediaType = remote.mediaType,
+                        seasonNumber = remote.seasonNumber,
+                        episodeNumber = remote.episodeNumber,
+                        watchedAt = remote.watchedAt
+                    )
+                )
             }
         }
     }

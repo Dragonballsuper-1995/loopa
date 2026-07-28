@@ -539,11 +539,12 @@ const App = {
             UI.renderHero(heroItems[heroIndex], watching);
         }, 5000);
 
-        // Pause hero when page is hidden (user switches browser tab)
+        // Pause hero when page is hidden (user switches browser tab) or modal is open
         if (!this.s._visibilityBound) {
             this.s._visibilityBound = true;
             document.addEventListener('visibilitychange', () => {
-                this.s.heroPaused = document.hidden;
+                const isModalOpen = document.getElementById('detailModal')?.classList.contains('active');
+                this.s.heroPaused = document.hidden || isModalOpen;
             });
         }
     },

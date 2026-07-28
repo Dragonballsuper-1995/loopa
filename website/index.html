@@ -28,15 +28,18 @@
     <meta name="twitter:description"
         content="loopa is your personal media tracker. Beautifully log everything you watch and let AI curate your next obsession.">
     <meta name="twitter:image" content="https://loopa.app/og-image.jpg">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://utkqrfdheofuepeuzutg.supabase.co">
+    <link rel="preconnect" href="https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev">
+    
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Supabase JS v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <script src="js/tailwind-config.js?v=20"></script>
-    <link rel="stylesheet" href="css/styles.css?v=20">
+    <link rel="stylesheet" href="css/output.css?v=21">
 </head>
 
 <body class="flex flex-col min-h-screen overflow-x-hidden">
@@ -666,6 +669,19 @@
 
     <!-- Firebase SDK (Modular) -->
     <script type="module" src="js/firebase-init.js?v=20"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
 </body>
 
 </html>
