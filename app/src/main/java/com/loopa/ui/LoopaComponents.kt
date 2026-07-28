@@ -26,6 +26,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -255,7 +259,9 @@ fun LoopPosterCard(
     onRelease: (() -> Unit)? = null,
     score: Double? = null,
     statusLabel: String? = null,
-    progressText: String? = null
+    progressText: String? = null,
+    totalEpisodes: Int = 0,
+    currentEpisode: Int = 0
 ) {
     val typeColor = when (mediaType.lowercase()) {
         "tv", "anime" -> Loopa.Amber
@@ -402,6 +408,19 @@ fun LoopPosterCard(
                 overflow = TextOverflow.Ellipsis
             )
         }
+
+        if (totalEpisodes > 0 && currentEpisode > 0) {
+            val progress = (currentEpisode.toFloat() / totalEpisodes.toFloat()).coerceIn(0f, 1f)
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(4.dp),
+                color = Loopa.Amber,
+                trackColor = Loopa.Base.copy(alpha = 0.5f)
+            )
+        }
     }
 }
 
@@ -430,11 +449,13 @@ fun LoopaEmptyState(message: String, modifier: Modifier = Modifier) =
 fun LoopaPosterCard(
     title: String, imageUrl: String?, mediaType: String, onClick: () -> Unit,
     modifier: Modifier = Modifier, onLongPress: (() -> Unit)? = null, onRelease: (() -> Unit)? = null,
-    score: Double? = null, statusLabel: String? = null, statusColor: Color = Loopa.Amber, progressText: String? = null
+    score: Double? = null, statusLabel: String? = null, statusColor: Color = Loopa.Amber, progressText: String? = null,
+    totalEpisodes: Int = 0, currentEpisode: Int = 0
 ) = LoopPosterCard(
     title = title, imageUrl = imageUrl, mediaType = mediaType, onClick = onClick,
     modifier = modifier, onLongPress = onLongPress, onRelease = onRelease,
-    score = score, statusLabel = statusLabel, progressText = progressText
+    score = score, statusLabel = statusLabel, progressText = progressText,
+    totalEpisodes = totalEpisodes, currentEpisode = currentEpisode
 )
 
 // Keep SkewedShape as a no-op rounded shape so usages don't crash at compile time
@@ -445,5 +466,84 @@ class SkewedShape(private val skewFactor: Float = 0.08f) : androidx.compose.ui.g
         density: androidx.compose.ui.unit.Density
     ): androidx.compose.ui.graphics.Outline {
         return RoundedCornerShape(10.dp).createOutline(size, layoutDirection, density)
+    }
+}
+
+@Composable
+fun LoopStatsBanner(statsState: com.loopa.viewmodel.StatsState) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        LoopStatsCard(
+            modifier = Modifier.weight(1f),
+            title = "Time Watched",
+            value = statsState.totalWatchTimeStr,
+            icon = androidx.compose.material.icons.Icons.Default.PlayArrow
+        )
+        LoopStatsCard(
+            modifier = Modifier.weight(1f),
+            title = "Top Genre",
+            value = statsState.topGenre,
+            icon = androidx.compose.material.icons.Icons.Default.Star
+        )
+        LoopStatsCard(
+            modifier = Modifier.weight(1f),
+            title = "Total Titles",
+            value = statsState.totalTitles.toString(),
+            icon = androidx.compose.material.icons.Icons.Default.List
+        )
+        LoopStatsCard(
+            modifier = Modifier.weight(1f),
+            title = "Top Creator",
+            value = statsState.topDirector,
+            icon = androidx.compose.material.icons.Icons.Default.AccountCircle
+        )
+    }
+}
+
+@Composable
+fun LoopStatsCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Loopa.Surface.copy(alpha = 0.4f))
+            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+            .clickable { }
+            .padding(12.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Loopa.Amber,
+                modifier = Modifier.size(24.dp).padding(bottom = 4.dp)
+            )
+            Text(
+                text = title.uppercase(),
+                color = Loopa.TextSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
+            )
+            Text(
+                text = value,
+                color = Loopa.TextPrimary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }

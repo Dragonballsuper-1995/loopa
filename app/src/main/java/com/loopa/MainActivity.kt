@@ -127,9 +127,27 @@ fun MediaTrackerApp(
   val sessionStatus by authViewModel.sessionStatus.collectAsState()
   var isGuestMode by remember { mutableStateOf(false) }
 
+  // ── Connectivity callback — flushes offline write queue when device goes online ──
+  // Mirrors: window.addEventListener('online', OfflineSync.attemptSync) on Web
+  val context = androidx.compose.ui.platform.LocalContext.current
+  DisposableEffect(Unit) {
+      val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+      val request = android.net.NetworkRequest.Builder()
+          .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+          .build()
+      val callback = object : android.net.ConnectivityManager.NetworkCallback() {
+          override fun onAvailable(network: android.net.Network) {
+              viewModel.flushPendingOps()
+          }
+      }
+      cm.registerNetworkCallback(request, callback)
+      onDispose { cm.unregisterNetworkCallback(callback) }
+  }
+
   LaunchedEffect(isGuestMode, sessionStatus) {
       if (!isGuestMode && sessionStatus is io.github.jan.supabase.auth.status.SessionStatus.Authenticated) {
           viewModel.startRealtime()
+          viewModel.syncMissingMetadata()
           while (true) {
               try {
                   viewModel.syncData()
@@ -205,6 +223,7 @@ fun MediaTrackerApp(
                     onLogout = { isGuestMode = false }
                   )
                 }
+
               }
             }
           }
@@ -327,12 +346,14 @@ fun MediaTrackerApp(
 fun MyListsScreen(
     navController: androidx.navigation.NavController, 
     viewModel: MediaViewModel = viewModel(),
+    statsViewModel: com.loopa.viewmodel.StatsViewModel = viewModel(),
     isGuestMode: Boolean = false
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var listQuery by remember { mutableStateOf("") }
     val tabs = listOf("All", "Movies", "TV Shows", "Anime")
     val savedItems by viewModel.savedMediaItems.collectAsState()
+    val statsState by statsViewModel.statsState.collectAsState()
     
     val filteredItems = remember(savedItems, selectedTab, listQuery) {
         viewModel.getFilteredLocalItems(savedItems, selectedTab, listQuery)
@@ -359,6 +380,7 @@ fun MyListsScreen(
             com.loopa.ui.LoopSectionHeader(
                 title = "My List",
                 subtitle = "${savedItems.size} Titles",
+                titleSize = 28,
                 showDivider = false
             )
             Row(
@@ -600,18 +622,26 @@ fun RecommendationCard(
     )
 
     if (showDetails) {
+        LaunchedEffect(showDetails) {
+            viewModel.setDetailOpen(true)
+        }
         LoopTrackDialog(
             title = title,
             mediaTypeStr = mediaTypeStr,
             overview = movie.overview,
-            onDismiss = { showDetails = false },
+            onDismiss = {
+                showDetails = false
+                viewModel.setDetailOpen(false)
+            },
             onWatched = {
                 viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "Watched", movie.mediaType ?: "movie")
                 showDetails = false
+                viewModel.setDetailOpen(false)
             },
             onToWatch = {
                 viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "To Watch", movie.mediaType ?: "movie")
                 showDetails = false
+                viewModel.setDetailOpen(false)
             }
         )
     }
@@ -811,6 +841,8 @@ fun MediaItemCard(item: com.loopa.db.MediaItemEntity, viewModel: MediaViewModel)
         score = item.score,
         statusLabel = statusLabel,
         progressText = progressText,
+        totalEpisodes = item.totalEpisodes ?: 0,
+        currentEpisode = item.currentEpisode ?: 0,
         modifier = Modifier.fillMaxWidth()
     )
 

@@ -8,9 +8,9 @@ const CONFIG = {
 
     // TMDB (Proxied through Cloudflare Worker)
     TMDB_BASE:     'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev/tmdb/3',
-    TMDB_IMG_500:  'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev/tmdb/t/p/w500',
+    TMDB_IMG_500:  'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev/tmdb/t/p/w342',
     TMDB_IMG_780:  'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev/tmdb/t/p/w780',
-    TMDB_IMG_ORIG: 'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev/tmdb/t/p/original',
+    TMDB_IMG_ORIG: 'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev/tmdb/t/p/w1280',
 
     // Jikan (MyAnimeList) — no key required
     JIKAN_BASE: 'https://api.jikan.moe/v4',

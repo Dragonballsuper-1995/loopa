@@ -31,6 +31,18 @@ class AuthViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
+    // Step 3.4 — Guest mode: Room-only, no Supabase calls
+    private val _isGuestMode = MutableStateFlow(false)
+    val isGuestMode: StateFlow<Boolean> = _isGuestMode.asStateFlow()
+
+    fun enterGuestMode() {
+        _isGuestMode.value = true
+    }
+
+    fun exitGuestMode() {
+        _isGuestMode.value = false
+    }
+
     fun signInWithEmail(email: String, pass: String) {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading

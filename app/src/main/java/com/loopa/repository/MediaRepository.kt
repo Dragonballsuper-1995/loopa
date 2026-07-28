@@ -2,7 +2,13 @@ package com.loopa.repository
 
 import com.loopa.db.MediaItemDao
 import com.loopa.db.MediaItemEntity
+import com.loopa.db.PendingOpDao
+import com.loopa.db.PendingOpEntity
+import com.loopa.db.WatchedEpisodeDao
+import com.loopa.db.WatchedEpisodeEntity
 import com.loopa.model.JikanAnime
+import com.loopa.model.RemoteMediaItem
+import com.loopa.model.RemoteWatchedEpisode
 import com.loopa.model.TmdbMovie
 import com.loopa.network.NetworkModule
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +21,9 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import retrofit2.HttpException
 import okhttp3.MediaType.Companion.toMediaType
 
@@ -39,10 +48,17 @@ object ApiCache {
     }
 }
 
-class MediaRepository(private val mediaItemDao: MediaItemDao) {
+// Lenient Json instance — ignores unknown keys from Supabase (e.g. future columns).
+private val lenientJson = Json { ignoreUnknownKeys = true }
+
+class MediaRepository(
+    private val mediaItemDao: MediaItemDao,
+    private val pendingOpDao: PendingOpDao,       // offline write queue
+    private val watchedEpisodeDao: WatchedEpisodeDao
+) {
     private val tmdbApi = NetworkModule.tmdbApi
     private val jikanApi = NetworkModule.jikanApi
-    
+
     private val _isRateLimited = MutableStateFlow(false)
     val isRateLimited = _isRateLimited.asStateFlow()
 
@@ -136,137 +152,309 @@ class MediaRepository(private val mediaItemDao: MediaItemDao) {
     val allMediaItems: Flow<List<MediaItemEntity>> = mediaItemDao.getAllMediaItems()
 
     suspend fun insertMediaItem(item: MediaItemEntity) {
+        // 1. Write to Room immediately (offline-first)
         mediaItemDao.insertMediaItem(item)
+
+        // 2. Attempt Supabase upsert; enqueue on any failure
+        val user = NetworkModule.supabase.auth.currentUserOrNull() ?: return
+        val remote = item.toRemote(user.id)
         try {
-            val user = NetworkModule.supabase.auth.currentUserOrNull()
-            if (user != null) {
-                val remoteItem = com.loopa.model.RemoteMediaItem(
-                    id = item.id,
-                    userId = user.id,
-                    title = item.title,
-                    imageUrl = item.imageUrl,
-                    date = item.date,
-                    score = item.score,
-                    listName = item.listName,
-                    mediaType = item.mediaType,
-                    currentSeason = item.currentSeason,
-                    currentEpisode = item.currentEpisode,
-                    totalEpisodes = item.totalEpisodes,
-                    totalSeasons = item.totalSeasons,
-                    progressString = item.progressString,
-                    userRating = item.userRating,
-                    personalNotes = item.personalNotes
-                )
-                NetworkModule.supabase.postgrest["media_items"].upsert(remoteItem)
-            }
+            NetworkModule.supabase.postgrest["media_items"].upsert(remote)
         } catch (e: Exception) {
-            // Ignore if offline
+            android.util.Log.w("MediaRepository", "insertMediaItem offline — queuing: ${e.message}")
+            pendingOpDao.enqueue(
+                PendingOpEntity(opType = "UPSERT_MEDIA", payload = lenientJson.encodeToString(remote))
+            )
         }
     }
 
     suspend fun deleteMediaItem(id: Int, mediaType: String) {
+        // 1. Delete from Room immediately
         mediaItemDao.deleteMediaItem(id, mediaType)
+
+        // 2. Attempt Supabase delete; enqueue on failure
+        val user = NetworkModule.supabase.auth.currentUserOrNull() ?: return
         try {
-            val user = NetworkModule.supabase.auth.currentUserOrNull()
-            if (user != null) {
-                NetworkModule.supabase.postgrest["media_items"]
-                    .delete {
-                        select() // request returned rows
-                        filter {
-                            eq("id", id)
-                            eq("user_id", user.id)
-                            eq("media_type", mediaType)
-                        }
-                    }
-                // Note: If no rows are returned, it likely means the RLS policy is blocking the delete.
+            NetworkModule.supabase.postgrest["media_items"].delete {
+                filter {
+                    eq("id", id)
+                    eq("user_id", user.id)
+                    eq("media_type", mediaType)
+                }
             }
         } catch (e: Exception) {
-            // Ignore if offline
+            android.util.Log.w("MediaRepository", "deleteMediaItem offline — queuing: ${e.message}")
+            // Store a minimal stub so the flush knows what to delete
+            val stub = RemoteMediaItem(
+                id = id, userId = user.id, title = "", listName = "", mediaType = mediaType
+            )
+            pendingOpDao.enqueue(
+                PendingOpEntity(opType = "DELETE_MEDIA", payload = lenientJson.encodeToString(stub))
+            )
         }
     }
 
+    // ── Episode sync ─────────────────────────────────────────────────────────
+
+    /** Marks an episode watched in Room, then pushes to Supabase (queues if offline). */
+    suspend fun insertWatchedEpisode(episode: WatchedEpisodeEntity, userId: String) {
+        watchedEpisodeDao.insertWatchedEpisode(episode)
+        val remote = RemoteWatchedEpisode(
+            mediaId       = episode.mediaId,
+            userId        = userId,
+            mediaType     = episode.mediaType,
+            seasonNumber  = episode.seasonNumber,
+            episodeNumber = episode.episodeNumber,
+            watchedAt     = episode.watchedAt
+        )
+        try {
+            NetworkModule.supabase.postgrest["watched_episodes"].upsert(remote)
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "insertWatchedEpisode offline — queuing: ${e.message}")
+            pendingOpDao.enqueue(
+                PendingOpEntity(opType = "UPSERT_EPISODE", payload = lenientJson.encodeToString(remote))
+            )
+        }
+    }
+
+    /** Unmarks an episode watched in Room, then deletes from Supabase (queues if offline). */
+    suspend fun deleteWatchedEpisode(
+        mediaId: Int, mediaType: String, userId: String,
+        seasonNumber: Int, episodeNumber: Int
+    ) {
+        watchedEpisodeDao.deleteWatchedEpisode(mediaId, mediaType, seasonNumber, episodeNumber)
+        val stub = RemoteWatchedEpisode(
+            mediaId = mediaId, userId = userId, mediaType = mediaType,
+            seasonNumber = seasonNumber, episodeNumber = episodeNumber
+        )
+        try {
+            NetworkModule.supabase.postgrest["watched_episodes"].delete {
+                filter {
+                    eq("media_id",       mediaId)
+                    eq("user_id",        userId)
+                    eq("media_type",     mediaType)
+                    eq("season_number",  seasonNumber)
+                    eq("episode_number", episodeNumber)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "deleteWatchedEpisode offline — queuing: ${e.message}")
+            pendingOpDao.enqueue(
+                PendingOpEntity(opType = "DELETE_EPISODE", payload = lenientJson.encodeToString(stub))
+            )
+        }
+    }
+
+    /** Bulk-inserts all episodes for a media item and syncs each to Supabase. */
+    suspend fun insertAllEpisodesWatched(episodes: List<WatchedEpisodeEntity>, userId: String) {
+        episodes.forEach { insertWatchedEpisode(it, userId) }
+    }
+
+    /**
+     * Full sync: downloads all remote items and applies Last-Write-Wins logic.
+     * Remote rows with a NEWER updated_at overwrite local; older remote rows are
+     * skipped so local offline edits (not yet flushed) are not clobbered.
+     *
+     * Also deletes local items that no longer exist on the server.
+     */
     suspend fun syncWithRemote() = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val user = NetworkModule.supabase.auth.currentUserOrNull() ?: throw Exception("User not logged in")
-        val localItems = mediaItemDao.getAllMediaItemsSync()
-        
-        // Fetch remote items
+        val user = NetworkModule.supabase.auth.currentUserOrNull()
+            ?: throw Exception("User not logged in")
+
         val remoteItems = retryWithBackoff {
             NetworkModule.supabase.postgrest["media_items"]
                 .select()
-                .decodeList<com.loopa.model.RemoteMediaItem>()
+                .decodeList<RemoteMediaItem>()
         }
-        
-        // For a simple sync: we merge them by inserting missing local items to remote,
-        // and inserting missing remote items to local. 
-        // In a real app we'd use timestamps, but this is a simple naive sync.
-        
+        val localItems = mediaItemDao.getAllMediaItemsSync()
+        val remoteMap  = remoteItems.associateBy { "${it.id}_${it.mediaType}" }
+
+        // Delete local items removed from the server
+        localItems
+            .filter { "${it.id}_${it.mediaType}" !in remoteMap }
+            .forEach { mediaItemDao.deleteMediaItem(it.id, it.mediaType) }
+
+        // Upsert remote items using Last-Write-Wins on updated_at
         val localMap = localItems.associateBy { "${it.id}_${it.mediaType}" }
-        val remoteMap = remoteItems.associateBy { "${it.id}_${it.mediaType}" }
-        
-        // Remote is the source of truth for deletions and updates in this naive sync.
-        // Delete any local items that are no longer in the remote DB.
-        val toDelete = localItems.filter { "${it.id}_${it.mediaType}" !in remoteMap }
-        toDelete.forEach {
-            mediaItemDao.deleteMediaItem(it.id, it.mediaType)
-        }
-        
-        // Download all remote items and replace local ones to sync updates (e.g. progress, notes)
-        val toDownload = remoteItems.map {
-            com.loopa.db.MediaItemEntity(
-                id = it.id,
-                title = it.title,
-                imageUrl = it.imageUrl,
-                date = it.date,
-                score = it.score,
-                listName = it.listName,
-                mediaType = it.mediaType,
-                currentSeason = it.currentSeason,
-                currentEpisode = it.currentEpisode,
-                totalEpisodes = it.totalEpisodes,
-                totalSeasons = it.totalSeasons,
-                progressString = it.progressString,
-                userRating = it.userRating,
-                personalNotes = it.personalNotes
-            )
-        }
-        
-        // Save to Room DB
-        if (toDownload.isNotEmpty()) {
-            toDownload.forEach { mediaItemDao.insertMediaItem(it) }
+        remoteItems.forEach { remote ->
+            val key   = "${remote.id}_${remote.mediaType}"
+            val local = localMap[key]
+            // Apply remote if: no local copy, or remote timestamp is >= local timestamp
+            val shouldApply = local == null ||
+                (remote.updatedAt ?: "") >= (local.updatedAt ?: "")
+            if (shouldApply) {
+                mediaItemDao.insertMediaItem(remote.toEntity())
+            }
         }
     }
 
+    /**
+     * Flushes all pending offline ops in FIFO order.
+     * For UPSERT_MEDIA: applies Last-Write-Wins before sending to Supabase.
+     * Call this from a ConnectivityManager.NetworkCallback.onAvailable() handler.
+     */
+    suspend fun flushPendingOps() = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val ops = pendingOpDao.getAll()
+        if (ops.isEmpty()) return@withContext
+        android.util.Log.d("MediaRepository", "Flushing ${ops.size} pending op(s)")
+
+        for (op in ops) {
+            try {
+                when (op.opType) {
+                    "UPSERT_MEDIA" -> {
+                        val remote = lenientJson.decodeFromString<RemoteMediaItem>(op.payload)
+
+                        // Last-Write-Wins: fetch remote updated_at before applying
+                        val remoteRow = runCatching {
+                            NetworkModule.supabase.postgrest["media_items"]
+                                .select {
+                                    filter {
+                                        eq("id", remote.id)
+                                        eq("user_id", remote.userId)
+                                        eq("media_type", remote.mediaType)
+                                    }
+                                }
+                                .decodeSingleOrNull<RemoteMediaItem>()
+                        }.getOrNull()
+
+                        val remoteTs = remoteRow?.updatedAt ?: ""
+                        if (op.enqueuedAt >= remoteTs) {
+                            NetworkModule.supabase.postgrest["media_items"].upsert(remote)
+                        } else {
+                            android.util.Log.d("MediaRepository",
+                                "LWW skip: remote ($remoteTs) is newer than local (${op.enqueuedAt})")
+                        }
+                        pendingOpDao.deleteById(op.localId)
+                    }
+                    "DELETE_MEDIA" -> {
+                        val remote = lenientJson.decodeFromString<RemoteMediaItem>(op.payload)
+                        NetworkModule.supabase.postgrest["media_items"].delete {
+                            filter {
+                                eq("id", remote.id)
+                                eq("user_id", remote.userId)
+                                eq("media_type", remote.mediaType)
+                            }
+                        }
+                        pendingOpDao.deleteById(op.localId)
+                    }
+                    // Episode ops
+                    "UPSERT_EPISODE" -> {
+                        val remote = lenientJson.decodeFromString<RemoteWatchedEpisode>(op.payload)
+                        NetworkModule.supabase.postgrest["watched_episodes"].upsert(remote)
+                        pendingOpDao.deleteById(op.localId)
+                    }
+                    "DELETE_EPISODE" -> {
+                        val remote = lenientJson.decodeFromString<RemoteWatchedEpisode>(op.payload)
+                        NetworkModule.supabase.postgrest["watched_episodes"].delete {
+                            filter {
+                                eq("media_id",       remote.mediaId)
+                                eq("user_id",        remote.userId)
+                                eq("media_type",     remote.mediaType)
+                                eq("season_number",  remote.seasonNumber)
+                                eq("episode_number", remote.episodeNumber)
+                            }
+                        }
+                        pendingOpDao.deleteById(op.localId)
+                    }
+                }
+            } catch (e: Exception) {
+                // Leave in queue for next flush attempt
+                android.util.Log.w("MediaRepository", "Flush failed for op ${op.localId}: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Symmetric Realtime handler.
+     * INSERT / UPDATE  → targeted single-row sync (no full table download).
+     * DELETE           → direct Room delete.
+     */
     suspend fun observeRealtimeChanges() {
         try {
             val user = NetworkModule.supabase.auth.currentUserOrNull() ?: return
             val channel = NetworkModule.supabase.channel("watchlist_changes")
-            
-            // Subscribing to any change on the table
-            val changeFlow = channel.postgresChangeFlow<io.github.jan.supabase.realtime.PostgresAction>(schema = "public") {
+
+            val changeFlow = channel.postgresChangeFlow<io.github.jan.supabase.realtime.PostgresAction>(
+                schema = "public"
+            ) {
                 table = "media_items"
-                filter("user_id", io.github.jan.supabase.postgrest.query.filter.FilterOperator.EQ, user.id)
+                filter("user_id",
+                    io.github.jan.supabase.postgrest.query.filter.FilterOperator.EQ,
+                    user.id)
             }
-            
-            val realtime = NetworkModule.supabase.pluginManager.getPlugin(io.github.jan.supabase.realtime.Realtime)
+
+            val realtime = NetworkModule.supabase.pluginManager
+                .getPlugin(io.github.jan.supabase.realtime.Realtime)
             realtime.connect()
             channel.subscribe()
-            
+
             changeFlow.collect { action ->
-                if (action is io.github.jan.supabase.realtime.PostgresAction.Delete) {
-                    val idStr = action.oldRecord["id"]?.toString()
-                    val id = idStr?.toDoubleOrNull()?.toInt()
-                    val mediaType = action.oldRecord["media_type"]?.toString()
-                    if (id != null && mediaType != null) {
-                        mediaItemDao.deleteMediaItem(id, mediaType)
+                when (action) {
+                    is io.github.jan.supabase.realtime.PostgresAction.Insert -> {
+                        val id        = action.record["id"]?.toString()?.toDoubleOrNull()?.toInt()
+                        val mediaType = action.record["media_type"]?.toString()
+                        if (id != null && mediaType != null) {
+                            runCatching { syncSingleItem(id, mediaType, user.id) }
+                        }
                     }
+                    is io.github.jan.supabase.realtime.PostgresAction.Update -> {
+                        val id        = action.record["id"]?.toString()?.toDoubleOrNull()?.toInt()
+                        val mediaType = action.record["media_type"]?.toString()
+                        if (id != null && mediaType != null) {
+                            runCatching { syncSingleItem(id, mediaType, user.id) }
+                        }
+                    }
+                    is io.github.jan.supabase.realtime.PostgresAction.Delete -> {
+                        val id        = action.oldRecord["id"]?.toString()?.toDoubleOrNull()?.toInt()
+                        val mediaType = action.oldRecord["media_type"]?.toString()
+                        if (id != null && mediaType != null) {
+                            mediaItemDao.deleteMediaItem(id, mediaType)
+                        }
+                    }
+                    else -> { /* ignore */ }
                 }
-                // Whenever a change happens remotely, sync with remote to update local DB
-                syncWithRemote()
             }
         } catch (e: Exception) {
-            // Ignore if realtime fails to connect or subscribe
+            android.util.Log.e("MediaRepository", "Realtime error: ${e.message}")
         }
     }
+
+    /** Fetches a single item by composite key and upserts it into Room. */
+    private suspend fun syncSingleItem(id: Int, mediaType: String, userId: String) {
+        val remote = NetworkModule.supabase.postgrest["media_items"]
+            .select {
+                filter {
+                    eq("id", id)
+                    eq("user_id", userId)
+                    eq("media_type", mediaType)
+                }
+            }
+            .decodeSingleOrNull<RemoteMediaItem>() ?: return
+        mediaItemDao.insertMediaItem(remote.toEntity())
+    }
+
+    // ── Extension helpers ────────────────────────────────────────────────────
+
+    /** Maps a Room entity to a Supabase-ready remote model, stamping updated_at now. */
+    private fun MediaItemEntity.toRemote(userId: String) = RemoteMediaItem(
+        id = id, userId = userId, title = title, imageUrl = imageUrl, date = date,
+        score = score, listName = listName, mediaType = mediaType,
+        currentSeason = currentSeason, currentEpisode = currentEpisode,
+        totalEpisodes = totalEpisodes, totalSeasons = totalSeasons,
+        progressString = progressString, userRating = userRating,
+        personalNotes = personalNotes,
+        updatedAt = java.time.Instant.now().toString()
+    )
+
+    /** Maps a remote Supabase model to a Room entity. */
+    private fun RemoteMediaItem.toEntity() = MediaItemEntity(
+        id = id, title = title, imageUrl = imageUrl, date = date,
+        score = score, listName = listName, mediaType = mediaType,
+        currentSeason = currentSeason, currentEpisode = currentEpisode,
+        totalEpisodes = totalEpisodes, totalSeasons = totalSeasons,
+        progressString = progressString, userRating = userRating,
+        personalNotes = personalNotes, updatedAt = updatedAt
+    )
 
     fun getTrendingMovies(apiKey: String): Flow<List<TmdbMovie>> = flow {
         val cacheKey = "trending_movies"
@@ -304,6 +492,54 @@ class MediaRepository(private val mediaItemDao: MediaItemDao) {
         emit(response.results)
     }
 
+    fun getTopRatedMovies(apiKey: String): Flow<List<TmdbMovie>> = flow {
+        val cacheKey = "top_rated_movies"
+        val cached = ApiCache.get<List<TmdbMovie>>(cacheKey)
+        if (cached != null) {
+            emit(cached)
+            return@flow
+        }
+        val response = retryWithBackoff { tmdbApi.getTopRatedMovies(apiKey) }
+        ApiCache.put(cacheKey, response.results)
+        emit(response.results)
+    }
+
+    fun getUpcomingMovies(apiKey: String): Flow<List<TmdbMovie>> = flow {
+        val cacheKey = "upcoming_movies"
+        val cached = ApiCache.get<List<TmdbMovie>>(cacheKey)
+        if (cached != null) {
+            emit(cached)
+            return@flow
+        }
+        val response = retryWithBackoff { tmdbApi.getUpcomingMovies(apiKey) }
+        ApiCache.put(cacheKey, response.results)
+        emit(response.results)
+    }
+
+    fun getTopRatedTv(apiKey: String): Flow<List<TmdbMovie>> = flow {
+        val cacheKey = "top_rated_tv"
+        val cached = ApiCache.get<List<TmdbMovie>>(cacheKey)
+        if (cached != null) {
+            emit(cached)
+            return@flow
+        }
+        val response = retryWithBackoff { tmdbApi.getTopRatedTv(apiKey) }
+        ApiCache.put(cacheKey, response.results)
+        emit(response.results)
+    }
+
+    fun getAiringTodayTv(apiKey: String): Flow<List<TmdbMovie>> = flow {
+        val cacheKey = "airing_today_tv"
+        val cached = ApiCache.get<List<TmdbMovie>>(cacheKey)
+        if (cached != null) {
+            emit(cached)
+            return@flow
+        }
+        val response = retryWithBackoff { tmdbApi.getAiringTodayTv(apiKey) }
+        ApiCache.put(cacheKey, response.results)
+        emit(response.results)
+    }
+
     fun searchMedia(apiKey: String, query: String): Flow<List<TmdbMovie>> = flow {
         val cacheKey = "search_$query"
         val cached = ApiCache.get<List<TmdbMovie>>(cacheKey)
@@ -316,6 +552,51 @@ class MediaRepository(private val mediaItemDao: MediaItemDao) {
         emit(response.results)
     }
 
+    /**
+     * Step 3.2 — Parallel unified search: TMDB multi + Jikan anime.
+     * Mirrors the Web's API.searchAll() which calls all three endpoints simultaneously.
+     */
+    fun searchAllMedia(apiKey: String, query: String): Flow<List<TmdbMovie>> = flow {
+        kotlinx.coroutines.coroutineScope {
+            val tmdbDeferred = async {
+                runCatching {
+                    retryWithBackoff { tmdbApi.searchMulti(apiKey, query) }.results
+                }.getOrDefault(emptyList())
+            }
+            val jikanDeferred = async {
+                runCatching { jikanApi.searchAnime(query) }.getOrNull()
+                    ?.data?.map { anime ->
+                        TmdbMovie(
+                            id           = anime.malId,
+                            title        = anime.title,
+                            name         = anime.title,
+                            overview     = anime.synopsis,
+                            posterPath   = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl,
+                            backdropPath = null,
+                            voteAverage  = anime.score,
+                            releaseDate  = null,
+                            firstAirDate = null,
+                            mediaType    = "anime",
+                            popularity   = 0.0,
+                            genreIds     = null
+                        )
+                    } ?: emptyList()
+            }
+
+            val tmdbResults  = tmdbDeferred.await()
+            val jikanResults = jikanDeferred.await()
+
+            // Merge: TMDB first, then Jikan; deduplicate by id+mediaType
+            val seen   = mutableSetOf<String>()
+            val merged = mutableListOf<TmdbMovie>()
+            (tmdbResults + jikanResults).forEach { item ->
+                val key = "${item.id}_${item.mediaType ?: "movie"}"
+                if (seen.add(key)) merged.add(item)
+            }
+            emit(merged)
+        }
+    }
+
     fun getTopAnime(): Flow<List<JikanAnime>> = flow {
         val cacheKey = "top_anime"
         val cached = ApiCache.get<List<JikanAnime>>(cacheKey)
@@ -324,6 +605,18 @@ class MediaRepository(private val mediaItemDao: MediaItemDao) {
             return@flow
         }
         val response = retryWithBackoff { jikanApi.getTopAnime() }
+        ApiCache.put(cacheKey, response.data)
+        emit(response.data)
+    }
+
+    fun getUpcomingAnime(): Flow<List<JikanAnime>> = flow {
+        val cacheKey = "upcoming_anime"
+        val cached = ApiCache.get<List<JikanAnime>>(cacheKey)
+        if (cached != null) {
+            emit(cached)
+            return@flow
+        }
+        val response = retryWithBackoff { jikanApi.getUpcomingAnime() }
         ApiCache.put(cacheKey, response.data)
         emit(response.data)
     }

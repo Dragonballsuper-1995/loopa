@@ -33,7 +33,7 @@ fun LoopSectionHeader(
     title: String,
     accentColor: Color = Loopa.Amber,
     subtitle: String? = null,
-    titleSize: Int = 20,
+    titleSize: Int = 18,
     showDivider: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -42,14 +42,6 @@ fun LoopSectionHeader(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
-            // Amber left accent bar — warm, slim, matches website design
-            Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .height((titleSize * 1.5f).dp)
-                    .background(accentColor)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
                     text = title,
@@ -84,7 +76,7 @@ fun LoopaSectionHeader(
     title: String,
     accentColor: Color = Loopa.Amber,
     subtitle: String? = null,
-    titleSize: Int = 20,
+    titleSize: Int = 18,
     showDivider: Boolean = false,
     modifier: Modifier = Modifier
 ) = LoopSectionHeader(

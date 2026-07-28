@@ -28,13 +28,6 @@ val DmSans = FontFamily(
     Font(R.font.dm_sans_italic, FontWeight.Bold,     FontStyle.Italic),
 )
 
-
-/**
- * Compatibility alias — every Compose screen that referenced BebasNeue
- * now uses DM Sans automatically, with zero changes to those files.
- */
-val BebasNeue: FontFamily get() = DmSans
-
 // ── Loopa Typography Scale ─────────────────────────────────────────────────
 val Typography = Typography(
 

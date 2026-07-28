@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,13 +28,14 @@ import androidx.compose.ui.window.DialogProperties
 import com.loopa.db.MediaItemEntity
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditMediaDialog(
     item: MediaItemEntity,
     onDismiss: () -> Unit,
     onSave: (MediaItemEntity) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    genres: List<String> = emptyList()   // fetched from TMDB in the hosting screen
 ) {
     var watchStatus by remember {
         mutableStateOf(
@@ -65,7 +67,7 @@ fun EditMediaDialog(
                     .background(Loopa.Surface)
                     .border(1.dp, Loopa.Border, Loopa.DialogShape)
             ) {
-                // Amber top accent bar — warm, not orange
+                // Amber top accent bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -79,25 +81,77 @@ fun EditMediaDialog(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 20.dp, vertical = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Title
-                    Text(
-                        text = item.title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = Loopa.TextPrimary,
-                        maxLines = 2,
-                        lineHeight = 26.sp
-                    )
+                    // Title Bar with Red Delete Button on the Right
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = item.title,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Loopa.TextPrimary,
+                            maxLines = 2,
+                            lineHeight = 24.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Spacer(Modifier.width(10.dp))
+
+                        // Red Delete Button — right aligned with title
+                        Row(
+                            modifier = Modifier
+                                .clip(Loopa.PillShape)
+                                .background(Loopa.Error.copy(alpha = 0.12f))
+                                .border(1.dp, Loopa.Error.copy(alpha = 0.35f), Loopa.PillShape)
+                                .clickable(onClick = onDelete)
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(Icons.Filled.Delete, "Delete", tint = Loopa.Error, modifier = Modifier.size(14.dp))
+                            Text("Delete", color = Loopa.Error, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                        }
+                    }
 
                     HorizontalDivider(color = Loopa.Border)
+
+                    // ── Genre chips ────────────────────────────────────────
+                    if (genres.isNotEmpty()) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement   = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            genres.forEach { genre ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Loopa.Raised)
+                                        .border(1.dp, Loopa.Border, RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = genre,
+                                        color = Loopa.TextSecondary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                        HorizontalDivider(color = Loopa.Border)
+                    }
 
                     // ── Watch Status ───────────────────────────────────────
                     Column {
                         SectionLabel("Watch Status")
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(8.dp))
 
+                        val mediaViewModel: com.loopa.viewmodel.MediaViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
                         val statuses = listOf("To Watch", "Watching", "Watched")
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -115,7 +169,12 @@ fun EditMediaDialog(
                                             if (isSelected) Color.Transparent else Loopa.BorderMd,
                                             Loopa.PillShape
                                         )
-                                        .clickable { watchStatus = status }
+                                        .clickable {
+                                            watchStatus = status
+                                            if (status == "Watched" && (item.mediaType == "tv" || item.mediaType == "anime")) {
+                                                mediaViewModel.markAllEpisodesWatched(item.id, item.mediaType, item.totalSeasons ?: 1)
+                                            }
+                                        }
                                         .padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -132,94 +191,90 @@ fun EditMediaDialog(
                         }
                     }
 
-                    // ── Season & Episode (TV / Anime only) ─────────────────
+                    // ── Unified User Control Panel (Rating & Notes) ──────
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(Loopa.CardShape)
+                            .background(Loopa.Surface)
+                            .border(1.dp, Loopa.Border, Loopa.CardShape)
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // Rating Header & 5-Star Row
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                SectionLabel("Your Rating")
+                                Text(
+                                    text = if (rating > 0) "${rating.roundToInt()} / 10" else "Unrated",
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (rating > 0) Loopa.Amber else Loopa.TextMuted,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            // 5 Interactive Star Icons
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            ) {
+                                for (i in 1..5) {
+                                    val starValue = i * 2f
+                                    val isActive = rating >= starValue - 1f
+                                    Icon(
+                                        imageVector = Icons.Filled.Star,
+                                        contentDescription = "Star $i",
+                                        tint = if (isActive) Loopa.Amber else Loopa.Raised,
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clickable {
+                                                rating = if (rating == starValue) 0f else starValue
+                                            }
+                                    )
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(color = Loopa.Border)
+
+                        // Notes Field
+                        Column {
+                            SectionLabel("Personal Notes")
+                            Spacer(Modifier.height(6.dp))
+                            OutlinedTextField(
+                                value = notes,
+                                onValueChange = { notes = it },
+                                placeholder = { Text("Add notes, favorite quotes, or thoughts…", color = Loopa.TextMuted, fontSize = 12.sp) },
+                                modifier = Modifier.fillMaxWidth().height(58.dp),
+                                shape = Loopa.InputShape,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    unfocusedContainerColor = Loopa.Raised,
+                                    focusedContainerColor   = Loopa.Raised,
+                                    unfocusedBorderColor    = Loopa.Border,
+                                    focusedBorderColor      = Loopa.Amber,
+                                    unfocusedTextColor      = Loopa.TextPrimary,
+                                    focusedTextColor        = Loopa.TextPrimary
+                                )
+                            )
+                        }
+                    }
+
+                    // ── Season & Episode Progress (TV / Anime only) ─────────────────
                     if (item.mediaType == "tv" || item.mediaType == "anime") {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // Season
-                            Column(modifier = Modifier.weight(1f)) {
-                                SectionLabel("Season")
-                                Spacer(Modifier.height(8.dp))
-                                CounterRow(
-                                    value = seasonInput.toIntOrNull() ?: 1,
-                                    onDecrease = {
-                                        val v = seasonInput.toIntOrNull() ?: 1
-                                        if (v > 1) seasonInput = (v - 1).toString()
-                                    },
-                                    onIncrease = {
-                                        val v = seasonInput.toIntOrNull() ?: 1
-                                        seasonInput = (v + 1).toString()
-                                    }
-                                )
+                        com.loopa.ui.components.EpisodeProgressSection(
+                            mediaId = item.id,
+                            mediaType = item.mediaType,
+                            totalSeasons = item.totalSeasons ?: 1,
+                            currentSeason = seasonInput.toIntOrNull() ?: 1,
+                            viewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+                            onSeasonChange = { newSeason ->
+                                seasonInput = newSeason.toString()
                             }
-                            // Episode
-                            Column(modifier = Modifier.weight(1f)) {
-                                SectionLabel("Episode")
-                                Spacer(Modifier.height(8.dp))
-                                CounterRow(
-                                    value = episodeInput.toIntOrNull() ?: 0,
-                                    onDecrease = {
-                                        val v = episodeInput.toIntOrNull() ?: 0
-                                        if (v > 0) episodeInput = (v - 1).toString()
-                                    },
-                                    onIncrease = {
-                                        val v = episodeInput.toIntOrNull() ?: 0
-                                        episodeInput = (v + 1).toString()
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // ── Rating Slider ──────────────────────────────────────
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            SectionLabel("Rating")
-                            Text(
-                                text = "${rating.roundToInt()} / 10",
-                                fontWeight = FontWeight.Bold,
-                                color = Loopa.Amber,
-                                fontSize = 14.sp
-                            )
-                        }
-                        Slider(
-                            value = rating,
-                            onValueChange = { rating = it },
-                            valueRange = 0f..10f,
-                            steps = 9,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = SliderDefaults.colors(
-                                thumbColor = Loopa.Amber,
-                                activeTrackColor = Loopa.Amber,
-                                inactiveTrackColor = Loopa.Raised
-                            )
-                        )
-                    }
-
-                    // ── Notes ──────────────────────────────────────────────
-                    Column {
-                        SectionLabel("Notes")
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = notes,
-                            onValueChange = { notes = it },
-                            placeholder = { Text("Add a note…", color = Loopa.TextMuted) },
-                            modifier = Modifier.fillMaxWidth().height(90.dp),
-                            shape = Loopa.InputShape,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedContainerColor = Loopa.Raised,
-                                focusedContainerColor   = Loopa.Raised,
-                                unfocusedBorderColor    = Loopa.Border,
-                                focusedBorderColor      = Loopa.Amber,
-                                unfocusedTextColor      = Loopa.TextPrimary,
-                                focusedTextColor        = Loopa.TextPrimary
-                            )
                         )
                     }
 
@@ -228,22 +283,9 @@ fun EditMediaDialog(
                     // ── Action Buttons ─────────────────────────────────────
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Delete button — error tint
-                        Box(
-                            modifier = Modifier
-                                .clip(Loopa.PillShape)
-                                .background(Loopa.Error.copy(alpha = 0.1f))
-                                .border(1.dp, Loopa.Error.copy(alpha = 0.4f), Loopa.PillShape)
-                                .clickable(onClick = onDelete)
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Delete, "Delete", tint = Loopa.Error, modifier = Modifier.size(18.dp))
-                        }
-
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             LoopButton(text = "Cancel", onClick = onDismiss, isSecondary = true)
                             LoopButton(
@@ -279,32 +321,4 @@ private fun SectionLabel(text: String) {
         color = Loopa.TextSecondary,
         letterSpacing = 0.4.sp
     )
-}
-
-@Composable
-private fun CounterRow(value: Int, onDecrease: () -> Unit, onIncrease: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(Loopa.CardShape)
-            .background(Loopa.Raised)
-            .border(1.dp, Loopa.Border, Loopa.CardShape)
-            .padding(horizontal = 4.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        IconButton(onClick = onDecrease, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Filled.Remove, "Decrease", tint = Loopa.TextSecondary, modifier = Modifier.size(16.dp))
-        }
-        Text(
-            text = value.toString(),
-            fontWeight = FontWeight.Bold,
-            color = Loopa.TextPrimary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-        IconButton(onClick = onIncrease, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Filled.Add, "Increase", tint = Loopa.Amber, modifier = Modifier.size(16.dp))
-        }
-    }
 }

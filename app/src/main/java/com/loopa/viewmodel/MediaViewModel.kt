@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import io.github.jan.supabase.auth.auth
 
 import com.loopa.network.NetworkModule
 import com.loopa.network.GenerateContentRequest
@@ -156,7 +158,9 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val mediaItemDao = DatabaseProvider.getDatabase(application).mediaItemDao()
-    private val repository = MediaRepository(mediaItemDao)
+    private val watchedEpisodeDao = DatabaseProvider.getDatabase(application).watchedEpisodeDao()
+    private val pendingOpDao = DatabaseProvider.getDatabase(application).pendingOpDao()
+    private val repository = MediaRepository(mediaItemDao, pendingOpDao, watchedEpisodeDao)
 
     val savedMediaItems: StateFlow<List<MediaItemEntity>> = repository.allMediaItems
         .stateIn(
@@ -179,6 +183,21 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     private val _topAnime = MutableStateFlow<List<com.loopa.model.JikanAnime>>(emptyList())
     val topAnime: StateFlow<List<com.loopa.model.JikanAnime>> = _topAnime.asStateFlow()
 
+    private val _topRatedMovies = MutableStateFlow<List<TmdbMovie>>(emptyList())
+    val topRatedMovies: StateFlow<List<TmdbMovie>> = _topRatedMovies.asStateFlow()
+
+    private val _upcomingMovies = MutableStateFlow<List<TmdbMovie>>(emptyList())
+    val upcomingMovies: StateFlow<List<TmdbMovie>> = _upcomingMovies.asStateFlow()
+
+    private val _topRatedTv = MutableStateFlow<List<TmdbMovie>>(emptyList())
+    val topRatedTv: StateFlow<List<TmdbMovie>> = _topRatedTv.asStateFlow()
+
+    private val _airingTodayTv = MutableStateFlow<List<TmdbMovie>>(emptyList())
+    val airingTodayTv: StateFlow<List<TmdbMovie>> = _airingTodayTv.asStateFlow()
+
+    private val _upcomingAnime = MutableStateFlow<List<com.loopa.model.JikanAnime>>(emptyList())
+    val upcomingAnime: StateFlow<List<com.loopa.model.JikanAnime>> = _upcomingAnime.asStateFlow()
+
     private val _searchState = MutableStateFlow<MediaUiState>(MediaUiState.Success(emptyList()))
     val searchState: StateFlow<MediaUiState> = _searchState.asStateFlow()
 
@@ -187,6 +206,17 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _recommendationState = MutableStateFlow<MediaUiState>(MediaUiState.Loading)
     val recommendationState: StateFlow<MediaUiState> = _recommendationState.asStateFlow()
+
+    // ── Detail Open State (pauses hero carousel) ──────────────────────────────
+    private val _isDetailOpen = MutableStateFlow(false)
+    val isDetailOpen: StateFlow<Boolean> = _isDetailOpen.asStateFlow()
+
+    fun setDetailOpen(open: Boolean) {
+        _isDetailOpen.value = open
+    }
+
+    // ── Home data session-load guard ──────────────────────────────────────────
+    private var _isHomeDataLoaded = false
 
     init {
         fetchHomeData()
@@ -203,6 +233,13 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch {
             _topAnime.collect { reindexSearchEngine() }
+        }
+    }
+
+    /** Called by MainActivity's ConnectivityManager callback when the device goes online. */
+    fun flushPendingOps() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            repository.flushPendingOps()
         }
     }
 
@@ -246,7 +283,31 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addMediaItem(id: Int, title: String, imageUrl: String?, date: String?, score: Double?, listName: String, mediaType: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var finalRuntime: Int? = null
+            var finalGenres: String? = null
+            var finalDirector: String? = null
+
+            try {
+                if (mediaType == "anime") {
+                    val detail = com.loopa.network.NetworkModule.jikanApi.getAnimeDetails(id).data
+                    finalGenres = detail.genres?.joinToString(", ") { it.name }
+                    // Jikan doesn't expose director easily in details, leave null
+                } else if (mediaType == "movie") {
+                    val detail = com.loopa.network.NetworkModule.tmdbApi.getMovieDetails(id, com.loopa.app.BuildConfig.TMDB_API_KEY)
+                    finalRuntime = detail.runtime
+                    finalGenres = detail.genres?.joinToString(", ") { it.name }
+                    finalDirector = detail.credits?.crew?.firstOrNull { it.job == "Director" }?.name
+                } else if (mediaType == "tv") {
+                    val detail = com.loopa.network.NetworkModule.tmdbApi.getTvDetails(id, com.loopa.app.BuildConfig.TMDB_API_KEY)
+                    finalRuntime = detail.episodeRunTime?.firstOrNull()
+                    finalGenres = detail.genres?.joinToString(", ") { it.name }
+                    finalDirector = detail.createdBy?.firstOrNull()?.name
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MediaViewModel", "Failed to fetch details for $id: ${e.message}")
+            }
+
             repository.insertMediaItem(
                 MediaItemEntity(
                     id = id,
@@ -259,7 +320,10 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                     currentEpisode = 0,
                     currentSeason = 1,
                     totalEpisodes = 0,
-                    totalSeasons = 0
+                    totalSeasons = 0,
+                    runtime = finalRuntime,
+                    genres = finalGenres,
+                    directorStudio = finalDirector
                 )
             )
         }
@@ -274,6 +338,51 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     fun removeMediaItem(id: Int, mediaType: String) {
         viewModelScope.launch {
             repository.deleteMediaItem(id, mediaType)
+        }
+    }
+
+    fun syncMissingMetadata() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val items = repository.allMediaItems.firstOrNull() ?: return@launch
+            val missing = items.filter { it.runtime == null && it.genres == null }
+            if (missing.isEmpty()) return@launch
+            android.util.Log.d("MediaViewModel", "[Sync] Hydrating ${missing.size} legacy items for stats...")
+            
+            for (item in missing) {
+                var finalRuntime: Int? = null
+                var finalGenres: String? = null
+                var finalDirector: String? = null
+                try {
+                    if (item.mediaType == "anime") {
+                        val detail = com.loopa.network.NetworkModule.jikanApi.getAnimeDetails(item.id).data
+                        finalGenres = detail.genres?.joinToString(", ") { it.name }
+                    } else if (item.mediaType == "movie") {
+                        val detail = com.loopa.network.NetworkModule.tmdbApi.getMovieDetails(item.id, com.loopa.app.BuildConfig.TMDB_API_KEY)
+                        finalRuntime = detail.runtime
+                        finalGenres = detail.genres?.joinToString(", ") { it.name }
+                        finalDirector = detail.credits?.crew?.firstOrNull { it.job == "Director" }?.name
+                    } else if (item.mediaType == "tv") {
+                        val detail = com.loopa.network.NetworkModule.tmdbApi.getTvDetails(item.id, com.loopa.app.BuildConfig.TMDB_API_KEY)
+                        finalRuntime = detail.episodeRunTime?.firstOrNull()
+                        finalGenres = detail.genres?.joinToString(", ") { it.name }
+                        finalDirector = detail.createdBy?.firstOrNull()?.name
+                    }
+                    
+                    val updatedItem = item.copy(
+                        runtime = finalRuntime,
+                        genres = finalGenres,
+                        directorStudio = finalDirector,
+                        // We do not bump updatedAt here to avoid triggering false sync loops 
+                        // unless we specifically want to push to remote. The repository handles 
+                        // the RemoteMediaItem update and sync queueing.
+                    )
+                    repository.insertMediaItem(updatedItem)
+                    kotlinx.coroutines.delay(500)
+                } catch (e: Exception) {
+                    android.util.Log.e("MediaViewModel", "Failed to hydrate item ${item.id}: ${e.message}")
+                }
+            }
+            android.util.Log.d("MediaViewModel", "[Sync] Hydration complete.")
         }
     }
 
@@ -416,7 +525,7 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            repository.searchMedia(apiKey, actualQuery)
+            repository.searchAllMedia(apiKey, actualQuery)
                 .catch { e ->
                     _searchState.value = MediaUiState.Error(e.localizedMessage ?: "Unknown error occurred")
                 }
@@ -461,42 +570,109 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ── Step 3.6 / 2.6 helpers ───────────────────────────────────────────
+
+    /**
+     * Fetches full anime metadata from Jikan /anime/{id}/full.
+     * Provides genres, synopsis, episode count, and status for the detail view.
+     */
+    suspend fun fetchAnimeDetails(malId: Int): com.loopa.model.JikanAnimeDetail? =
+        runCatching { NetworkModule.jikanApi.getAnimeDetails(malId).data }.getOrNull()
+
+    /**
+     * Unified genre fetch used by EditMediaDialog (Step 2.6).
+     * Returns a list of genre name strings for movies/TV from TMDB, or anime from Jikan.
+     */
+    suspend fun fetchGenres(id: Int, mediaType: String): List<String> {
+        return when (mediaType) {
+            "anime" -> {
+                fetchAnimeDetails(id)?.genres?.map { it.name } ?: emptyList()
+            }
+            "movie" -> runCatching {
+                val apiKey = com.loopa.app.BuildConfig.TMDB_API_KEY
+                NetworkModule.tmdbApi.getMovieDetails(id, apiKey).genres
+                    ?.map { it.name } ?: emptyList()
+            }.getOrDefault(emptyList())
+            else -> runCatching {
+                val apiKey = com.loopa.app.BuildConfig.TMDB_API_KEY
+                NetworkModule.tmdbApi.getTvDetails(id, apiKey).genres
+                    ?.map { it.name } ?: emptyList()
+            }.getOrDefault(emptyList())
+        }
+    }
+
     fun fetchHomeData() {
+        if (_isHomeDataLoaded) return // Already loaded — serve from cached StateFlows
+        _isHomeDataLoaded = true
+
         viewModelScope.launch {
-            val apiKey = BuildConfig.TMDB_API_KEY
+            val apiKey = com.loopa.app.BuildConfig.TMDB_API_KEY
             if (apiKey.isEmpty() || apiKey == "MY_TMDB_API_KEY") {
                 _uiState.value = MediaUiState.Error("Missing TMDB API Key. Add it in AI Studio Secrets.")
                 return@launch
             }
 
             _uiState.value = MediaUiState.Loading
-            
-            // Trending
+
+            // ── Tier 1: Trending (hero renders first) ─────────────────────────
             launch {
                 repository.getTrendingMovies(apiKey)
                     .catch { e -> _uiState.value = MediaUiState.Error(e.localizedMessage ?: "Unknown error occurred") }
                     .collect { movies -> _uiState.value = MediaUiState.Success(movies) }
             }
 
-            // Popular Movies
+            // ── Tier 2: Above-fold rows (100ms delay) ─────────────────────────
+            kotlinx.coroutines.delay(100)
+
             launch {
                 repository.getPopularMovies(apiKey)
                     .catch { /* ignore */ }
                     .collect { movies -> _popularMovies.value = movies }
             }
 
-            // Popular TV
             launch {
                 repository.getPopularTv(apiKey)
                     .catch { /* ignore */ }
                     .collect { tv -> _popularTv.value = tv }
             }
 
-            // Top Anime
             launch {
                 repository.getTopAnime()
                     .catch { /* ignore */ }
                     .collect { anime -> _topAnime.value = anime }
+            }
+
+            // ── Tier 3: Below-fold rows (200ms delay) ─────────────────────────
+            kotlinx.coroutines.delay(100)
+
+            launch {
+                repository.getTopRatedMovies(apiKey)
+                    .catch { /* ignore */ }
+                    .collect { movies -> _topRatedMovies.value = movies }
+            }
+
+            launch {
+                repository.getUpcomingMovies(apiKey)
+                    .catch { /* ignore */ }
+                    .collect { movies -> _upcomingMovies.value = movies }
+            }
+
+            launch {
+                repository.getTopRatedTv(apiKey)
+                    .catch { /* ignore */ }
+                    .collect { tv -> _topRatedTv.value = tv }
+            }
+
+            launch {
+                repository.getAiringTodayTv(apiKey)
+                    .catch { /* ignore */ }
+                    .collect { tv -> _airingTodayTv.value = tv }
+            }
+
+            launch {
+                repository.getUpcomingAnime()
+                    .catch { /* ignore */ }
+                    .collect { anime -> _upcomingAnime.value = anime }
             }
         }
     }
@@ -524,6 +700,71 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                 _recommendationState.value = MediaUiState.Success(results)
             } catch (e: Exception) {
                 _recommendationState.value = MediaUiState.Error(e.localizedMessage ?: "Unknown error")
+            }
+        }
+    }
+
+    suspend fun fetchTvSeasonDetails(tvId: Int, seasonNumber: Int): com.loopa.model.TmdbSeasonResponse? {
+        val apiKey = BuildConfig.TMDB_API_KEY
+        if (apiKey.isEmpty() || apiKey == "MY_TMDB_API_KEY") return null
+        return try {
+            com.loopa.network.NetworkModule.tmdbApi.getTvSeasonDetails(tvId, seasonNumber, apiKey)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun getWatchedEpisodesForMedia(mediaId: Int, mediaType: String): kotlinx.coroutines.flow.Flow<List<com.loopa.db.WatchedEpisodeEntity>> {
+        return watchedEpisodeDao.getWatchedEpisodesForMedia(mediaId, mediaType)
+    }
+
+    fun toggleEpisodeWatched(mediaId: Int, mediaType: String, seasonNumber: Int, episodeNumber: Int, isWatched: Boolean) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
+            if (isWatched) {
+                val entity = com.loopa.db.WatchedEpisodeEntity(mediaId, mediaType, seasonNumber, episodeNumber)
+                if (userId != null) {
+                    repository.insertWatchedEpisode(entity, userId)
+                } else {
+                    // Guest mode — Room only
+                    watchedEpisodeDao.insertWatchedEpisode(entity)
+                }
+            } else {
+                if (userId != null) {
+                    repository.deleteWatchedEpisode(mediaId, mediaType, userId, seasonNumber, episodeNumber)
+                } else {
+                    watchedEpisodeDao.deleteWatchedEpisode(mediaId, mediaType, seasonNumber, episodeNumber)
+                }
+            }
+        }
+    }
+
+    fun markAllEpisodesWatched(mediaId: Int, mediaType: String, totalSeasons: Int) {
+        viewModelScope.launch {
+            val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
+            try {
+                val episodes = mutableListOf<com.loopa.db.WatchedEpisodeEntity>()
+                for (s in 1..totalSeasons) {
+                    val seasonDetails = fetchTvSeasonDetails(mediaId, s)
+                    seasonDetails?.episodes?.forEach { ep ->
+                        episodes.add(com.loopa.db.WatchedEpisodeEntity(mediaId, mediaType, s, ep.episodeNumber))
+                    }
+                }
+                if (userId != null) {
+                    repository.insertAllEpisodesWatched(episodes, userId)
+                } else {
+                    episodes.forEach { watchedEpisodeDao.insertWatchedEpisode(it) }
+                }
+            } catch (_: Exception) {
+                // Fallback: mark first 10 episodes of season 1
+                val fallback = (1..10).map {
+                    com.loopa.db.WatchedEpisodeEntity(mediaId, mediaType, 1, it)
+                }
+                if (userId != null) {
+                    repository.insertAllEpisodesWatched(fallback, userId)
+                } else {
+                    fallback.forEach { watchedEpisodeDao.insertWatchedEpisode(it) }
+                }
             }
         }
     }

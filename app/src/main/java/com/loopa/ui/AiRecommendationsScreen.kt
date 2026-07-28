@@ -77,7 +77,7 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
             LoopSectionHeader(
                 title = "Loopa AI",
                 subtitle = "Discover your next obsession",
-                titleSize = 26,
+                titleSize = 28,
                 showDivider = false,
                 modifier = Modifier.padding(top = 16.dp, bottom = 4.dp).weight(1f)
             )

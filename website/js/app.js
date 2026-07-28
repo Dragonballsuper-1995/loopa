@@ -23,6 +23,12 @@ const App = {
         animeList: [],
         moviesList: [],
         tvList: [],
+        // Performance flags
+        dashboardLoaded: false,
+        heroPaused: false,
+        heroInterval: null,
+        dashboardRefreshTimer: null,
+        rowObservers: [],
     },
 
     async init() {
@@ -51,7 +57,7 @@ const App = {
         this._bindAll();
     },
 
-    _boot() {
+    async _boot() {
         document.getElementById('authModal').classList.remove('active');
         document.getElementById('appContainer').classList.remove('opacity-0');
         
@@ -67,11 +73,18 @@ const App = {
         this._updateSyncTime();
         
         if (!this.s.isGuest && this.s.user?.id) {
+            this.s.watchlist = await SBList.getAll(this.s.user.id);
+            if(this.s.view === 'watchlist') this._updateWLUI();
+
             SBList.subscribeToChanges(
                 this.s.user.id,
-                async () => {
+                async (newRow) => {
                     this.s.watchlist = await SBList.getAll(this.s.user.id);
                     if(this.s.view === 'watchlist') this._updateWLUI();
+                    if(this.s.drawerDBEntry && this.s.drawerDBEntry.id === newRow.id) {
+                        this.s.drawerDBEntry = newRow;
+                        UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
+                    }
                 },
                 async (newRow) => {
                     this.s.watchlist = await SBList.getAll(this.s.user.id);
@@ -254,27 +267,35 @@ const App = {
         document.querySelectorAll('[data-wf]').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('[data-wf]').forEach(b => {
-                    b.classList.remove('bg-neonOrange', 'text-white');
-                    b.classList.add('bg-cineSurface', 'text-gray-400');
+                    b.classList.remove('active');
                 });
-                btn.classList.remove('bg-cineSurface', 'text-gray-400');
-                btn.classList.add('bg-neonOrange', 'text-white');
+                btn.classList.add('active');
                 this.s.wlFilter = btn.dataset.wf;
-                const list = this.s.wlFilter === 'all' ? this.s.watchlist : this.s.watchlist.filter(i => i.list_name === this.s.wlFilter);
-                UI.renderWatchlistGrid(list);
+                this._updateWLUI();
             });
         });
 
         // AI
         const btnRefreshAI = document.getElementById('btnRefreshAI');
         if (btnRefreshAI) btnRefreshAI.addEventListener('click', () => this._loadAI(true));
+
+        // Radar Refresh Button
+        const btnRefreshRadar = document.getElementById('btnRefreshRadar');
+        if (btnRefreshRadar) btnRefreshRadar.addEventListener('click', () => this.refreshDashboard());
  
+
         // Modals
         const btnModalClose = document.getElementById('btnModalClose');
         if (btnModalClose) btnModalClose.addEventListener('click', () => this.closeDrawer());
         
-        const detailModalBg = document.getElementById('detailModalBg');
-        if (detailModalBg) detailModalBg.addEventListener('click', () => this.closeDrawer());
+        const detailModal = document.getElementById('detailModal');
+        if (detailModal) {
+            detailModal.addEventListener('click', (e) => {
+                if (e.target === detailModal) {
+                    this.closeDrawer();
+                }
+            });
+        }
 
         // Auth inputs Enter key listener
         const authEmail = document.getElementById('authEmail');
@@ -334,6 +355,14 @@ const App = {
         });
     },
 
+    _updateSyncTime() {
+        const lastSync = localStorage.getItem('lastSyncTime');
+        const el = document.getElementById('dropdownSyncTime');
+        if(el) {
+            el.textContent = lastSync ? new Date(parseInt(lastSync)).toLocaleString() : 'NEVER';
+        }
+    },
+
     // ── Auth ──────────────────────────────────────────────────────────────────
     async _login() {
         const email = document.getElementById('authEmail').value.trim();
@@ -375,7 +404,13 @@ const App = {
     // ── Navigation ────────────────────────────────────────────────────────────
     navigateTo(view, fromSearchInput = false) {
         if (view !== 'search') {
-            clearInterval(this.s.heroInterval);
+            // Pause hero carousel when leaving Radar tab (don't destroy the interval)
+            this.s.heroPaused = true;
+        } else {
+            // Resume hero when returning to Radar (if page is visible)
+            if (!document.hidden) {
+                this.s.heroPaused = false;
+            }
         }
         this.s.view = view;
         ['search', 'watchlist', 'ai'].forEach(v => {
@@ -403,25 +438,43 @@ const App = {
         }
         if (view === 'watchlist') this._loadTerminal();
         if (view === 'ai' && !this.s.aiLoaded) this._loadAI();
+
     },
 
     // ── Data Loading ──────────────────────────────────────────────────────────
-    async _loadDashboard() {
-        document.getElementById('row-trending').innerHTML = UI.skeletonRow(6);
-        document.getElementById('row-anime').innerHTML = UI.skeletonRow(6);
-        document.getElementById('row-movies').innerHTML = UI.skeletonRow(6);
-        document.getElementById('row-tv').innerHTML = UI.skeletonRow(6);
+    
 
-        const [trending, anime, movies, tv, wl] = await Promise.allSettled([
-            API.fetchTrending(), API.fetchTopAnime(), API.fetchPopularMovies(), API.fetchPopularTV(),
+
+    async _loadDashboard(forceRefresh = false) {
+        // ── Session cache guard ───────────────────────────────────────────────
+        // If dashboard was already loaded and we're not forcing a refresh,
+        // re-render from in-memory lists instantly (zero network cost).
+        if (this.s.dashboardLoaded && !forceRefresh) {
+            const watching = this.s.watchlist.find(i => i.list_name === 'Watching');
+            this._startHeroCarousel(this.s.trendingList.filter(i => i.backdropUrl || i.posterUrl).slice(0, 5), watching);
+            if (this.s.trendingList.length) UI.renderScrollRow('row-trending', this.s.trendingList.slice(0, 10));
+            if (this.s.animeList.length)   UI.renderScrollRow('row-anime',    this.s.animeList.slice(0, 10));
+            if (this.s.moviesList.length)  UI.renderScrollRow('row-movies',   this.s.moviesList.slice(0, 10));
+            if (this.s.tvList.length)      UI.renderScrollRow('row-tv',       this.s.tvList.slice(0, 10));
+            // Tier-3 rows: re-attach IntersectionObserver so they still lazy-load
+            this._attachTier3Observers();
+            return;
+        }
+
+        // Clear any previous row observers
+        this.s.rowObservers.forEach(obs => obs.disconnect());
+        this.s.rowObservers = [];
+
+        // ── Tier 1: Critical — renders hero immediately ───────────────────────
+        document.getElementById('row-trending').innerHTML = UI.skeletonRow(6);
+
+        const [trending, wl] = await Promise.allSettled([
+            API.fetchTrendingByRegion('IN'),
             this.s.isGuest ? Promise.resolve([]) : SBList.getAll(this.s.user.id)
         ]);
 
         const t = trending.status === 'fulfilled' ? trending.value : [];
         this.s.trendingList = t;
-        this.s.animeList = anime.status === 'fulfilled' ? anime.value : [];
-        this.s.moviesList = movies.status === 'fulfilled' ? movies.value : [];
-        this.s.tvList = tv.status === 'fulfilled' ? tv.value : [];
 
         if (wl.status === 'fulfilled') {
             this.s.watchlist = wl.value;
@@ -433,24 +486,128 @@ const App = {
 
         this._reindexSearch();
 
-        const heroItems = t.filter(i => i.backdropUrl || i.posterUrl).slice(0, 5);
         const watching = this.s.watchlist.find(i => i.list_name === 'Watching');
-        
-        clearInterval(this.s.heroInterval);
-        if (heroItems.length) {
-            let heroIndex = 0;
-            UI.renderHero(heroItems[heroIndex], watching);
-            this.s.heroInterval = setInterval(() => {
-                heroIndex = (heroIndex + 1) % heroItems.length;
-                UI.renderHero(heroItems[heroIndex], watching);
-            }, 5000);
-        }
-
+        const heroItems = t.filter(i => i.backdropUrl || i.posterUrl).slice(0, 5);
+        this._startHeroCarousel(heroItems, watching);
         if (t.length) UI.renderScrollRow('row-trending', t.slice(0, 10));
-        if (anime.status === 'fulfilled') UI.renderScrollRow('row-anime', anime.value.slice(0, 10));
-        if (movies.status === 'fulfilled') UI.renderScrollRow('row-movies', movies.value.slice(0, 10));
-        if (tv.status === 'fulfilled') UI.renderScrollRow('row-tv', tv.value.slice(0, 10));
+
+        // ── Tier 2: Above-fold rows — fire shortly after hero renders ─────────
+        setTimeout(async () => {
+            document.getElementById('row-anime').innerHTML  = UI.skeletonRow(6);
+            document.getElementById('row-movies').innerHTML = UI.skeletonRow(6);
+            document.getElementById('row-tv').innerHTML     = UI.skeletonRow(6);
+
+            const [anime, movies, tv] = await Promise.allSettled([
+                API.fetchTopAnime(),
+                API.fetchPopularMovies(),
+                API.fetchPopularTV(),
+            ]);
+
+            this.s.animeList  = anime.status  === 'fulfilled' ? anime.value  : [];
+            this.s.moviesList = movies.status === 'fulfilled' ? movies.value : [];
+            this.s.tvList     = tv.status     === 'fulfilled' ? tv.value     : [];
+
+            this._reindexSearch();
+
+            if (anime.status  === 'fulfilled') UI.renderScrollRow('row-anime',  anime.value.slice(0, 10));
+            if (movies.status === 'fulfilled') UI.renderScrollRow('row-movies', movies.value.slice(0, 10));
+            if (tv.status     === 'fulfilled') UI.renderScrollRow('row-tv',     tv.value.slice(0, 10));
+        }, 100);
+
+        // ── Tier 3: Below-fold — IntersectionObserver lazy-load ──────────────
+        this._attachTier3Observers();
+
+        // Mark as loaded and schedule auto-refresh
+        this.s.dashboardLoaded = true;
+        this._scheduleAutoRefresh();
     },
+
+    // ── Hero Carousel Management ─────────────────────────────────────────────
+    _startHeroCarousel(heroItems, watching) {
+        clearInterval(this.s.heroInterval);
+        this.s.heroInterval = null;
+
+        if (!heroItems.length) return;
+
+        let heroIndex = 0;
+        UI.renderHero(heroItems[heroIndex], watching);
+
+        this.s.heroInterval = setInterval(() => {
+            // Don't advance carousel if hero is paused (modal open / tab hidden)
+            if (this.s.heroPaused) return;
+            heroIndex = (heroIndex + 1) % heroItems.length;
+            UI.renderHero(heroItems[heroIndex], watching);
+        }, 5000);
+
+        // Pause hero when page is hidden (user switches browser tab)
+        if (!this.s._visibilityBound) {
+            this.s._visibilityBound = true;
+            document.addEventListener('visibilitychange', () => {
+                this.s.heroPaused = document.hidden;
+            });
+        }
+    },
+
+    // ── Tier-3 IntersectionObserver lazy rows ────────────────────────────────
+    _attachTier3Observers() {
+        const tier3 = [
+            { rowId: 'row-top-movies',      fetch: () => API.fetchTopRatedMovies()    },
+            { rowId: 'row-upcoming-movies', fetch: () => API.fetchUpcomingMovies()    },
+            { rowId: 'row-top-tv',          fetch: () => API.fetchTopRatedTV()        },
+            { rowId: 'row-airing-tv',       fetch: () => API.fetchAiringTodayTV()     },
+            { rowId: 'row-upcoming-anime',  fetch: () => API.fetchUpcomingAnime()     },
+        ];
+
+        tier3.forEach(({ rowId, fetch }) => {
+            const rowEl = document.getElementById(rowId);
+            if (!rowEl) return;
+
+            // If already populated, skip
+            if (rowEl.children.length > 0 && !rowEl.querySelector('.skeleton')) return;
+
+            // Start with skeleton
+            rowEl.innerHTML = UI.skeletonRow(6);
+
+            const section = rowEl.closest('section') || rowEl;
+            const obs = new IntersectionObserver(async (entries) => {
+                if (!entries[0].isIntersecting) return;
+                obs.disconnect();
+                try {
+                    const items = await fetch();
+                    UI.renderScrollRow(rowId, items.slice(0, 10));
+                } catch (e) {
+                    rowEl.innerHTML = '';
+                }
+            }, { rootMargin: '200px' }); // pre-load 200px before viewport
+
+            obs.observe(section);
+            this.s.rowObservers.push(obs);
+        });
+    },
+
+    // ── Dashboard Auto-Refresh (30 min) ──────────────────────────────────────
+    _scheduleAutoRefresh() {
+        clearTimeout(this.s.dashboardRefreshTimer);
+        const THIRTY_MIN = 30 * 60 * 1000;
+        this.s.dashboardRefreshTimer = setTimeout(() => {
+            // Only auto-refresh if Radar tab is currently visible
+            if (this.s.view === 'search' && !document.hidden) {
+                this.refreshDashboard();
+            } else {
+                // Reset loaded flag so next visit to Radar triggers a fresh load
+                this.s.dashboardLoaded = false;
+                API.clearCache();
+            }
+        }, THIRTY_MIN);
+    },
+
+    async refreshDashboard() {
+        this.s.dashboardLoaded = false;
+        API.clearCache();
+        await this._loadDashboard();
+        UI.toast('CONTENT REFRESHED');
+    },
+
 
     async _doSearch(q) {
         try {
@@ -566,8 +723,11 @@ const App = {
 
     _updateWLUI() {
         document.getElementById('watchlistCount').textContent = `${this.s.watchlist.length} TARGETS ACQUIRED`;
-        const list = this.s.wlFilter === 'all' ? this.s.watchlist : this.s.watchlist.filter(i => i.list_name === this.s.wlFilter);
-        UI.renderWatchlistGrid(list);
+        const filter = this.s.wlFilter || 'all';
+        const list = filter === 'all' 
+            ? this.s.watchlist 
+            : this.s.watchlist.filter(i => (i.media_type || i.mediaType) === filter);
+        UI.renderWatchlistGrid(list, this.s.watchlist);
     },
 
     _reindexSearch() {
@@ -700,13 +860,16 @@ const App = {
             
             const recs = await API.getAIRecommendations(targets, liked, disliked, this.s.chatHistory);
             
-            // Enrich results
+            // Enrich results — Step 3.3: use unified schema field names matching Android
             const enriched = await Promise.allSettled(recs.map(async rec => {
                 let r;
-                if(rec.type==='anime') r = await API.searchAnime(rec.title);
-                else if(rec.type==='movie') r = await API.searchMovies(rec.title);
+                if(rec.mediaType==='anime') r = await API.searchAnime(rec.title);
+                else if(rec.mediaType==='movie') r = await API.searchMovies(rec.title);
                 else r = await API.searchTV(rec.title);
-                return r[0] ? {...r[0], reason: rec.reason} : null;
+                return r[0]
+                    ? { ...r[0], reason: rec.reasoning, reasoning: rec.reasoning,
+                                 genre: rec.genre, releaseYear: rec.releaseYear }
+                    : null;
             }));
 
             const valid = enriched.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value);
@@ -746,17 +909,23 @@ const App = {
 
     // ── Drawer & Watchlist Actions ────────────────────────────────────────────
     async openDrawer(item) {
+        this.s.heroPaused = true; // Pause hero carousel while modal is open
         this.s.drawerItem = item;
         this.s.drawerDBEntry = this.s.watchlist.find(w => w.id === item.id && w.media_type === item.mediaType) || null;
-        UI.renderDrawer(item, this.s.drawerDBEntry);
+        this.s.drawerWatchedEpisodes = [];
+        if (!this.s.isGuest && this.s.user) {
+            this.s.drawerWatchedEpisodes = await SBWatchedEpisodes.getForMedia(this.s.user.id, item.id, item.mediaType);
+        }
+        UI.renderDrawer(item, this.s.drawerDBEntry, this.s.drawerWatchedEpisodes);
         document.getElementById('detailModal').classList.add('active');
+        document.body.style.overflow = 'hidden'; // prevent background scroll
 
         try {
             if (item.id > 0) {
-                const full = await API.fetchDetails(item.id, item.mediaType);
+                const full = await API.fetchDetails(item.id, item.mediaType || item.media_type, item.provider);
                 if (full) {
                     this.s.drawerItem = { ...item, ...full };
-                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
+                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry, this.s.drawerWatchedEpisodes);
                 }
             }
         } catch {}
@@ -765,19 +934,26 @@ const App = {
     async openDrawerFromDB(dbItem) {
         const basic = {
             id: dbItem.id, mediaType: dbItem.media_type, title: dbItem.title, posterUrl: dbItem.image_url,
-            year: dbItem.date, score: dbItem.score, totalEpisodes: dbItem.total_episodes, totalSeasons: dbItem.total_seasons
+            year: dbItem.date, score: dbItem.score, totalEpisodes: dbItem.total_episodes, totalSeasons: dbItem.total_seasons,
+            provider: dbItem.director_studio ? 'tmdb' : null
         };
+        this.s.heroPaused = true; // Pause hero carousel while modal is open
         this.s.drawerItem = basic;
         this.s.drawerDBEntry = dbItem;
-        UI.renderDrawer(basic, dbItem);
+        this.s.drawerWatchedEpisodes = [];
+        if (!this.s.isGuest && this.s.user) {
+            this.s.drawerWatchedEpisodes = await SBWatchedEpisodes.getForMedia(this.s.user.id, dbItem.id, dbItem.media_type);
+        }
+        UI.renderDrawer(basic, dbItem, this.s.drawerWatchedEpisodes);
         document.getElementById('detailModal').classList.add('active');
+        document.body.style.overflow = 'hidden'; // prevent background scroll
 
         try {
             if (dbItem.id > 0) {
-                const full = await API.fetchDetails(dbItem.id, dbItem.media_type);
+                const full = await API.fetchDetails(dbItem.id, dbItem.media_type, basic.provider);
                 if (full) {
                     this.s.drawerItem = { ...basic, ...full };
-                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
+                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry, this.s.drawerWatchedEpisodes);
                 }
             }
         } catch {}
@@ -785,19 +961,36 @@ const App = {
 
     closeDrawer() {
         document.getElementById('detailModal').classList.remove('active');
+        document.body.style.overflow = ''; // restore scroll
+        // Resume hero carousel (only if not hidden by tab switch)
+        if (!document.hidden) {
+            this.s.heroPaused = false;
+        }
     },
 
     async addToWatchlist(item, listName) {
         if (this.s.isGuest) return UI.toast('AUTH REQUIRED', 'error');
         try {
-            await SBList.add(this.s.user.id, item, listName);
-            this.s.watchlist = await SBList.getAll(this.s.user.id);
-            this.s.drawerDBEntry = this.s.watchlist.find(w => w.id === item.id && w.media_type === item.mediaType);
-            UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
+            // Ensure full details (runtime, genres, etc.) are fetched for stats before saving
+            if (!item.runtime && item.id) {
+                const full = await API.fetchDetails(item.id, item.mediaType || item.media_type, item.provider);
+                if (full) item = { ...item, ...full };
+            }
+            const [row] = await SBList.add(this.s.user.id, item, listName);
+            const idx = this.s.watchlist.findIndex(w => w.id === row.id && w.media_type === row.media_type);
+            if (idx >= 0) this.s.watchlist[idx] = row;
+            else this.s.watchlist.unshift(row);
+
+            this.s.drawerItem = item;
+            this.s.drawerDBEntry = row;
+            UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry, this.s.drawerWatchedEpisodes);
             this._updateWLUI();
             this._reindexSearch();
             UI.toast('TARGET ACQUIRED');
-        } catch (e) { UI.toast('SYSTEM ERROR', 'error'); }
+        } catch (e) {
+            console.error('addToWatchlist failed:', e);
+            UI.toast('SYSTEM ERROR', 'error');
+        }
     },
 
     async removeFromWatchlist(id, type) {
@@ -806,11 +999,47 @@ const App = {
             await SBList.remove(this.s.user.id, id, type);
             this.s.watchlist = this.s.watchlist.filter(w => !(w.id === id && w.media_type === type));
             this.s.drawerDBEntry = null;
-            UI.renderDrawer(this.s.drawerItem, null);
+            this.s.drawerWatchedEpisodes = [];
+            UI.renderDrawer(this.s.drawerItem, null, []);
             this._updateWLUI();
             this._reindexSearch();
             UI.toast('TARGET PURGED');
         } catch (e) { UI.toast('SYSTEM ERROR', 'error'); }
+    },
+
+    async markAllEpisodesWatched(item, dbEntry) {
+        if (!dbEntry || this.s.isGuest || !this.s.user) return;
+        const mediaType = (dbEntry.media_type || item?.mediaType || '').toLowerCase();
+        if (mediaType !== 'tv' && mediaType !== 'anime') return;
+
+        const totalSeasons = item?.totalSeasons || dbEntry.total_seasons || 1;
+        const isAniList = item?.provider === 'anilist' || item?.provider === 'jikan';
+
+        for (let s = 1; s <= totalSeasons; s++) {
+            let epCount = dbEntry.total_episodes || item?.totalEpisodes || 0;
+            if (!isAniList && epCount === 0) {
+                try {
+                    const seasonData = await API.fetchTVSeasonDetails(dbEntry.id, s);
+                    if (seasonData?.episodes?.length > 0) {
+                        epCount = seasonData.episodes.length;
+                    }
+                } catch {}
+            }
+            if (epCount > 0) {
+                for (let ep = 1; ep <= epCount; ep++) {
+                    await SBWatchedEpisodes.add(this.s.user.id, dbEntry.id, dbEntry.media_type, s, ep);
+                }
+            }
+        }
+        this.s.drawerWatchedEpisodes = JSON.parse(
+            localStorage.getItem(`loopa_episodes_${this.s.user.id}_${dbEntry.id}`) || '[]'
+        );
+        const newCount = this.s.drawerWatchedEpisodes.length;
+        const idx = this.s.watchlist.findIndex(w => w.id === dbEntry.id && w.media_type === dbEntry.media_type);
+        if (idx >= 0) {
+            this.s.watchlist[idx].current_episode = newCount;
+            this.s.drawerDBEntry.current_episode = newCount;
+        }
     },
 
     async updateStatus(status) {
@@ -821,23 +1050,36 @@ const App = {
             e.list_name = status;
             const idx = this.s.watchlist.findIndex(w => w.id === e.id && w.media_type === e.media_type);
             if (idx >= 0) this.s.watchlist[idx].list_name = status;
-            UI.renderDrawer(this.s.drawerItem, e);
+            if (status === 'Watched' || status === 'Completed') {
+                await this.markAllEpisodesWatched(this.s.drawerItem, e);
+            }
+            UI.renderDrawer(this.s.drawerItem, e, this.s.drawerWatchedEpisodes);
             UI.toast('STATUS UPDATED');
         } catch (err) {}
     },
 
-    async updateProgress(field, delta) {
+    // updateProgress removed as requested in redesign
+
+    async toggleEpisodeWatched(seasonNum, episodeNum, isWatched) {
         const e = this.s.drawerDBEntry;
         if (!e || this.s.isGuest) return;
-        if (field === 'episode') {
-            e.current_episode = Math.max(0, (e.current_episode || 0) + delta);
-            document.getElementById('progDisplay').textContent = `E ${e.current_episode}`;
-            
-            try {
-                await SBList.update(this.s.user.id, e.id, e.media_type, { current_episode: e.current_episode });
-                const idx = this.s.watchlist.findIndex(w => w.id === e.id && w.media_type === e.media_type);
-                if (idx >= 0) this.s.watchlist[idx].current_episode = e.current_episode;
-            } catch {}
+        try {
+            if (isWatched) {
+                await SBWatchedEpisodes.add(this.s.user.id, e.id, e.media_type, seasonNum, episodeNum);
+            } else {
+                await SBWatchedEpisodes.remove(this.s.user.id, e.id, e.media_type, seasonNum, episodeNum);
+            }
+            // Refresh local episode count
+            this.s.drawerWatchedEpisodes = await SBWatchedEpisodes.getForMedia(this.s.user.id, e.id, e.media_type);
+            const newCount = this.s.drawerWatchedEpisodes.length;
+            // Update the watchlist entry in local state
+            const idx = this.s.watchlist.findIndex(w => w.id === e.id && w.media_type === e.media_type);
+            if (idx >= 0) {
+                this.s.watchlist[idx].current_episode = newCount;
+                this.s.drawerDBEntry.current_episode = newCount;
+            }
+        } catch (err) {
+            console.error(err);
         }
     },
 

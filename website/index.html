@@ -35,367 +35,8 @@
     <!-- Supabase JS v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        loopBase: '#0F0E0C',
-                        loopSurface: '#1A1915',
-                        loopRaised: '#242320',
-                        loopAmber: '#E8A87C',
-                        loopAmberStrong: '#D4845A',
-                        loopAmberSubtle: '#2A1F17',
-                        textPrimary: '#F0EDE8',
-                        textSecondary: '#A09990',
-                        textMuted: '#5C574F',
-                        loopSuccess: '#7AB87A',
-                        loopError: '#C87070',
-                    },
-                    fontFamily: {
-                        sans: ['"DM Sans"', 'sans-serif'],
-                    },
-                    borderRadius: {
-                        'sm': '6px',
-                        'md': '10px',
-                        'lg': '14px',
-                        'xl': '20px',
-                        '2xl': '28px',
-                    },
-                    boxShadow: {
-                        'amber': '0 0 0 1px rgba(232,168,124,0.4)',
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* ── Loopa Design System ──────────────────────────────────────────────── */
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background-color: #0F0E0C;
-            color: #F0EDE8;
-            font-family: 'DM Sans', sans-serif;
-        }
-
-        /* Selection */
-        ::selection {
-            background-color: rgba(232, 168, 124, 0.25);
-            color: #F0EDE8;
-        }
-
-        /* Scrollbars */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        /* Frosted Glass — warm version */
-        .frosted-glass {
-            background-color: rgba(26, 25, 21, 0.82) !important;
-            backdrop-filter: blur(24px) !important;
-            -webkit-backdrop-filter: blur(24px) !important;
-            border: 1px solid rgba(240, 237, 232, 0.08) !important;
-        }
-
-        /* Super Frosted & Readable Dropdown */
-        .dropdown-frosted {
-            background-color: rgba(18, 17, 14, 0.95) !important;
-            backdrop-filter: blur(40px) !important;
-            -webkit-backdrop-filter: blur(40px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.12) !important;
-            box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.02) inset !important;
-        }
-
-        /* Horizontal Scroll Edge Fade */
-        .scroll-fade-container {
-            position: relative;
-            width: 100%;
-        }
-        .scroll-fade-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 48px;
-            background: linear-gradient(to right, #0F0E0C 10%, transparent);
-            pointer-events: none;
-            z-index: 10;
-        }
-        .scroll-fade-container::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 48px;
-            background: linear-gradient(to left, #0F0E0C 10%, transparent);
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        /* Category Header Navigation Buttons */
-        .header-nav-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: rgba(26, 25, 21, 0.65);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: #F0EDE8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .header-nav-btn:hover {
-            background-color: rgba(232, 168, 124, 0.95);
-            color: #0F0E0C;
-            border-color: #E8A87C;
-            transform: scale(1.1);
-        }
-
-        /* Modal transitions */
-        #detailModal,
-        #authModal {
-            transition: opacity 0.25s ease;
-        }
-
-        #modalContent,
-        #authContent {
-            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            transform: scale(0.97) translateY(8px);
-        }
-
-        #detailModal.active,
-        #authModal.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        #detailModal.active #modalContent,
-        #authModal.active #authContent {
-            transform: scale(1) translateY(0);
-        }
-
-        /* Active nav indicator */
-        .nav-btn {
-            position: relative;
-            transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .nav-btn::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 2px;
-            background: #E8A87C;
-            border-radius: 9999px;
-            transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .nav-btn.active-nav::after {
-            width: 70%;
-        }
-
-        .nav-btn.active-nav {
-            color: #F0EDE8 !important;
-        }
-
-        /* Card hover */
-        .media-card {
-            transition: border-color 150ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .media-card:hover {
-            border-color: rgba(232, 168, 124, 0.35);
-        }
-
-        .media-card:hover .poster-img {
-            transform: scale(1.05);
-        }
-
-        .poster-img {
-            transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        /* Amber glow on focused inputs */
-        .loop-input:focus {
-            border-color: rgba(232, 168, 124, 0.6);
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(232, 168, 124, 0.08);
-        }
-
-        /* Status badge */
-        .status-badge-watching {
-            color: #E8A87C;
-            border-color: rgba(232, 168, 124, 0.4);
-        }
-
-        .status-badge-watched {
-            color: #7AB87A;
-            border-color: rgba(122, 184, 122, 0.4);
-        }
-
-        .status-badge-planned {
-            color: #A09990;
-            border-color: rgba(160, 153, 144, 0.3);
-        }
-
-        /* Shimmer skeleton */
-        @keyframes shimmer {
-            0% {
-                background-position: -400px 0;
-            }
-
-            100% {
-                background-position: 400px 0;
-            }
-        }
-
-        .skeleton {
-            background: linear-gradient(90deg, #1A1915 25%, #242320 50%, #1A1915 75%);
-            background-size: 400px 100%;
-            animation: shimmer 1.4s ease-in-out infinite;
-        }
-
-        /* Toast slide */
-        #toast {
-            transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        /* Pill button base */
-        .btn-primary {
-            background: #E8A87C;
-            color: #0F0E0C;
-            font-weight: 600;
-            border-radius: 9999px;
-            padding: 12px 28px;
-            transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .btn-primary:hover {
-            background: #D4845A;
-            transform: scale(1.02);
-        }
-
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: #F0EDE8;
-            font-weight: 500;
-            border-radius: 9999px;
-            border: 1px solid rgba(240, 237, 232, 0.15);
-            padding: 12px 28px;
-            transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(240, 237, 232, 0.06);
-            border-color: rgba(240, 237, 232, 0.25);
-        }
-
-        /* Filter pill */
-        .filter-pill {
-            background: #1A1915;
-            color: #A09990;
-            border: 1px solid rgba(240, 237, 232, 0.08);
-            border-radius: 9999px;
-            padding: 8px 20px;
-            font-weight: 500;
-            font-size: 14px;
-            transition: all 150ms ease;
-        }
-
-        .filter-pill:hover {
-            color: #F0EDE8;
-            border-color: rgba(240, 237, 232, 0.2);
-            background: #242320;
-        }
-
-        .filter-pill.active {
-            background: rgba(232, 168, 124, 0.12);
-            color: #E8A87C;
-            border-color: rgba(232, 168, 124, 0.35);
-        }
-
-        /* Section accent line */
-        .section-accent {
-            width: 3px;
-            height: 1.3em;
-            background: #E8A87C;
-            border-radius: 9999px;
-            display: inline-block;
-            flex-shrink: 0;
-        }
-
-        /* Hero gradient */
-        .hero-gradient-top {
-            background: linear-gradient(to bottom, #0F0E0C 0%, rgba(15, 14, 12, 0.4) 60%, transparent 100%);
-        }
-
-        .hero-gradient-base {
-            background: linear-gradient(to top, #0F0E0C 0%, rgba(15, 14, 12, 0.5) 50%, transparent 100%);
-        }
-
-        .hero-gradient-side {
-            background: linear-gradient(to right, #0F0E0C 0%, rgba(15, 14, 12, 0.3) 40%, transparent 100%);
-        }
-
-        /* Status selector button */
-        .status-btn {
-            border-radius: 9999px;
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 150ms ease;
-            border: 1px solid rgba(240, 237, 232, 0.1);
-            color: #A09990;
-            background: #1A1915;
-        }
-
-        .status-btn:hover {
-            color: #F0EDE8;
-            border-color: rgba(240, 237, 232, 0.25);
-        }
-
-        .status-btn.active-status {
-            background: rgba(232, 168, 124, 0.14);
-            color: #E8A87C;
-            border-color: rgba(232, 168, 124, 0.4);
-        }
-
-        /* Smooth page fade in */
-        .page-fade {
-            animation: pageFadeIn 0.4s ease forwards;
-        }
-
-        @keyframes pageFadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(6px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
+    <script src="js/tailwind-config.js?v=20"></script>
+    <link rel="stylesheet" href="css/styles.css?v=20">
 </head>
 
 <body class="flex flex-col min-h-screen overflow-x-hidden">
@@ -456,7 +97,7 @@
                     <!-- Nav items -->
                     <nav class="flex items-center gap-1 shrink-0">
                         <button
-                            class="nav-btn active-nav px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors"
+                            class="nav-btn px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors"
                             data-nav="search">Radar</button>
                         <button
                             class="nav-btn px-4 py-2 text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors"
@@ -595,14 +236,14 @@
                     </div>
 
                     <!-- Curated rows -->
-                    <div class="max-w-[1600px] mx-auto px-5 lg:px-8 pt-10 md:pt-14 space-y-12 md:space-y-16">
+                    <div class="max-w-[1600px] mx-auto px-5 lg:px-8 pt-10 md:pt-14 flex flex-col gap-10">
                         <section>
-                            <div class="flex items-center justify-between mb-6 px-12">
-                                <div class="flex items-center gap-3">
-                                    <span class="section-accent"></span>
-                                    <h2 class="text-2xl font-bold text-textPrimary">Trending</h2>
-                                </div>
-                                <div class="flex gap-2">
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <h2 class="text-xl font-bold text-textPrimary">Trending</h2>
+                                <div class="flex gap-2 items-center">
+                                    <button id="btnRefreshRadar" title="Refresh content" class="header-nav-btn" onclick="App.refreshDashboard()">
+                                        <i class="fa-solid fa-rotate text-[10px]"></i>
+                                    </button>
                                     <button class="header-nav-btn" onclick="App.scrollRow('row-trending', 'left')">
                                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
                                     </button>
@@ -618,11 +259,8 @@
                         </section>
 
                         <section>
-                            <div class="flex items-center justify-between mb-6 px-12">
-                                <div class="flex items-center gap-3">
-                                    <span class="section-accent"></span>
-                                    <h2 class="text-2xl font-bold text-textPrimary">Anime</h2>
-                                </div>
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <h2 class="text-xl font-bold text-textPrimary">Anime</h2>
                                 <div class="flex gap-2">
                                     <button class="header-nav-btn" onclick="App.scrollRow('row-anime', 'left')">
                                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
@@ -638,11 +276,8 @@
                         </section>
 
                         <section>
-                            <div class="flex items-center justify-between mb-6 px-12">
-                                <div class="flex items-center gap-3">
-                                    <span class="section-accent"></span>
-                                    <h2 class="text-2xl font-bold text-textPrimary">Popular Movies</h2>
-                                </div>
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <h2 class="text-xl font-bold text-textPrimary">Popular Movies</h2>
                                 <div class="flex gap-2">
                                     <button class="header-nav-btn" onclick="App.scrollRow('row-movies', 'left')">
                                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
@@ -658,11 +293,8 @@
                         </section>
 
                         <section>
-                            <div class="flex items-center justify-between mb-6 px-12">
-                                <div class="flex items-center gap-3">
-                                    <span class="section-accent"></span>
-                                    <h2 class="text-2xl font-bold text-textPrimary">Popular TV</h2>
-                                </div>
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <h2 class="text-xl font-bold text-textPrimary">Popular TV</h2>
                                 <div class="flex gap-2">
                                     <button class="header-nav-btn" onclick="App.scrollRow('row-tv', 'left')">
                                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
@@ -674,6 +306,91 @@
                             </div>
                             <div class="scroll-fade-container">
                                 <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-tv"></div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <h2 class="text-xl font-bold text-textPrimary">Top Rated Movies</h2>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-top-movies', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-top-movies', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="scroll-fade-container">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-top-movies"></div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <h2 class="text-xl font-bold text-textPrimary">Upcoming Movies</h2>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-upcoming-movies', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-upcoming-movies', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="scroll-fade-container">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-upcoming-movies"></div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <h2 class="text-xl font-bold text-textPrimary">Top Rated TV</h2>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-top-tv', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-top-tv', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="scroll-fade-container">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-top-tv"></div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <h2 class="text-xl font-bold text-textPrimary">Airing Today TV</h2>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-airing-tv', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-airing-tv', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="scroll-fade-container">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-airing-tv"></div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <h2 class="text-xl font-bold text-textPrimary">Upcoming Anime</h2>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-upcoming-anime', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-upcoming-anime', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="scroll-fade-container">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-upcoming-anime"></div>
                             </div>
                         </section>
                     </div>
@@ -689,9 +406,9 @@
                     </div>
                     <div class="flex flex-wrap gap-2" id="wlFilters">
                         <button class="filter-pill active" data-wf="all">All</button>
-                        <button class="filter-pill" data-wf="Watching">Watching</button>
-                        <button class="filter-pill" data-wf="To Watch">Planned</button>
-                        <button class="filter-pill" data-wf="Watched">Completed</button>
+                        <button class="filter-pill" data-wf="movie">Movies</button>
+                        <button class="filter-pill" data-wf="tv">TV Shows</button>
+                        <button class="filter-pill" data-wf="anime">Anime</button>
                     </div>
                 </div>
 
@@ -706,13 +423,15 @@
                 </div>
             </main>
 
+
+
             <!-- Tab 4: For You (AI) -->
             <main id="tab-ai"
                 class="w-full hidden max-w-[1200px] mx-auto px-5 lg:px-8 pt-6 pb-6 flex flex-col h-[calc(100dvh-64px)] overflow-hidden">
                 <div class="flex justify-between items-end mb-6 shrink-0">
                     <div>
-                        <h1 class="text-4xl md:text-5xl font-bold text-textPrimary">AI Assistant</h1>
-                        <p class="text-textSecondary text-sm mt-1.5">Chat with Gemini to find your next target</p>
+                        <h1 class="text-4xl md:text-5xl font-bold text-textPrimary">Loopa AI</h1>
+                        <p class="text-textSecondary text-sm mt-1.5">Discover your next obsession</p>
                     </div>
                     <button id="btnAiClearChat"
                         class="bg-loopSurface hover:bg-loopRaised border border-white/10 rounded-full w-10 h-10 flex items-center justify-center text-textSecondary hover:text-textPrimary transition-colors">
@@ -766,10 +485,16 @@
             </button>
 
             <!-- Left: Poster -->
-            <div class="w-full md:w-[38%] h-52 md:h-full relative overflow-hidden bg-loopSurface shrink-0">
+            <div class="w-full md:w-[38%] h-72 md:h-full relative overflow-hidden bg-loopSurface shrink-0 flex flex-col justify-end">
                 <div id="modalImageContainer" class="absolute inset-0"></div>
-                <div class="absolute inset-0 hero-gradient-base md:hidden"></div>
-                <div class="absolute inset-0 hero-gradient-side hidden md:block"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-loopBase via-loopBase/70 to-transparent z-10 pointer-events-none"></div>
+                <div class="relative z-20 p-5 md:p-6 flex flex-col justify-end max-h-[70%]">
+                    <div class="inline-flex items-center gap-1.5 mb-1.5 text-[10px] font-bold tracking-widest uppercase text-loopAmber">
+                        <i class="fa-solid fa-align-left text-[9px]"></i>
+                        <span>Synopsis</span>
+                    </div>
+                    <div class="text-xs text-textSecondary leading-relaxed overflow-y-auto max-h-48 no-scrollbar pr-1 font-medium" id="modalSummary"></div>
+                </div>
             </div>
 
             <!-- Right: Details -->
@@ -786,13 +511,24 @@
                         class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10"
                         id="modalYear">----</span>
                     <span
+                        class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10 hidden"
+                        id="modalEpisodes"></span>
+                    <span
+                        class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10 hidden"
+                        id="modalRuntime"></span>
+                    <span
                         class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10"
                         id="modalType">—</span>
                 </div>
 
-                <h2 class="text-3xl md:text-5xl font-bold text-textPrimary leading-tight mb-3" id="modalTitle">Loading…
-                </h2>
-                <div class="flex flex-wrap gap-2 mb-8 text-xs font-medium text-textSecondary" id="modalGenres"></div>
+                <div class="flex items-center justify-between gap-4 mb-3">
+                    <h2 class="text-3xl md:text-5xl font-bold text-textPrimary leading-tight" id="modalTitle">Loading…</h2>
+                    <button id="btnDeleteWatchlist" class="hidden text-red-400 hover:text-red-300 transition-colors bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg px-3.5 py-1.5 shrink-0 flex items-center gap-2 text-xs font-semibold" title="Remove from list">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                        <span>Delete</span>
+                    </button>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-4 text-xs font-medium text-textSecondary" id="modalGenres"></div>
 
                 <!-- Watchlist Actions -->
                 <div id="modalActions" class="mb-8">
@@ -809,48 +545,103 @@
                         <button class="status-btn flex-1" data-status="Watched">Completed</button>
                     </div>
 
-                    <!-- Progress & Rating -->
+                        <!-- Unified User Control Card (Rating + Notes + Progress) -->
                     <div id="progressSection"
-                        class="hidden bg-loopSurface border border-white/[0.07] rounded-xl p-5 mt-2">
-                        <div class="flex justify-between items-center mb-4" id="episodeProgressContainer">
-                            <span class="text-sm font-semibold text-textSecondary">Progress</span>
-                            <div class="flex items-center gap-3">
-                                <button id="btnProgSub"
-                                    class="w-7 h-7 bg-loopRaised text-textSecondary rounded-full hover:text-textPrimary flex items-center justify-center transition-colors text-xs">
-                                    <i class="fa-solid fa-minus"></i>
-                                </button>
-                                <span class="text-textPrimary font-semibold text-sm w-12 text-center" id="progDisplay">E
-                                    1</span>
-                                <button id="btnProgAdd"
-                                    class="w-7 h-7 bg-loopRaised text-textSecondary rounded-full hover:text-loopAmber flex items-center justify-center transition-colors text-xs">
-                                    <i class="fa-solid fa-plus"></i>
+                        class="hidden bg-loopSurface border border-white/[0.07] rounded-xl p-4 md:p-5 mt-2 flex flex-col gap-4 shadow-lg">
+                        
+                        <!-- 1. Your Rating Header Row -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-md bg-loopAmber/10 border border-loopAmber/20 flex items-center justify-center text-loopAmber text-xs">
+                                    <i class="fa-solid fa-star"></i>
+                                </div>
+                                <span class="text-xs font-bold text-textPrimary tracking-wide">Your Rating</span>
+                            </div>
+                            <div id="starRating"></div>
+                        </div>
+
+                        <!-- Divider -->
+                        <div class="h-px w-full bg-white/[0.06]"></div>
+
+                        <!-- 2. Personal Notes Section -->
+                        <div class="flex flex-col gap-2" id="notesSection">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-textMuted flex items-center gap-1.5">
+                                    <i class="fa-solid fa-note-sticky text-xs text-textSecondary"></i>
+                                    <span>Personal Notes</span>
+                                </span>
+                                <button id="btnSaveNotes" type="button" class="btn-primary py-1 px-3 text-[11px] font-semibold flex items-center gap-1.5 rounded-lg shadow-sm">
+                                    <i class="fa-solid fa-floppy-disk text-[10px]"></i>
+                                    <span>Save</span>
                                 </button>
                             </div>
+                            <textarea id="personalNotesInput" class="w-full bg-loopBase/80 border border-white/10 rounded-xl p-3 text-xs text-textPrimary placeholder-textMuted focus:outline-none focus:border-loopAmber/50 transition-all resize-none font-medium leading-relaxed" placeholder="Add notes, favorite quotes, or thoughts..." rows="2"></textarea>
                         </div>
-                        <div class="flex justify-between items-center border-t border-white/[0.06] pt-4">
-                            <span class="text-sm font-semibold text-textSecondary">Your Rating</span>
-                            <div class="flex gap-1.5 text-xl" id="starRating"></div>
+                        
+                        <!-- 3. Season / Episode Checklist Dropdown (TV / Anime Only) -->
+                        <div id="seasonChecklistSection" class="hidden border-t border-white/[0.06] pt-3 mt-1">
+                            <button id="btnToggleEpisodesSection" type="button" class="w-full flex items-center justify-between py-1 text-sm font-semibold text-textSecondary hover:text-textPrimary transition-colors group">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-chart-pie text-loopAmber text-xs"></i>
+                                    <span>Progress Tracker</span>
+                                </div>
+                                <div class="flex items-center gap-2.5">
+                                    <!-- Creative Dual Micro Progress Badges -->
+                                    <div id="episodesProgressBadge" class="flex items-center gap-1.5">
+                                        <!-- Injected by JS -->
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down text-textMuted text-[10px] transition-transform duration-200" id="episodesSectionIcon"></i>
+                                </div>
+                            </button>
+                            
+                            <div id="episodesSectionContent" class="hidden mt-3.5 pt-1">
+                                <!-- Visual Progress Dashboard -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 p-3.5 bg-loopBase/60 border border-white/[0.08] rounded-xl shadow-inner">
+                                    <!-- Season Progress Card -->
+                                    <div class="flex flex-col gap-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider flex items-center gap-1.5">
+                                                <i class="fa-solid fa-layer-group text-[9px] text-loopAmber"></i>
+                                                <span>Season Progress</span>
+                                            </span>
+                                            <span class="text-xs font-bold text-textPrimary" id="visualSeasonText">S1 / 3</span>
+                                        </div>
+                                        <!-- Segmented Season Bar -->
+                                        <div class="flex gap-1.5 h-2 w-full items-center" id="visualSeasonSegments">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Episode Progress Card -->
+                                    <div class="flex flex-col gap-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] font-bold text-loopAmber uppercase tracking-wider flex items-center gap-1.5">
+                                                <i class="fa-solid fa-circle-play text-[9px]"></i>
+                                                <span>Episode Progress</span>
+                                            </span>
+                                            <span class="text-xs font-bold text-textPrimary" id="visualEpisodeText">0 / 0 (0%)</span>
+                                        </div>
+                                        <!-- Smooth Gradient Episode Bar -->
+                                        <div class="h-2 w-full bg-loopSurface rounded-full overflow-hidden border border-white/5 relative">
+                                            <div id="visualEpisodeBar" class="h-full bg-gradient-to-r from-loopAmber to-loopAmberStrong rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(232,168,124,0.5)]" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Custom Season Dropdown -->
+                                <div class="relative mb-3.5 z-20" id="seasonDropdownWrapper">
+                                    <button id="seasonDropdownBtn" type="button" class="w-full bg-loopBase border border-white/10 hover:border-loopAmber/40 rounded-xl px-4 py-2.5 text-xs font-semibold text-textPrimary flex items-center justify-between transition-all shadow-inner group">
+                                        <span id="seasonDropdownLabel" class="group-hover:text-loopAmber transition-colors">Season 1</span>
+                                        <i class="fa-solid fa-chevron-down text-textMuted text-[10px] transition-transform duration-200" id="seasonDropdownIcon"></i>
+                                    </button>
+                                    <div id="seasonDropdownMenu" class="absolute left-0 right-0 top-full mt-1.5 bg-loopRaised/95 backdrop-blur-xl border border-white/10 rounded-xl p-1.5 shadow-2xl z-30 hidden flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar">
+                                    </div>
+                                </div>
+
+                                <div id="episodeList" class="flex flex-col gap-2 max-h-56 overflow-y-auto no-scrollbar pr-1">
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Personal Notes -->
-                    <div id="notesSection" class="hidden bg-loopSurface border border-white/[0.07] rounded-xl p-5 mt-2">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="text-sm font-semibold text-textSecondary">Personal Notes</span>
-                        </div>
-                        <textarea id="personalNotesInput" class="w-full bg-loopBase border border-white/10 rounded-lg p-3 text-sm text-textPrimary placeholder-textMuted focus:outline-none focus:border-loopAmber/50" placeholder="Add a note..." rows="3"></textarea>
-                        <div class="flex justify-end mt-3">
-                            <button id="btnSaveNotes" class="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-2">Save</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Stats -->
-                <div class="grid grid-cols-3 gap-3 mb-8" id="modalStats"></div>
-
-                <!-- Synopsis -->
-                <h3 class="text-sm font-semibold text-textSecondary mb-3 uppercase tracking-wider">Synopsis</h3>
-                <div class="text-sm text-textSecondary leading-relaxed" id="modalSummary"></div>
             </div>
         </div>
     </div>
@@ -866,31 +657,15 @@
         <!-- Injected by JS -->
     </div>
 
-    <script src="js/config.js?v=5"></script>
-    <script src="js/api.js?v=5"></script>
-    <script src="js/supabase.js?v=5"></script>
-    <script src="js/search-engine.js?v=5"></script>
-    <script src="js/ui.js?v=5"></script>
-    <script src="js/app.js?v=5"></script>
+    <script src="js/config.js?v=19"></script>
+    <script src="js/api.js?v=19"></script>
+    <script src="js/supabase.js?v=19"></script>
+    <script src="js/search-engine.js?v=19"></script>
+    <script src="js/ui.js?v=19"></script>
+    <script src="js/app.js?v=19"></script>
 
     <!-- Firebase SDK (Modular) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyA5eYGlSMNFSKn0QyFRyGkDwYpRAc9aISY",
-            authDomain: "loopa-4e92d.firebaseapp.com",
-            projectId: "loopa-4e92d",
-            storageBucket: "loopa-4e92d.firebasestorage.app",
-            messagingSenderId: "752063756580",
-            appId: "1:752063756580:web:4175ffe3b6c7e44329dbb1",
-            measurementId: "G-XRL3HP9CT4"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-    </script>
+    <script type="module" src="js/firebase-init.js?v=20"></script>
 </body>
 
 </html>

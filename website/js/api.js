@@ -19,9 +19,35 @@
 
 const API = {
 
+    // ── Response Cache (30-minute TTL) ───────────────────────────────────────
+    _cache: new Map(),
+    _CACHE_TTL_MS: 30 * 60 * 1000, // 30 minutes
+
+    _cacheGet(key) {
+        const entry = this._cache.get(key);
+        if (!entry) return null;
+        if (Date.now() - entry.ts > this._CACHE_TTL_MS) {
+            this._cache.delete(key);
+            return null;
+        }
+        return entry.data;
+    },
+
+    _cacheSet(key, data) {
+        this._cache.set(key, { data, ts: Date.now() });
+    },
+
+    clearCache() {
+        this._cache.clear();
+    },
+
     // ── Private fetch helpers ────────────────────────────────────────────────
 
     async _tmdb(endpoint, params = {}) {
+        const cacheKey = `tmdb:${endpoint}:${JSON.stringify(params)}`;
+        const cached = this._cacheGet(cacheKey);
+        if (cached) return cached;
+
         const url = new URL(`${CONFIG.TMDB_BASE}${endpoint}`);
         url.searchParams.set('language', 'en-US');
         Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
@@ -31,34 +57,71 @@ const API = {
             }
         });
         if (!res.ok) throw new Error(`TMDB ${res.status} on ${endpoint}`);
-        return res.json();
+        const data = await res.json();
+        this._cacheSet(cacheKey, data);
+        return data;
     },
 
     async _jikan(endpoint, params = {}) {
+        const cacheKey = `jikan:${endpoint}:${JSON.stringify(params)}`;
+        const cached = this._cacheGet(cacheKey);
+        if (cached) return cached;
+
         const url = new URL(`${CONFIG.JIKAN_BASE}${endpoint}`);
         Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-        // Jikan rate limit: simple retry after 1 s on 429
         let res = await fetch(url.toString());
         if (res.status === 429) {
             await new Promise(r => setTimeout(r, 1000));
             res = await fetch(url.toString());
         }
         if (!res.ok) throw new Error(`Jikan ${res.status} on ${endpoint}`);
-        return res.json();
+        const data = await res.json();
+        this._cacheSet(cacheKey, data);
+        return data;
+    },
+
+    async _anilist(query, variables = {}) {
+        const cacheKey = `anilist:${query.trim().substring(0, 60)}:${JSON.stringify(variables)}`;
+        const cached = this._cacheGet(cacheKey);
+        if (cached) return cached;
+
+        const res = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ query, variables })
+        });
+        if (!res.ok) throw new Error(`AniList ${res.status}`);
+        const json = await res.json();
+        this._cacheSet(cacheKey, json.data);
+        return json.data;
     },
 
     // ── Normalise ─────────────────────────────────────────────────────────────
 
     _normTMDB(item, forceType = null) {
-        const mediaType = forceType
-            || (item.media_type === 'movie' ? 'movie'
-            :   item.media_type === 'tv'    ? 'tv'
-            :   item.first_air_date          ? 'tv'
-            :   item.release_date            ? 'movie'
-            :   item.name                    ? 'tv' : 'movie');
+        // Detect anime: TMDB genre_ids/genres include Animation (16) + Japanese origin/language
+        const genreIds = item.genre_ids || (item.genres || []).map(g => g.id);
+        const isAnimation = genreIds.includes(16);
+        const isJapanese = (item.origin_country && item.origin_country.includes('JP')) || item.original_language === 'ja';
+        const isTV = item.media_type === 'tv' || item.first_air_date || item.name;
+        const isAnime = isAnimation && (isJapanese || forceType === 'anime') && isTV;
+
+        const mediaType = forceType === 'movie' ? 'movie'
+            : forceType === 'anime' ? 'anime'
+            : isAnime ? 'anime'
+            : forceType === 'tv' ? 'tv'
+            : (item.media_type === 'movie' ? 'movie'
+            :  item.media_type === 'tv'    ? 'tv'
+            :  item.first_air_date         ? 'tv'
+            :  item.release_date           ? 'movie'
+            :  item.name                   ? 'tv' : 'movie');
 
         return {
             id:           item.id,
+            provider:     'tmdb',
             mediaType,
             title:        item.title || item.name || 'Unknown',
             posterUrl:    item.poster_path   ? `${CONFIG.TMDB_IMG_500}${item.poster_path}`   : null,
@@ -78,6 +141,7 @@ const API = {
     _normJikan(anime) {
         return {
             id:           anime.mal_id,
+            provider:     'jikan',
             mediaType:    'anime',
             title:        anime.title_english || anime.title || 'Unknown',
             posterUrl:    anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url || null,
@@ -92,6 +156,24 @@ const API = {
         };
     },
 
+    _normAniList(anime) {
+        return {
+            id:           anime.id,
+            provider:     'anilist',
+            mediaType:    'anime',
+            title:        anime.title?.english || anime.title?.romaji || anime.title?.userPreferred || 'Unknown',
+            posterUrl:    anime.coverImage?.extraLarge || anime.coverImage?.large || null,
+            backdropUrl:  anime.bannerImage || null,
+            year:         anime.startDate?.year ? String(anime.startDate.year) : '',
+            score:        anime.meanScore ? +(anime.meanScore / 10).toFixed(1) : null,
+            synopsis:     (anime.description || 'No synopsis available.').replace(/<[^>]*>?/gm, ''),
+            genres:       anime.genres || [],
+            totalEpisodes: anime.episodes || 0,
+            totalSeasons:  1,
+            status:        anime.status || 'Finished',
+        };
+    },
+
     // ── Dashboard / Discovery rows ────────────────────────────────────────────
 
     async fetchTrending() {
@@ -99,8 +181,25 @@ const API = {
         return (d.results || []).filter(i => i.poster_path).slice(0, 20).map(i => this._normTMDB(i));
     },
 
+    async fetchTrendingByRegion(region = 'IN') {
+        const d = await this._tmdb('/movie/popular', { region });
+        return (d.results || []).filter(i => i.poster_path).slice(0, 20).map(i => this._normTMDB(i, 'movie'));
+    },
+
     async fetchPopularMovies() {
         const d = await this._tmdb('/movie/popular');
+        return (d.results || []).filter(i => i.poster_path).slice(0, 20)
+            .map(i => this._normTMDB(i, 'movie'));
+    },
+
+    async fetchTopRatedMovies() {
+        const d = await this._tmdb('/movie/top_rated');
+        return (d.results || []).filter(i => i.poster_path).slice(0, 20)
+            .map(i => this._normTMDB(i, 'movie'));
+    },
+
+    async fetchUpcomingMovies() {
+        const d = await this._tmdb('/movie/upcoming');
         return (d.results || []).filter(i => i.poster_path).slice(0, 20)
             .map(i => this._normTMDB(i, 'movie'));
     },
@@ -111,10 +210,66 @@ const API = {
             .map(i => this._normTMDB(i, 'tv'));
     },
 
+    async fetchTopRatedTV() {
+        const d = await this._tmdb('/tv/top_rated');
+        return (d.results || []).filter(i => i.poster_path).slice(0, 20)
+            .map(i => this._normTMDB(i, 'tv'));
+    },
+
+    async fetchAiringTodayTV() {
+        const d = await this._tmdb('/tv/airing_today');
+        return (d.results || []).filter(i => i.poster_path).slice(0, 20)
+            .map(i => this._normTMDB(i, 'tv'));
+    },
+
     async fetchTopAnime() {
-        const d = await this._jikan('/top/anime', { limit: 20 });
-        return (d.data || []).filter(a => a.images?.jpg?.large_image_url).slice(0, 20)
-            .map(a => this._normJikan(a));
+        try {
+            const gql = `
+            query {
+              Page(page: 1, perPage: 20) {
+                media(type: ANIME, sort: SCORE_DESC, isAdult: false) {
+                  id title { english romaji userPreferred } coverImage { extraLarge large } bannerImage startDate { year } meanScore description genres episodes status
+                }
+              }
+            }
+            `;
+            const data = await this._anilist(gql);
+            const list = data?.Page?.media || [];
+            if (list.length > 0) return list.map(a => this._normAniList(a));
+        } catch (e) {
+            console.warn('[Top Anime] AniList failed:', e.message);
+        }
+
+        try {
+            const d = await this._jikan('/top/anime', { limit: 20 });
+            return (d.data || []).filter(a => a.images?.jpg?.large_image_url).slice(0, 20)
+                .map(a => this._normJikan(a));
+        } catch { return []; }
+    },
+
+    async fetchUpcomingAnime() {
+        try {
+            const gql = `
+            query {
+              Page(page: 1, perPage: 20) {
+                media(type: ANIME, status: NOT_YET_RELEASED, sort: POPULARITY_DESC, isAdult: false) {
+                  id title { english romaji userPreferred } coverImage { extraLarge large } bannerImage startDate { year } meanScore description genres episodes status
+                }
+              }
+            }
+            `;
+            const data = await this._anilist(gql);
+            const list = data?.Page?.media || [];
+            if (list.length > 0) return list.map(a => this._normAniList(a));
+        } catch (e) {
+            console.warn('[Upcoming Anime] AniList failed:', e.message);
+        }
+
+        try {
+            const d = await this._jikan('/seasons/upcoming', { limit: 20 });
+            return (d.data || []).filter(a => a.images?.jpg?.large_image_url).slice(0, 20)
+                .map(a => this._normJikan(a));
+        } catch { return []; }
     },
 
     // ── Search ────────────────────────────────────────────────────────────────
@@ -132,9 +287,60 @@ const API = {
     },
 
     async searchAnime(query) {
-        const d = await this._jikan('/anime', { q: query, limit: 12, sfw: true });
-        return (d.data || []).filter(a => a.images?.jpg?.large_image_url).slice(0, 12)
-            .map(a => this._normJikan(a));
+        // 1. AniList (Fastest, most reliable)
+        try {
+            const gql = `
+            query ($search: String) {
+              Page(page: 1, perPage: 12) {
+                media(search: $search, type: ANIME, isAdult: false) {
+                  id
+                  title { english romaji userPreferred }
+                  coverImage { extraLarge large }
+                  bannerImage
+                  startDate { year }
+                  meanScore
+                  description
+                  genres
+                  episodes
+                  status
+                }
+              }
+            }
+            `;
+            const data = await this._anilist(gql, { search: query });
+            const list = data?.Page?.media || [];
+            if (list.length > 0) {
+                return list.map(a => this._normAniList(a));
+            }
+        } catch (e) {
+            console.warn('[Anime Search] AniList failed:', e.message);
+        }
+
+        // 2. Jikan fallback
+        try {
+            const d = await this._jikan('/anime', { q: query, limit: 12, sfw: true });
+            const results = (d.data || []).filter(a => a.images?.jpg?.large_image_url).slice(0, 12)
+                .map(a => this._normJikan(a));
+            if (results.length > 0) return results;
+        } catch (e) {
+            console.warn('[Anime Search] Jikan failed:', e.message);
+        }
+
+        // 3. TMDB fallback (Japanese Animation only)
+        try {
+            const d = await this._tmdb('/search/tv', { query });
+            return (d.results || [])
+                .filter(i => i.poster_path && (
+                    (i.genre_ids && i.genre_ids.includes(16)) || 
+                    (i.origin_country && i.origin_country.includes('JP')) || 
+                    i.original_language === 'ja'
+                ))
+                .slice(0, 12)
+                .map(i => this._normTMDB(i, 'anime'));
+        } catch (e) {
+            console.warn('[Anime Search] TMDB fallback failed:', e.message);
+            return [];
+        }
     },
 
     async searchAll(query) {
@@ -162,16 +368,47 @@ const API = {
         return this._normTMDB(d, 'tv');
     },
 
-    async fetchAnimeDetails(id) {
-        const d = await this._jikan(`/anime/${id}/full`);
-        return this._normJikan(d.data || {});
+    async fetchTVSeasonDetails(id, seasonNumber) {
+        return await this._tmdb(`/tv/${id}/season/${seasonNumber}`);
     },
 
-    async fetchDetails(id, mediaType) {
+    async fetchAnimeDetails(id) {
         try {
+            const gql = `
+            query ($id: Int) {
+              Media(id: $id, type: ANIME) {
+                id title { english romaji userPreferred } coverImage { extraLarge large } bannerImage startDate { year } meanScore description genres episodes status
+              }
+            }
+            `;
+            const data = await this._anilist(gql, { id: parseInt(id) });
+            if (data?.Media) return this._normAniList(data.Media);
+        } catch {}
+
+        try {
+            const d = await this._jikan(`/anime/${id}/full`);
+            return this._normJikan(d.data || {});
+        } catch {}
+
+        return null;
+    },
+
+    async fetchDetails(id, mediaType, provider = null) {
+        try {
+            if (provider === 'tmdb') {
+                if (mediaType === 'movie') return await this.fetchMovieDetails(id);
+                return await this.fetchTVDetails(id);
+            }
+            if (provider === 'anilist' || provider === 'jikan') {
+                return await this.fetchAnimeDetails(id);
+            }
             if (mediaType === 'movie') return await this.fetchMovieDetails(id);
-            if (mediaType === 'tv')    return await this.fetchTVDetails(id);
-            if (mediaType === 'anime') return await this.fetchAnimeDetails(id);
+            if (mediaType === 'anime') {
+                const ani = await this.fetchAnimeDetails(id);
+                if (ani) return ani;
+                return await this.fetchTVDetails(id);
+            }
+            if (mediaType === 'tv') return await this.fetchTVDetails(id);
         } catch (e) {
             console.warn('fetchDetails failed:', e.message);
         }
@@ -199,8 +436,9 @@ const API = {
             prompt += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
         });
 
+        // Step 3.3 — Unified schema matching Android AiRecommendationResult.kt
         prompt += `\nBased on the conversation above (especially the User's last message), provide exactly 4 recommendations they have NOT watched yet. Return ONLY a raw JSON array (no markdown, no code blocks). Each element:
-{"title":"<title>","type":"movie"|"tv"|"anime","reason":"<max 12 words>"}`;
+{"title":"<title>","mediaType":"movie"|"tv"|"anime","genre":"<primary genre>","releaseYear":"<YYYY>","reasoning":"<max 15 words>"}`;
 
         try {
             console.log('Attempting AI recommendation via Cloudflare Proxy...');
