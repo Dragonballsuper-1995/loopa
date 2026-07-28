@@ -26,3 +26,6 @@ platform_references/
 references/ 
 node_modules/
 website/css/output.css
+ 
+*.apk
+build_output.txt
