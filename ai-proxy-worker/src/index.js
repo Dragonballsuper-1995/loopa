@@ -3,6 +3,9 @@ export default {
     // Add CORS headers so web and android apps can fetch this API
     const allowedOrigins = [
       'https://loopa.app',
+      'https://loopa1.netlify.app',
+      'https://loopa-4e92d.web.app',
+      'https://dragonballsuper-1995.github.io',
       'http://localhost:5173',
       'http://localhost:3000',
       'http://127.0.0.1:5500',
