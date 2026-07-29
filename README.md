@@ -1,6 +1,6 @@
 <div align="center">
   <br>
-  <img src="assets/logo.svg" width="200" alt="Loopa Logo">
+  <img src="website/assets/logo.svg" width="200" alt="Loopa Logo">
 
   <blockquote>
     <p><b>Discover Your Next Obsession.</b></p>
@@ -400,7 +400,7 @@ Contributions are welcome. Before opening a pull request, please read the docume
 <br>
 
 <div align="center">
-  <img src="assets/logo.svg" width="144" alt="Loopa Logo">
+  <img src="website/assets/logo.svg" width="144" alt="Loopa Logo">
   <br>
   <sub>Built with obsession by <b>Dragonballsuper-1995</b>.</sub>
   <br><br>
