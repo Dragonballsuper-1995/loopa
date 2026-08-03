@@ -1,4 +1,4 @@
-const CACHE_NAME = 'loopa-cache-v1';
+const CACHE_NAME = 'loopa-cache-v2';
 
 // Static assets to cache immediately on install
 const PRECACHE_URLS = [
@@ -47,9 +47,12 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             caches.match(event.request).then(cachedResponse => {
                 const fetchPromise = fetch(event.request).then(networkResponse => {
-                    caches.open(CACHE_NAME).then(cache => {
-                        cache.put(event.request, networkResponse.clone());
-                    });
+                    if (networkResponse.ok && url.protocol.startsWith('http')) {
+                        const cloneForCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(event.request, cloneForCache);
+                        });
+                    }
                     return networkResponse;
                 }).catch(() => {
                     // Ignore fetch errors if offline
@@ -62,8 +65,8 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             fetch(event.request)
                 .then(response => {
-                    // Only cache successful GET requests
-                    if (event.request.method === 'GET' && response.ok) {
+                    // Only cache successful GET requests over HTTP/HTTPS (ignore chrome-extension://)
+                    if (event.request.method === 'GET' && response.ok && url.protocol.startsWith('http')) {
                         const responseClone = response.clone();
                         caches.open(CACHE_NAME).then(cache => {
                             cache.put(event.request, responseClone);
