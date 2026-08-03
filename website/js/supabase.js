@@ -277,7 +277,11 @@ const SBList = {
 
     /** Subscribe to real-time changes for a specific user's watchlist */
     subscribeToChanges(userId, onInsert, onUpdate, onDelete) {
-        return getDB()
+        if (this._subscription) {
+            getDB().removeChannel(this._subscription);
+        }
+        
+        this._subscription = getDB()
             .channel('watchlist_changes')
             .on(
                 'postgres_changes',
@@ -295,6 +299,8 @@ const SBList = {
                 (payload) => { if (onDelete) onDelete(payload.old); }
             )
             .subscribe();
+            
+        return this._subscription;
     },
 };
 
