@@ -21,7 +21,7 @@
 
   [**Explore the Web App**](https://loopa1.netlify.app/) &nbsp;|&nbsp; [**Download Android APK**](https://github.com/Dragonballsuper-1995/loopa/releases)
 
-  *Mirrors: [Firebase](https://loopa-4e92d.web.app/) | [Vercel](https://loopa1.vercel.app/) | [GitHub Pages](https://dragonballsuper-1995.github.io/loopa/)*
+  *Mirrors: [Vercel](https://loopa1.vercel.app/) | [GitHub Pages](https://dragonballsuper-1995.github.io/loopa/)*
 
   <br>
 

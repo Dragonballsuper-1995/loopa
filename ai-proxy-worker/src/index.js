@@ -4,7 +4,6 @@ export default {
     const allowedOrigins = [
       'https://loopa.app',
       'https://loopa1.netlify.app',
-      'https://loopa-4e92d.web.app',
       'https://dragonballsuper-1995.github.io',
       'http://localhost:5173',
       'http://localhost:3000',
