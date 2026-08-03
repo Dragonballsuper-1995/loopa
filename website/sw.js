@@ -1,4 +1,4 @@
-const CACHE_NAME = 'loopa-cache-v2';
+const CACHE_NAME = 'loopa-cache-v3';
 
 // Static assets to cache immediately on install
 const PRECACHE_URLS = [
