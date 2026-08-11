@@ -78,14 +78,14 @@ Loopa is a unified system bridging a Native Android application and a high-perfo
 ┌─────────────────────────────────────────────────────────────────┐
 │                         LOOPA ECOSYSTEM                         │
 │                                                                 │
-│   ┌─────────────────┐          ┌──────────────────────────┐     │
-│   │  Android Client │          │      Web Client (PWA)    │     │
-│   │                 │          │                          │     │
-│   │  Kotlin +       │          │  HTML5 + Vanilla JS +    │     │
-│   │  Jetpack Compose│          │  Tailwind CSS (Static)   │     │
-│   │  Room DB (v7)   │          │  Service Worker (sw.js)  │     │
-│   │  PendingOpEntity│          │  loopa_sync_queue        │     │
-│   └────────┬────────┘          └───────────┬──────────────┘     │
+│   ┌──────────────────┐         ┌──────────────────────────┐     │
+│   │  Android Client  │         │      Web Client (PWA)    │     │
+│   │                  │         │                          │     │
+│   │  Kotlin +        │         │  HTML5 + Vanilla JS +    │     │
+│   │  Jetpack Compose │         │  Tailwind CSS (Static)   │     │
+│   │  Room DB (v7)    │         │  Service Worker (sw.js)  │     │
+│   │  PendingOpEntity │         │  loopa_sync_queue        │     │
+│   └────────┬─────────┘         └───────────┬──────────────┘     │
 │            │                               │                    │
 │            └──────────────┬────────────────┘                    │
 │                           │                                     │
@@ -98,13 +98,13 @@ Loopa is a unified system bridging a Native Android application and a high-perfo
 │                └──────────┬──────────┘                          │
 │                           │                                     │
 │              ┌────────────▼──────────────┐                      │
-│              │   Cloudflare Worker       │                      │
-│              │   (loopa-ai-proxy)        │                      │
+│              │    Cloudflare Worker      │                      │
+│              │    (loopa-ai-proxy)       │                      │
 │              └────────────┬──────────────┘                      │
 │                           │                                     │
-│                 ┌──────────▼───────────┐                        │
-│                 │    Google Gemini API │                        │
-│                 └──────────────────────┘                        │
+│                ┌──────────▼───────────┐                         │
+│                │  Google Gemini API   │                         │
+│                └──────────────────────┘                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
