@@ -41,10 +41,10 @@ val Typography = Typography(
     ),
     displayMedium = TextStyle(
         fontFamily = DmSans,
-        fontWeight = FontWeight.Bold,
-        fontSize = 38.sp,
-        lineHeight = 44.sp,
-        letterSpacing = (-0.5).sp
+        fontWeight = FontWeight.ExtraBold,  // Phase 1D: ExtraBold for hero titles
+        fontSize = 46.sp,
+        lineHeight = 50.sp,
+        letterSpacing = (-1.5).sp
     ),
     displaySmall = TextStyle(
         fontFamily = DmSans,

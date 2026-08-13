@@ -175,8 +175,8 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
                                     RecommendationCard(
                                         rec = rec,
                                         onAddToList = {
-                                            viewModel.addMediaItem(rec.title.hashCode(), rec.title, rec.imageUrl, rec.releaseYear, null, "To Watch", rec.mediaType.lowercase())
-                                            viewModel.showToast("${rec.title} added to To Watch")
+                                            viewModel.addMediaItem(rec.title.hashCode(), rec.title, rec.imageUrl, rec.releaseYear, null, "Watching", rec.mediaType.lowercase())
+                                            viewModel.showToast("${rec.title} added to Watching")
                                         },
                                         onAlreadyWatched = {
                                             viewModel.addMediaItem(rec.title.hashCode(), rec.title, rec.imageUrl, rec.releaseYear, null, "Watched", rec.mediaType.lowercase())

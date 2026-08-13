@@ -4,15 +4,16 @@ module.exports = {
     theme: {
         extend: {
             colors: {
-                loopBase: '#0F0E0C',
-                loopSurface: '#1A1915',
-                loopRaised: '#242320',
+                loopBase: '#0C0B09',          // deepened — warm near-black
+                loopSurface: '#1C1A17',        // warmer mid-dark
+                loopRaised: '#2A2823',         // more contrast vs surface
                 loopAmber: '#E8A87C',
                 loopAmberStrong: '#D4845A',
                 loopAmberSubtle: '#2A1F17',
+                loopTerracotta: '#C47A5A',     // secondary accent — decorative / non-CTA
                 textPrimary: '#F0EDE8',
                 textSecondary: '#A09990',
-                textMuted: '#5C574F',
+                textMuted: '#7A746D',          // raised from #5C574F for readability
                 loopSuccess: '#7AB87A',
                 loopError: '#C87070',
                 // Named border tokens — mirror Android Loopa.Border / BorderMd / BorderStrong (Color.kt)

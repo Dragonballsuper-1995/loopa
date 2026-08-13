@@ -120,13 +120,12 @@
                         <input type="text" id="searchInput" placeholder="Search targets..."
                             class="loop-input w-full bg-loopSurface/60 border border-white/10 rounded-full text-textPrimary py-1.5 pl-8 pr-4 text-xs font-semibold transition-all focus:border-loopAmber/40 focus:bg-loopSurface/90 placeholder-textMuted/80 outline-none"
                             autocomplete="off">
+                        <!-- Phase 4A: Autocomplete Dropdown -->
+                        <div id="searchAutocomplete"
+                            class="hidden absolute left-0 right-0 top-full mt-2 dropdown-frosted rounded-xl z-[200] overflow-hidden p-2 shadow-2xl">
+                        </div>
                     </div>
 
-                    <!-- Sync Button Moved Here -->
-                    <button id="btnDropdownSync" class="flex items-center gap-2 px-3.5 py-1.5 bg-loopSurface border border-white/10 rounded-full hover:border-loopAmber/40 transition-colors text-textSecondary hover:text-loopAmber group">
-                        <i class="fa-solid fa-rotate text-[10px] group-hover:rotate-180 transition-transform duration-500"></i>
-                        <span class="text-xs font-semibold">Sync Data</span>
-                    </button>
 
                     <!-- Dropdown Trigger -->
                     <div id="userDropdownTrigger"
@@ -159,6 +158,10 @@
                                         <span class="text-sm font-medium text-textSecondary">Last Synced</span>
                                         <span id="dropdownSyncTime" class="text-xs text-textPrimary font-medium">Never synced</span>
                                     </div>
+                                    <button id="btnDropdownSync"
+                                        class="w-full pt-3 mt-1 border-t border-white/5 text-sm font-medium text-textSecondary hover:text-textPrimary transition-colors flex items-center gap-2">
+                                        <i class="fa-solid fa-rotate text-xs w-4 text-center"></i> Sync Data
+                                    </button>
                                     <button id="btnSignOut"
                                         class="w-full text-left pt-3 mt-1 border-t border-white/5 text-sm font-medium text-loopError hover:text-red-400 transition-colors flex items-center gap-2">
                                         <i class="fa-solid fa-power-off w-4 text-center"></i> Sign Out
@@ -225,7 +228,39 @@
                         <button class="filter-pill" data-sf="anime">Anime</button>
                     </div>
 
-                    <div id="searchState" class="text-textMuted py-20 text-base text-center">Start typing to search…</div>
+                    <!-- Phase 4A: Rich Search Empty State with Genre Cards -->
+                    <div id="searchState" class="py-12">
+                        <div class="max-w-4xl mx-auto text-center mb-8">
+                            <h2 class="text-2xl md:text-3xl font-extrabold text-textPrimary mb-2">What will you watch next?</h2>
+                            <p class="text-textMuted text-xs md:text-sm font-medium">Search by title or tap a genre tile below to explore</p>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3.5 max-w-5xl mx-auto" id="genreTiles">
+                            <div class="genre-tile bg-gradient-to-br from-red-950/70 to-red-900/20 border-red-500/20 hover:border-red-500/40" data-genre="Action">
+                                <i class="fa-solid fa-fire text-red-400 text-lg"></i>
+                                <span>Action</span>
+                            </div>
+                            <div class="genre-tile bg-gradient-to-br from-blue-950/70 to-blue-900/20 border-blue-500/20 hover:border-blue-500/40" data-genre="Drama">
+                                <i class="fa-solid fa-masks-theater text-blue-400 text-lg"></i>
+                                <span>Drama</span>
+                            </div>
+                            <div class="genre-tile bg-gradient-to-br from-yellow-950/70 to-yellow-900/20 border-yellow-500/20 hover:border-yellow-500/40" data-genre="Comedy">
+                                <i class="fa-solid fa-face-laugh-beam text-yellow-400 text-lg"></i>
+                                <span>Comedy</span>
+                            </div>
+                            <div class="genre-tile bg-gradient-to-br from-purple-950/70 to-purple-900/20 border-purple-500/20 hover:border-purple-500/40" data-genre="Horror">
+                                <i class="fa-solid fa-ghost text-purple-400 text-lg"></i>
+                                <span>Horror</span>
+                            </div>
+                            <div class="genre-tile bg-gradient-to-br from-cyan-950/70 to-cyan-900/20 border-cyan-500/20 hover:border-cyan-500/40" data-genre="Sci-Fi">
+                                <i class="fa-solid fa-rocket text-cyan-400 text-lg"></i>
+                                <span>Sci-Fi</span>
+                            </div>
+                            <div class="genre-tile bg-gradient-to-br from-pink-950/70 to-pink-900/20 border-pink-500/20 hover:border-pink-500/40" data-genre="Anime">
+                                <i class="fa-solid fa-wand-magic-sparkles text-pink-400 text-lg"></i>
+                                <span>Anime</span>
+                            </div>
+                        </div>
+                    </div>
                     <div id="searchResults"
                         class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-5 pb-10">
                     </div>
@@ -233,8 +268,8 @@
 
                 <!-- Curated browse content (Type-to-Reveal: visible by default, hidden when searching) -->
                 <div id="radar-browse-content" class="w-full">
-                    <!-- Hero Section (Full width) -->
-                    <div id="hero-section" class="relative w-full h-[40vh] md:h-[450px]">
+                    <!-- Hero Section (Full width) — Phase 2B: taller, cinematic -->
+                    <div id="hero-section" class="relative w-full h-[55vh] md:h-[580px]">
                         <div class="absolute inset-0 bg-loopSurface"></div>
                     </div>
 
@@ -242,7 +277,10 @@
                     <div class="max-w-[1600px] mx-auto px-5 lg:px-8 pt-10 md:pt-14 flex flex-col gap-10">
                         <section>
                             <div class="flex items-center justify-between mb-4 px-6 md:px-8">
-                                <h2 class="text-xl font-bold text-textPrimary">Trending</h2>
+                                <div class="flex items-center gap-4">
+                                    <h2 class="text-xl font-bold text-textPrimary">Trending</h2>
+                                    <a class="see-all-link" href="#" data-see-all="trending">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
+                                </div>
                                 <div class="flex gap-2 items-center">
                                     <button id="btnRefreshRadar" title="Refresh content" class="header-nav-btn" onclick="App.refreshDashboard()">
                                         <i class="fa-solid fa-rotate text-[10px]"></i>
@@ -256,14 +294,41 @@
                                 </div>
                             </div>
                             <div class="scroll-fade-container">
-                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-trending">
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar py-6 snap-x px-12" id="row-trending">
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Phase 4B: Top 10 Today Row -->
+                        <section id="top10-section">
+                            <div class="flex items-center justify-between mb-4 px-6 md:px-8">
+                                <div class="flex items-center gap-3">
+                                    <h2 class="text-xl font-extrabold text-textPrimary flex items-center gap-2">
+                                        <span class="text-loopAmber text-2xl font-black tracking-tighter">TOP 10</span>
+                                        <span class="text-textSecondary font-semibold text-sm">Today</span>
+                                    </h2>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-top10', 'left')">
+                                        <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    </button>
+                                    <button class="header-nav-btn" onclick="App.scrollRow('row-top10', 'right')">
+                                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="scroll-fade-container">
+                                <div class="flex overflow-x-auto no-scrollbar py-6 px-8 items-center" id="row-top10">
                                 </div>
                             </div>
                         </section>
 
                         <section>
                             <div class="flex items-center justify-between mb-4 px-6 md:px-8">
-                                <h2 class="text-xl font-bold text-textPrimary">Anime</h2>
+                                <div class="flex items-center gap-4">
+                                    <h2 class="text-xl font-bold text-textPrimary">Anime</h2>
+                                    <a class="see-all-link" href="#" data-see-all="anime">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
+                                </div>
                                 <div class="flex gap-2">
                                     <button class="header-nav-btn" onclick="App.scrollRow('row-anime', 'left')">
                                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
@@ -274,13 +339,16 @@
                                 </div>
                             </div>
                             <div class="scroll-fade-container">
-                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-anime"></div>
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar py-6 snap-x px-12" id="row-anime"></div>
                             </div>
                         </section>
 
                         <section>
                             <div class="flex items-center justify-between mb-4 px-6 md:px-8">
-                                <h2 class="text-xl font-bold text-textPrimary">Popular Movies</h2>
+                                <div class="flex items-center gap-4">
+                                    <h2 class="text-xl font-bold text-textPrimary">Popular Movies</h2>
+                                    <a class="see-all-link" href="#" data-see-all="movies">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
+                                </div>
                                 <div class="flex gap-2">
                                     <button class="header-nav-btn" onclick="App.scrollRow('row-movies', 'left')">
                                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
@@ -291,13 +359,16 @@
                                 </div>
                             </div>
                             <div class="scroll-fade-container">
-                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-movies"></div>
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar py-6 snap-x px-12" id="row-movies"></div>
                             </div>
                         </section>
 
                         <section>
                             <div class="flex items-center justify-between mb-4 px-6 md:px-8">
-                                <h2 class="text-xl font-bold text-textPrimary">Popular TV</h2>
+                                <div class="flex items-center gap-4">
+                                    <h2 class="text-xl font-bold text-textPrimary">Popular TV</h2>
+                                    <a class="see-all-link" href="#" data-see-all="tv">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
+                                </div>
                                 <div class="flex gap-2">
                                     <button class="header-nav-btn" onclick="App.scrollRow('row-tv', 'left')">
                                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
@@ -308,7 +379,7 @@
                                 </div>
                             </div>
                             <div class="scroll-fade-container">
-                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-tv"></div>
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar py-6 snap-x px-12" id="row-tv"></div>
                             </div>
                         </section>
 
@@ -325,7 +396,7 @@
                                 </div>
                             </div>
                             <div class="scroll-fade-container">
-                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-top-movies"></div>
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar py-6 snap-x px-12" id="row-top-movies"></div>
                             </div>
                         </section>
 
@@ -342,7 +413,7 @@
                                 </div>
                             </div>
                             <div class="scroll-fade-container">
-                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-upcoming-movies"></div>
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar py-6 snap-x px-12" id="row-upcoming-movies"></div>
                             </div>
                         </section>
 
@@ -359,7 +430,7 @@
                                 </div>
                             </div>
                             <div class="scroll-fade-container">
-                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-top-tv"></div>
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar py-6 snap-x px-12" id="row-top-tv"></div>
                             </div>
                         </section>
 
@@ -376,7 +447,7 @@
                                 </div>
                             </div>
                             <div class="scroll-fade-container">
-                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-airing-tv"></div>
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar py-6 snap-x px-12" id="row-airing-tv"></div>
                             </div>
                         </section>
 
@@ -393,7 +464,7 @@
                                 </div>
                             </div>
                             <div class="scroll-fade-container">
-                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar pb-4 snap-x px-12" id="row-upcoming-anime"></div>
+                                <div class="flex gap-4 md:gap-5 overflow-x-auto no-scrollbar py-6 snap-x px-12" id="row-upcoming-anime"></div>
                             </div>
                         </section>
                     </div>
@@ -479,62 +550,47 @@
     <div id="detailModal"
         class="fixed inset-0 z-50 opacity-0 pointer-events-none flex justify-center items-center px-4 bg-loopBase/70 backdrop-blur-md">
         <div id="modalContent"
-            class="relative w-full max-w-5xl h-[88vh] md:h-[78vh] min-h-[500px] frosted-glass rounded-2xl flex flex-col md:flex-row overflow-hidden">
+            class="relative w-full max-w-2xl max-h-[90vh] frosted-glass rounded-2xl flex flex-col overflow-hidden">
 
             <!-- Close -->
             <button id="btnModalClose"
-                class="absolute top-4 right-4 w-9 h-9 bg-loopRaised hover:bg-loopSurface border border-white/10 rounded-full text-textSecondary hover:text-textPrimary flex items-center justify-center z-20 transition-colors">
+                class="absolute top-4 right-4 w-9 h-9 bg-loopBase/60 hover:bg-loopRaised border border-white/10 rounded-full text-textSecondary hover:text-textPrimary flex items-center justify-center z-30 transition-colors backdrop-blur-sm">
                 <i class="fa-solid fa-xmark text-sm"></i>
             </button>
 
-            <!-- Left: Poster -->
-            <div class="w-full md:w-[38%] h-72 md:h-full relative overflow-hidden bg-loopSurface shrink-0 flex flex-col justify-end">
-                <div id="modalImageContainer" class="absolute inset-0"></div>
-                <div class="absolute inset-0 bg-gradient-to-t from-loopBase via-loopBase/70 to-transparent z-10 pointer-events-none"></div>
-                <div class="relative z-20 p-5 md:p-6 flex flex-col justify-end max-h-[70%]">
-                    <div class="inline-flex items-center gap-1.5 mb-1.5 text-[10px] font-bold tracking-widest uppercase text-loopAmber">
-                        <i class="fa-solid fa-align-left text-[9px]"></i>
-                        <span>Synopsis</span>
+            <!-- Phase 3C: Cinematic Backdrop Header -->
+            <div id="modalBackdrop" class="relative w-full h-[240px] overflow-hidden flex-shrink-0">
+                <img id="modalBackdropImg" src="" alt=""
+                     class="w-full h-full object-cover object-[center_20%] transition-opacity duration-400">
+                <!-- 4-zone gradient overlay -->
+                <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(18,17,14,0.97) 0%, rgba(18,17,14,0.60) 38%, transparent 65%);"></div>
+                <div class="absolute inset-0" style="background: linear-gradient(to right, rgba(18,17,14,0.50) 0%, transparent 45%);"></div>
+                <!-- Title overlay on backdrop -->
+                <div id="modalBackdropTitle" class="absolute bottom-0 left-0 right-0 p-5 z-10">
+                    <div class="flex flex-wrap items-center gap-1.5 mb-2" id="modalTagsRow">
+                        <!-- Tags injected by JS -->
                     </div>
-                    <div class="text-xs text-textSecondary leading-relaxed overflow-y-auto max-h-48 no-scrollbar pr-1 font-medium" id="modalSummary"></div>
+                    <h2 class="text-2xl md:text-3xl font-extrabold text-textPrimary leading-tight tracking-tight" id="modalTitle">Loading…</h2>
                 </div>
             </div>
 
-            <!-- Right: Details -->
-            <div class="w-full md:w-[62%] h-full p-6 md:p-10 flex flex-col overflow-y-auto no-scrollbar">
+            <!-- Scrollable body -->
+            <div class="flex-1 overflow-y-auto no-scrollbar p-5 md:p-6 flex flex-col gap-4">
 
-                <!-- Tags row -->
-                <div class="flex items-center gap-2 flex-wrap mb-4">
-                    <span
-                        class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopAmberSubtle text-loopAmber border border-loopAmber/20">Tracking</span>
-                    <span
-                        class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10"
-                        id="modalRating">--</span>
-                    <span
-                        class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10"
-                        id="modalYear">----</span>
-                    <span
-                        class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10 hidden"
-                        id="modalEpisodes"></span>
-                    <span
-                        class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10 hidden"
-                        id="modalRuntime"></span>
-                    <span
-                        class="text-[10px] font-semibold tracking-wider px-2.5 py-1 rounded-md bg-loopSurface text-textSecondary border border-white/10"
-                        id="modalType">—</span>
-                </div>
+                <!-- Genre pills (Phase 3C) -->
+                <div id="modalGenrePills" class="flex flex-wrap gap-2 -mt-1"></div>
 
-                <div class="flex items-center justify-between gap-4 mb-3">
-                    <h2 class="text-3xl md:text-5xl font-bold text-textPrimary leading-tight" id="modalTitle">Loading…</h2>
-                    <button id="btnDeleteWatchlist" class="hidden text-red-400 hover:text-red-300 transition-colors bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg px-3.5 py-1.5 shrink-0 flex items-center gap-2 text-xs font-semibold" title="Remove from list">
-                        <i class="fa-solid fa-trash-can text-xs"></i>
-                        <span>Delete</span>
-                    </button>
+                <!-- Synopsis -->
+                <div>
+                    <div class="inline-flex items-center gap-1.5 mb-2 text-[10px] font-bold tracking-widest uppercase text-loopAmber">
+                        <i class="fa-solid fa-align-left text-[9px]"></i>
+                        <span>Synopsis</span>
+                    </div>
+                    <div class="text-sm text-textSecondary leading-relaxed font-medium" id="modalSummary"></div>
                 </div>
-                <div class="flex flex-wrap gap-2 mb-4 text-xs font-medium text-textSecondary" id="modalGenres"></div>
 
                 <!-- Watchlist Actions -->
-                <div id="modalActions" class="mb-8">
+                <div id="modalActions">
                     <button id="watchlistBtn"
                         class="btn-primary w-full mb-4 text-sm font-semibold flex items-center justify-center gap-2">
                         <i class="fa-solid fa-plus" id="watchlistBtnIcon"></i>
@@ -544,8 +600,7 @@
                     <!-- Status Selector -->
                     <div id="statusSelector" class="hidden flex gap-2 mb-4 flex-wrap">
                         <button class="status-btn flex-1" data-status="Watching">Watching</button>
-                        <button class="status-btn flex-1" data-status="To Watch">Planned</button>
-                        <button class="status-btn flex-1" data-status="Watched">Completed</button>
+                        <button class="status-btn flex-1" data-status="Watched">Watched</button>
                     </div>
 
                         <!-- Unified User Control Card (Rating + Notes + Progress) -->
@@ -630,14 +685,20 @@
                                     </div>
                                 </div>
 
-                                <!-- Custom Season Dropdown -->
-                                <div class="relative mb-3.5 z-20" id="seasonDropdownWrapper">
-                                    <button id="seasonDropdownBtn" type="button" class="w-full bg-loopBase border border-white/10 hover:border-loopAmber/40 rounded-xl px-4 py-2.5 text-xs font-semibold text-textPrimary flex items-center justify-between transition-all shadow-inner group">
-                                        <span id="seasonDropdownLabel" class="group-hover:text-loopAmber transition-colors">Season 1</span>
-                                        <i class="fa-solid fa-chevron-down text-textMuted text-[10px] transition-transform duration-200" id="seasonDropdownIcon"></i>
-                                    </button>
-                                    <div id="seasonDropdownMenu" class="absolute left-0 right-0 top-full mt-1.5 bg-loopRaised/95 backdrop-blur-xl border border-white/10 rounded-xl p-1.5 shadow-2xl z-30 hidden flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar">
+                                <!-- Custom Season Dropdown and Mark Season Button -->
+                                <div class="flex items-center gap-2 mb-3.5 z-20 relative" id="seasonDropdownContainer">
+                                    <div class="relative flex-1" id="seasonDropdownWrapper">
+                                        <button id="seasonDropdownBtn" type="button" class="w-full bg-loopBase border border-white/10 hover:border-loopAmber/40 rounded-xl px-4 py-2.5 text-xs font-semibold text-textPrimary flex items-center justify-between transition-all shadow-inner group">
+                                            <span id="seasonDropdownLabel" class="group-hover:text-loopAmber transition-colors">Season 1</span>
+                                            <i class="fa-solid fa-chevron-down text-textMuted text-[10px] transition-transform duration-200" id="seasonDropdownIcon"></i>
+                                        </button>
+                                        <div id="seasonDropdownMenu" class="absolute left-0 right-0 top-full mt-1.5 bg-loopRaised/95 backdrop-blur-xl border border-white/10 rounded-xl p-1.5 shadow-2xl z-30 hidden flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar">
+                                        </div>
                                     </div>
+                                    <button id="btnMarkSeasonWatched" type="button" class="shrink-0 bg-loopBase border border-white/10 hover:border-loopAmber/40 rounded-xl px-3 py-2.5 text-[11px] font-semibold text-textSecondary hover:text-loopAmber flex items-center gap-1.5 transition-colors" title="Mark season as watched">
+                                        <i class="fa-solid fa-check-double text-loopAmber/80"></i>
+                                        <span class="hidden sm:inline">Complete</span>
+                                    </button>
                                 </div>
 
                                 <div id="episodeList" class="flex flex-col gap-2 max-h-56 overflow-y-auto no-scrollbar pr-1">
@@ -645,6 +706,25 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Delete button (hidden until in list) -->
+                <button id="btnDeleteWatchlist" class="hidden text-red-400 hover:text-red-300 transition-colors bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg px-3.5 py-2 flex items-center justify-center gap-2 text-xs font-semibold w-full" title="Remove from list">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                    <span>Remove from My List</span>
+                </button>
+
+                <!-- Phase 3C: More Like This -->
+                <section id="moreLikeThisSection" class="hidden">
+                    <h3 class="text-sm font-bold text-textSecondary mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-loopAmber text-xs"></i>
+                        More Like This
+                    </h3>
+                    <div id="moreLikeThisRow" class="flex gap-3 overflow-x-auto no-scrollbar py-6">
+                        <!-- Injected by JS -->
+                    </div>
+                </section>
+
             </div>
         </div>
     </div>
@@ -672,7 +752,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(registration => {
+                navigator.serviceWorker.register('js/sw.js', { scope: './' }).then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
                 }, err => {
                     console.log('ServiceWorker registration failed: ', err);

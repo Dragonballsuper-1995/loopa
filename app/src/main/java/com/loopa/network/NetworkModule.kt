@@ -55,6 +55,24 @@ object NetworkModule {
             .create(TmdbApiService::class.java)
     }
 
+    val kitsuApi: KitsuApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://kitsu.io/api/edge/")
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(KitsuApiService::class.java)
+    }
+
+    val anilistApi: AniListApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://graphql.anilist.co/")
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(AniListApiService::class.java)
+    }
+
     val jikanApi: JikanApiService by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.jikan.moe/v4/")
@@ -71,5 +89,31 @@ object NetworkModule {
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(GeminiApiService::class.java)
+    }
+
+    val loopaApi: LoopaApiService by lazy {
+        val proxyBase = com.loopa.app.BuildConfig.AI_PROXY_URL.trimEnd('/') + "/"
+        Retrofit.Builder()
+            .baseUrl(proxyBase)
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(LoopaApiService::class.java)
+    }
+
+    fun prewarmConnections() {
+        try {
+            val proxyBase = com.loopa.app.BuildConfig.AI_PROXY_URL
+            if (proxyBase.isNotEmpty() && proxyBase != "YOUR_CLOUDFLARE_WORKER_URL") {
+                val req = okhttp3.Request.Builder()
+                    .url(proxyBase)
+                    .head()
+                    .build()
+                okHttpClient.newCall(req).enqueue(object : okhttp3.Callback {
+                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {}
+                    override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) { response.close() }
+                })
+            }
+        } catch (_: Exception) {}
     }
 }

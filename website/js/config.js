@@ -19,9 +19,11 @@ const CONFIG = {
     SUPABASE_URL: 'https://utkqrfdheofuepeuzutg.supabase.co',
     SUPABASE_KEY: 'sb_publishable_OFJE4wCeLAUAw3ufKHlA1Q_4oE4Ap5g',
 
-    // AI Proxy (Cloudflare Worker)
-    AI_PROXY_URL: 'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev', // e.g., 'https://loopa-ai-proxy.your-username.workers.dev'
-
+    // AI Proxy & Edge API (Cloudflare Worker)
+    AI_PROXY_URL: 'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev',
+    SEARCH_FAST_URL: 'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev/api/search/fast',
+    MEDIA_DETAILS_URL: 'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev/api/media/details',
+    RECOMMENDATIONS_URL: 'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev/api/recommendations',
 
     // Database table — same table used by the Android app
     DB_TABLE: 'media_items',

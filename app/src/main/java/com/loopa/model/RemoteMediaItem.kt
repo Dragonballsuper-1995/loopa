@@ -24,6 +24,7 @@ data class RemoteMediaItem(
     @SerialName("runtime") val runtime: Int? = null,
     @SerialName("genres") val genres: String? = null,
     @SerialName("director_studio") val directorStudio: String? = null,
+    @SerialName("progress_backup") val progressBackup: String? = null,
     // ISO 8601 timestamp — "2026-07-21T17:45:00Z". Nullable for backwards compat
     // during the migration window before all rows have been updated.
     @SerialName("updated_at") val updatedAt: String? = null

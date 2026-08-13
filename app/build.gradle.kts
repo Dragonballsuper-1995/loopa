@@ -95,7 +95,7 @@ dependencies {
   implementation(libs.supabase.gotrue)
   implementation(libs.supabase.postgrest)
   implementation(libs.supabase.realtime)
-  implementation(libs.ktor.client.android)
+  implementation(libs.ktor.client.okhttp)
   implementation(libs.coil.compose)
   implementation("dev.chrisbanes.haze:haze:1.7.2")
   implementation(libs.converter.moshi)

@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -44,15 +45,17 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 
 // ── Loopa Design Tokens ───────────────────────────────────────────────────────
 object Loopa {
-    val Base       = Color(0xFF0F0E0C)
-    val Surface    = Color(0xFF1A1915)
-    val Raised     = Color(0xFF242320)
+    // v2.1 — Phase 1: deeper surfaces, raised TextMuted, added Terracotta
+    val Base       = Color(0xFF0C0B09)
+    val Surface    = Color(0xFF1C1A17)
+    val Raised     = Color(0xFF2A2823)
     val Amber      = Color(0xFFE8A87C)
     val AmberStrong = Color(0xFFD4845A)
     val AmberSubtle = Color(0xFF2A1F17)
+    val Terracotta  = Color(0xFFC47A5A)   // Secondary accent — decorative, non-CTA
     val TextPrimary   = Color(0xFFF0EDE8)
     val TextSecondary = Color(0xFFA09990)
-    val TextMuted     = Color(0xFF5C574F)
+    val TextMuted     = Color(0xFF7A746D)   // Raised from #5C574F for readability
     val Success    = Color(0xFF7AB87A)
     val Error      = Color(0xFFC87070)
     val Border     = Color(0x12F0EDE8)
@@ -174,6 +177,7 @@ fun LoopCard(
     Box(
         modifier = modifier
             .scale(scale)
+            .shadow(elevation = 8.dp, shape = Loopa.CardShape, ambientColor = Color.Black.copy(alpha = 0.5f), spotColor = Color.Black.copy(alpha = 0.7f))  // Phase 1C
             .clip(Loopa.CardShape)
             .background(Loopa.Surface)
             .border(1.dp, borderColor, Loopa.CardShape)
@@ -202,6 +206,7 @@ fun LoopDialogContainer(
 ) {
     Column(
         modifier = modifier
+            .shadow(elevation = 24.dp, shape = Loopa.DialogShape, ambientColor = Color.Black.copy(alpha = 0.6f), spotColor = Color.Black.copy(alpha = 0.85f))  // Phase 1C
             .clip(Loopa.DialogShape)
             .background(Loopa.Surface)
             .border(1.dp, Loopa.Border, Loopa.DialogShape)
@@ -264,10 +269,8 @@ fun LoopPosterCard(
     totalEpisodes: Int = 0,
     currentEpisode: Int = 0
 ) {
-    val typeColor = when (mediaType.lowercase()) {
-        "tv", "anime" -> Loopa.Amber
-        else -> Loopa.TextSecondary
-    }
+    // Phase 1B: type badge is always neutral — amber is reserved for CTAs
+    val typeColor = Loopa.TextSecondary
 
     val haptic = LocalHapticFeedback.current
     var isPressed by remember { mutableStateOf(false) }
@@ -351,7 +354,7 @@ fun LoopPosterCard(
                     Text(
                         text = "★ ${String.format("%.1f", score)}",
                         color = Loopa.Amber,
-                        fontSize = 9.sp,
+                        fontSize = 12.sp,   // Phase 1B: bumped from 9sp for readability
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -531,7 +534,7 @@ fun LoopStatsCard(
             androidx.compose.material3.Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Loopa.Amber,
+                tint = Loopa.TextSecondary,   // Phase 1B: neutral icon, not amber
                 modifier = Modifier.size(24.dp).padding(bottom = 4.dp)
             )
             Text(

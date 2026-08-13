@@ -27,3 +27,6 @@ references/
 node_modules/
 *.apk
 build_output.txt
+
+Screenshots/
+tester.js

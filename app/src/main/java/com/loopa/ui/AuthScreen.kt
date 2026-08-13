@@ -17,7 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -25,8 +27,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.loopa.viewmodel.AuthUiState
 import com.loopa.viewmodel.AuthViewModel
+
+private val AMBIENT_POSTERS = listOf(
+    "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342/8cdWjvZ2qY92D9CjLv2s9j6q5.jpg",
+    "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
+    "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
+)
 
 @Composable
 fun AuthScreen(viewModel: AuthViewModel, onAuthSuccess: () -> Unit, onGuestClick: () -> Unit) {
@@ -48,6 +57,31 @@ fun AuthScreen(viewModel: AuthViewModel, onAuthSuccess: () -> Unit, onGuestClick
             .background(Loopa.Base),
         contentAlignment = Alignment.Center
     ) {
+        // Phase 4D: Ambient poster background with dark scrim
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                AMBIENT_POSTERS.forEach { url ->
+                    AsyncImage(
+                        model = url,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        alpha = 0.14f
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0.0f to Loopa.Base.copy(alpha = 0.88f),
+                            0.5f to Loopa.Base.copy(alpha = 0.94f),
+                            1.0f to Loopa.Base
+                        )
+                    )
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()

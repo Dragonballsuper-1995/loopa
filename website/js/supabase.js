@@ -87,9 +87,24 @@ const OfflineSync = {
         this._isSyncing = true;
 
         try {
-            const q = this.getQueue();
+            let q = this.getQueue();
             if (q.length === 0) return;
             
+            // ── Auto-collapse legacy sequential EPISODE_ADD into BULK to prevent network spam ──
+            const bulkData = [];
+            const optimizedQ = [];
+            for (const op of q) {
+                if (op.type === 'EPISODE_ADD') {
+                    bulkData.push(op.data);
+                } else {
+                    optimizedQ.push(op);
+                }
+            }
+            if (bulkData.length > 0) {
+                optimizedQ.push({ type: 'EPISODE_ADD_BULK', data: bulkData, timestamp: Date.now() });
+            }
+            q = optimizedQ;
+
             const processedTimestamps = new Set();
             const failedOps = [];
 
@@ -137,8 +152,14 @@ const OfflineSync = {
                         await getDB().from('watched_episodes').upsert(op.data, {
                             onConflict: 'user_id,media_id,media_type,season_number,episode_number'
                         });
+                    } else if (op.type === 'EPISODE_ADD_BULK') {
+                        await getDB().from('watched_episodes').upsert(op.data, {
+                            onConflict: 'user_id,media_id,media_type,season_number,episode_number'
+                        });
                     } else if (op.type === 'EPISODE_REMOVE') {
                         await getDB().from('watched_episodes').delete().match(op.keys);
+                    } else if (op.type === 'EPISODE_REMOVE_ALL') {
+                        await getDB().from('watched_episodes').delete().eq('user_id', op.keys.user_id).eq('media_id', op.keys.media_id);
                     }
                     processedTimestamps.add(op.timestamp);
                 } catch (e) {
@@ -209,7 +230,7 @@ const SBList = {
      * Upsert a media item into the list.
      * Uses composite PK (id, user_id, media_type) to avoid duplicates.
      */
-    async add(userId, mediaItem, listName = 'To Watch') {
+    async add(userId, mediaItem, listName = 'Watching') {
         const row = {
             id:               mediaItem.id,
             user_id:          userId,
@@ -349,6 +370,35 @@ const SBWatchedEpisodes = {
         OfflineSync.enqueue({ type: 'EPISODE_ADD', data: row });
     },
 
+    async addBulk(userId, mediaId, mediaType, episodesArray) {
+        if (!episodesArray || episodesArray.length === 0) return;
+        const now = new Date().toISOString();
+        const rows = episodesArray.map(ep => ({
+            media_id: mediaId,
+            user_id: userId,
+            media_type: mediaType,
+            season_number: ep.season_number,
+            episode_number: ep.episode_number,
+            watched_at: now
+        }));
+        
+        const localData = JSON.parse(localStorage.getItem(`loopa_episodes_${userId}_${mediaId}`) || '[]');
+        const existingSet = new Set(localData.map(e => `${e.season_number}_${e.episode_number}`));
+        
+        const newRows = [];
+        for (const row of rows) {
+            if (!existingSet.has(`${row.season_number}_${row.episode_number}`)) {
+                localData.push(row);
+                newRows.push(row);
+            }
+        }
+        
+        if (newRows.length > 0) {
+            localStorage.setItem(`loopa_episodes_${userId}_${mediaId}`, JSON.stringify(localData));
+            OfflineSync.enqueue({ type: 'EPISODE_ADD_BULK', data: newRows });
+        }
+    },
+
     async remove(userId, mediaId, mediaType, seasonNumber, episodeNumber) {
         const localData = JSON.parse(localStorage.getItem(`loopa_episodes_${userId}_${mediaId}`) || '[]');
         const filtered = localData.filter(e => !(e.season_number === seasonNumber && e.episode_number === episodeNumber));
@@ -356,6 +406,14 @@ const SBWatchedEpisodes = {
         OfflineSync.enqueue({ 
             type: 'EPISODE_REMOVE', 
             keys: { media_id: mediaId, user_id: userId, season_number: seasonNumber, episode_number: episodeNumber } 
+        });
+    },
+
+    async removeAll(userId, mediaId, mediaType) {
+        localStorage.setItem(`loopa_episodes_${userId}_${mediaId}`, '[]');
+        OfflineSync.enqueue({
+            type: 'EPISODE_REMOVE_ALL',
+            keys: { media_id: mediaId, user_id: userId }
         });
     }
 };

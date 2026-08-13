@@ -37,10 +37,10 @@ fun EditMediaDialog(
     onDelete: () -> Unit,
     genres: List<String> = emptyList()   // fetched from TMDB in the hosting screen
 ) {
-    var watchStatus by remember {
+    var watchStatus by remember(item.listName) {
         mutableStateOf(
             when (item.listName) {
-                "To Watch", "Want" -> "To Watch"
+                "To Watch", "Want" -> "Watching"
                 "Watching", "Active" -> "Watching"
                 else -> "Watched"
             }
@@ -152,7 +152,7 @@ fun EditMediaDialog(
                         Spacer(Modifier.height(8.dp))
 
                         val mediaViewModel: com.loopa.viewmodel.MediaViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-                        val statuses = listOf("To Watch", "Watching", "Watched")
+                        val statuses = listOf("Watching", "Watched")
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -171,9 +171,6 @@ fun EditMediaDialog(
                                         )
                                         .clickable {
                                             watchStatus = status
-                                            if (status == "Watched" && (item.mediaType == "tv" || item.mediaType == "anime")) {
-                                                mediaViewModel.markAllEpisodesWatched(item.id, item.mediaType, item.totalSeasons ?: 1)
-                                            }
                                         }
                                         .padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center
@@ -270,6 +267,7 @@ fun EditMediaDialog(
                             mediaId = item.id,
                             mediaType = item.mediaType,
                             totalSeasons = item.totalSeasons ?: 1,
+                            totalEpisodes = item.totalEpisodes ?: 0,
                             currentSeason = seasonInput.toIntOrNull() ?: 1,
                             viewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
                             onSeasonChange = { newSeason ->

@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [MediaItemEntity::class, WatchedEpisodeEntity::class, PendingOpEntity::class],
-    version = 7,          // bumped from 6
+    version = 8,          // bumped from 7
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -85,6 +85,17 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE media_items ADD COLUMN runtime INTEGER DEFAULT NULL")
                 database.execSQL("ALTER TABLE media_items ADD COLUMN genres TEXT DEFAULT NULL")
                 database.execSQL("ALTER TABLE media_items ADD COLUMN directorStudio TEXT DEFAULT NULL")
+            }
+        }
+
+
+        /**
+         * Migration 7 → 8
+         * Adds progressBackup column for persistent episode tracking.
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE media_items ADD COLUMN progressBackup TEXT DEFAULT NULL")
             }
         }
     }

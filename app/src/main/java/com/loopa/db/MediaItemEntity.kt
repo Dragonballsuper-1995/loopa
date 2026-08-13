@@ -9,7 +9,7 @@ data class MediaItemEntity(
     val imageUrl: String?,
     val date: String?,
     val score: Double?,
-    val listName: String,  // "Watched", "Watching", "To Watch"
+    val listName: String,  // "Watched", "Watching"
     val mediaType: String, // "movie", "tv", "anime"
     val currentSeason: Int    = 1,
     val currentEpisode: Int   = 0,
@@ -22,6 +22,7 @@ data class MediaItemEntity(
     val runtime: Int?         = null,
     val genres: String?       = null,
     val directorStudio: String? = null,
+    val progressBackup: String? = null,
     // ISO 8601 timestamp from Supabase — used for Last-Write-Wins conflict resolution.
     // Null for items inserted before the schema migration.
     val updatedAt: String?    = null

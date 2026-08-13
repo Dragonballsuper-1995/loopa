@@ -8,7 +8,7 @@
 }
 
 body {
-    background-color: #0F0E0C;
+    background-color: #0C0B09; /* Phase 1A: updated loopBase */
     color: #F0EDE8;
     font-family: 'DM Sans', sans-serif;
 }
@@ -31,7 +31,7 @@ body {
 
 /* Frosted Glass — warm version */
 .frosted-glass {
-    background-color: rgba(26, 25, 21, 0.82) !important;
+    background-color: rgba(28, 26, 23, 0.85) !important; /* Phase 1A: new loopSurface */
     backdrop-filter: blur(24px) !important;
     -webkit-backdrop-filter: blur(24px) !important;
     border: 1px solid rgba(240, 237, 232, 0.08) !important;
@@ -57,7 +57,7 @@ select option:hover, select option:focus, select option:active, select option:ch
     box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.02) inset !important;
 }
 
-/* Horizontal Scroll Edge Fade */
+/* Horizontal Scroll Edge Fade — Phase 1E: halved from 48px to 24px so first card shows fully */
 .scroll-fade-container {
     position: relative;
     width: 100%;
@@ -68,8 +68,8 @@ select option:hover, select option:focus, select option:active, select option:ch
     top: 0;
     left: 0;
     bottom: 0;
-    width: 48px;
-    background: linear-gradient(to right, #0F0E0C 10%, transparent);
+    width: 24px;
+    background: linear-gradient(to right, #0C0B09 10%, transparent);
     pointer-events: none;
     z-index: 10;
 }
@@ -79,8 +79,8 @@ select option:hover, select option:focus, select option:active, select option:ch
     top: 0;
     right: 0;
     bottom: 0;
-    width: 48px;
-    background: linear-gradient(to left, #0F0E0C 10%, transparent);
+    width: 24px;
+    background: linear-gradient(to left, #0C0B09 10%, transparent);
     pointer-events: none;
     z-index: 10;
 }
@@ -149,28 +149,102 @@ select option:hover, select option:focus, select option:active, select option:ch
 }
 
 .nav-btn.active-nav::after {
-    width: 70%;
+    width: 100%;  /* Phase 1E: full-width underline — cleaner than 70% */
 }
 
 .nav-btn.active-nav {
     color: #F0EDE8 !important;
 }
 
-/* Card hover */
+/* ── Phase 3A: Card Hover System ─────────────────────────────────────────── */
 .media-card {
-    transition: border-color 150ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden !important;
+    isolation: isolate;
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    clip-path: inset(0 round 0.5rem);
+    transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 200ms ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+    z-index: 1;
 }
 
 .media-card:hover {
-    border-color: rgba(232, 168, 124, 0.35);
+    transform: scale(1.05) translateY(-4px);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.72);
+    border-color: rgba(232, 168, 124, 0.30);
+    z-index: 20;
+}
+
+/* Poster image subtle scale */
+.poster-img {
+    transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .media-card:hover .poster-img {
-    transform: scale(1.05);
+    transform: scale(1.06);
 }
 
-.poster-img {
-    transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+/* Default label fade on card hover */
+.card-default-label {
+    transition: opacity 200ms ease;
+}
+
+.media-card:hover .card-default-label {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+
+
+/* Action button row inside hover panel */
+.card-action-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.card-action-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(240, 237, 232, 0.20);
+    background: rgba(28, 26, 23, 0.90);
+    color: #F0EDE8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+    flex-shrink: 0;
+}
+
+.card-action-btn:hover {
+    background: rgba(232, 168, 124, 0.90);
+    color: #0C0B09;
+    border-color: transparent;
+}
+
+.card-action-btn.primary {
+    background: #E8A87C;
+    color: #0C0B09;
+    border-color: transparent;
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+}
+
+.card-action-btn.primary:hover {
+    background: #D4845A;
+}
+
+/* Hide hover panel on touch-only devices */
+@media (hover: none) {
+    .card-hover-panel {
+        display: none;
+    }
 }
 
 /* Amber glow on focused inputs */
@@ -208,7 +282,7 @@ select option:hover, select option:focus, select option:active, select option:ch
 }
 
 .skeleton {
-    background: linear-gradient(90deg, #1A1915 25%, #242320 50%, #1A1915 75%);
+    background: linear-gradient(90deg, #1C1A17 25%, #2A2823 50%, #1C1A17 75%); /* Phase 1A: updated tokens */
     background-size: 400px 100%;
     animation: shimmer 1.4s ease-in-out infinite;
 }
@@ -221,7 +295,7 @@ select option:hover, select option:focus, select option:active, select option:ch
 /* Pill button base */
 .btn-primary {
     background: #E8A87C;
-    color: #0F0E0C;
+    color: #0C0B09; /* Phase 1A: updated loopBase */
     font-weight: 600;
     border-radius: 9999px;
     padding: 12px 28px;
@@ -276,11 +350,11 @@ select option:hover, select option:focus, select option:active, select option:ch
     border-color: rgba(232, 168, 124, 0.35);
 }
 
-/* Section accent line */
+/* Section accent line — Phase 1B: warm grey (amber reserved for CTAs only) */
 .section-accent {
     width: 3px;
     height: 1.3em;
-    background: #E8A87C;
+    background: #7A746D;
     border-radius: 9999px;
     display: inline-block;
     flex-shrink: 0;
@@ -338,3 +412,262 @@ select option:hover, select option:focus, select option:active, select option:ch
         transform: translateY(0);
     }
 }
+
+/* ── Phase 1C: Modal box-shadow ──────────────────────────────────────────── */
+#modalContent {
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.85);
+}
+
+/* ── Phase 1D: Hero section typography ───────────────────────────────────── */
+.hero-title {
+    font-size: clamp(2rem, 5vw, 4.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6);
+}
+
+.hero-meta-text {
+    font-size: 0.8125rem; /* 13px */
+    color: #7A746D; /* textMuted v2.1 */
+    font-weight: 500;
+}
+
+/* ── Phase 2B: Hero Gradient System ─────────────────────────────────────── */
+
+/* Top fade — subtle scrim so header nav text remains readable */
+.hero-gradient-top {
+    background: linear-gradient(
+        to bottom,
+        rgba(12, 11, 9, 0.55) 0%,
+        transparent 28%
+    );
+}
+
+/* Base / bottom fade — strong pull into the page background */
+.hero-gradient-base {
+    background: linear-gradient(
+        to top,
+        #0C0B09 0%,
+        rgba(12, 11, 9, 0.75) 22%,
+        transparent 52%
+    );
+}
+
+/* Left vignette — editorial depth, pushes content to foreground */
+.hero-gradient-side {
+    background: linear-gradient(
+        to right,
+        rgba(12, 11, 9, 0.70) 0%,
+        transparent 45%
+    );
+}
+
+/* ── Phase 2B: Scroll-transparent header ────────────────────────────────── */
+header {
+    transition: background-color 300ms ease, border-color 300ms ease, backdrop-filter 300ms ease;
+}
+
+/* Applied by JS when user scrolls above the hero */
+header.header-transparent {
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-color: transparent !important;
+}
+
+/* ── Phase 1E: Larger search input text ──────────────────────────────────── */
+#searchInput {
+    font-size: 0.875rem; /* text-sm — overrides the text-xs Tailwind class */
+}
+
+/* ── Utility: line-clamp for hero title ──────────────────────────────────── */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ── Phase 3C: Modal Backdrop Image ──────────────────────────────────────── */
+#modalBackdrop {
+    width: 100%;
+    height: 260px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+#modalBackdropImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
+    transition: opacity 400ms ease;
+}
+
+#modalBackdrop::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgba(18, 17, 14, 0.96) 0%,
+        rgba(18, 17, 14, 0.65) 35%,
+        transparent 65%
+    );
+    pointer-events: none;
+}
+
+/* Title overlay on backdrop */
+#modalBackdropTitle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 24px 20px;
+    z-index: 2;
+}
+
+/* ── Phase 3C: Genre Pills ────────────────────────────────────────────────── */
+.genre-pill {
+    background: rgba(240, 237, 232, 0.06);
+    border: 1px solid rgba(240, 237, 232, 0.10);
+    border-radius: 9999px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #A09990;
+    white-space: nowrap;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+/* ── Phase 3C: More Like This Row ────────────────────────────────────────── */
+#moreLikeThisSection {
+    flex-shrink: 0;
+    border-top: 1px solid rgba(240, 237, 232, 0.06);
+    padding: 16px 0 8px;
+}
+
+#moreLikeThisRow {
+    /* inherit no-scrollbar */
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+#moreLikeThisRow .media-card {
+    width: 110px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+}
+
+/* ── Phase 4A: Genre Tile Cards ─────────────────────────────────────────── */
+.genre-tile {
+    border-radius: 14px;
+    padding: 20px 16px;
+    border-width: 1px;
+    border-style: solid;
+    cursor: pointer;
+    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease, border-color 200ms ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #F0EDE8;
+    user-select: none;
+}
+
+.genre-tile:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Phase 4B: Top 10 Row Cards & Rank Overlay ────────────────────────────── */
+.top10-card-wrapper {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.top10-rank {
+    position: absolute;
+    left: -4px;
+    bottom: -6px;
+    font-size: 82px;
+    font-weight: 900;
+    line-height: 0.8;
+    letter-spacing: -5px;
+    color: transparent;
+    -webkit-text-stroke: 2px rgba(240, 237, 232, 0.22);
+    pointer-events: none;
+    z-index: 5;
+    user-select: none;
+}
+
+.top10-rank.top3 {
+    -webkit-text-stroke: 2px rgba(232, 168, 124, 0.60);
+}
+
+.top10-card-wrapper .media-card {
+    margin-left: 44px;
+    z-index: 10;
+    width: 120px;
+}
+
+/* ── Phase 4C: See All Link ────────────────────────────────────────────────── */
+.see-all-link {
+    font-size: 12px;
+    font-weight: 600;
+    color: #7A746D;
+    transition: color 150ms ease, transform 150ms ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+}
+
+.see-all-link:hover {
+    color: #E8A87C;
+    transform: translateX(2px);
+}
+
+/* ── Phase 4A: Autocomplete Dropdown Rows ────────────────────────────────── */
+.autocomplete-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 150ms ease;
+    color: #F0EDE8;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.autocomplete-row:hover {
+    background: rgba(240, 237, 232, 0.08);
+}
+
+/* ── Phase 4D: Auth Shifting Ambient Gradient ──────────────────────────────── */
+@keyframes ambientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+#authModal {
+    background: radial-gradient(ellipse at 20% 50%, rgba(42,31,23,0.55) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(28,24,18,0.75) 0%, transparent 50%),
+                rgba(12,11,9,0.92);
+    background-size: 200% 200%;
+    animation: ambientShift 10s ease infinite;
+}
+
+/* styles.css v4.0 — Phase 4 Discovery Layer */
+

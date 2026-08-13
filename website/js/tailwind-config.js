@@ -2,15 +2,16 @@ tailwind.config = {
     theme: {
         extend: {
             colors: {
-                loopBase: '#0F0E0C',
-                loopSurface: '#1A1915',
-                loopRaised: '#242320',
+                loopBase: '#0C0B09',          // Phase 1: deepened
+                loopSurface: '#1C1A17',        // Phase 1: warmer mid-dark
+                loopRaised: '#2A2823',         // Phase 1: more contrast
                 loopAmber: '#E8A87C',
                 loopAmberStrong: '#D4845A',
                 loopAmberSubtle: '#2A1F17',
+                loopTerracotta: '#C47A5A',     // Phase 1: secondary accent
                 textPrimary: '#F0EDE8',
                 textSecondary: '#A09990',
-                textMuted: '#5C574F',
+                textMuted: '#7A746D',          // Phase 1: raised for readability
                 loopSuccess: '#7AB87A',
                 loopError: '#C87070',
                 // Named border tokens — mirror Android Loopa.Border / BorderMd / BorderStrong (Color.kt)

@@ -45,6 +45,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -99,6 +102,7 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+    com.loopa.network.NetworkModule.prewarmConnections()
     setContent {
       val viewModel: MediaViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
       val themeMode by viewModel.themeMode.collectAsState()
@@ -640,7 +644,7 @@ fun RecommendationCard(
                 viewModel.setDetailOpen(false)
             },
             onToWatch = {
-                viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "To Watch", movie.mediaType ?: "movie")
+                viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "Watching", movie.mediaType ?: "movie")
                 showDetails = false
                 viewModel.setDetailOpen(false)
             }
@@ -721,7 +725,7 @@ fun LoopTrackDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
                         com.loopa.ui.LoopButton(
-                            text = "To Watch",
+                            text = "Watching",
                             onClick = onToWatch,
                             isSecondary = false,
                             modifier = Modifier.fillMaxWidth()
@@ -782,7 +786,7 @@ fun LoopQuickActionDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                     com.loopa.ui.LoopButton(
-                        text = "To Watch",
+                        text = "Watching",
                         onClick = onToWatch,
                         isSecondary = false,
                         modifier = Modifier.fillMaxWidth()
@@ -817,11 +821,10 @@ fun MediaItemCard(item: com.loopa.db.MediaItemEntity, viewModel: MediaViewModel)
     // Determine status color based on watch status
     val statusColor = when (item.listName) {
         "Watching", "Active" -> Color(0xFF00E5FF)   // Cyan = currently watching
-        "Watched" -> Color(0xFF33CC33)               // Green = completed
-        else -> Color(0xFFFF4500)                     // Orange = to watch
+        "Watched" -> Color(0xFF33CC33)               // Green = watched
+        else -> Color(0xFF00E5FF)                    
     }
     val statusLabel = when (item.listName) {
-        "To Watch", "Want" -> "TO WATCH"
         "Watching", "Active" -> "WATCHING"
         "Watched" -> "WATCHED"
         else -> item.listName.uppercase()
@@ -871,7 +874,7 @@ fun MediaItemCard(item: com.loopa.db.MediaItemEntity, viewModel: MediaViewModel)
                 showQuickAdd = false
             },
             onToWatch = {
-                viewModel.updateMediaItem(item.copy(listName = "To Watch"))
+                viewModel.updateMediaItem(item.copy(listName = "Watching"))
                 showQuickAdd = false
             },
             onRemove = {
@@ -961,6 +964,8 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
     var hoverMovie by remember { mutableStateOf<TmdbMovie?>(null) }
     val searchState by viewModel.searchState.collectAsState()
     val searchSuggestions by viewModel.searchSuggestionsState.collectAsState()
+    var isSearchFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
     
     var showFilterSheet by remember { mutableStateOf(false) }
     var selectedMediaType by remember { mutableStateOf("All") }
@@ -1061,6 +1066,53 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
             }
         }
 
+        // Search Overlays (Empty State / Autocomplete)
+        val currentSuggestions = if (query.isBlank()) {
+            emptyList()
+        } else if (searchSuggestions.isNotEmpty()) {
+            searchSuggestions
+        } else {
+            (searchState as? MediaUiState.Success)?.trending?.take(5) ?: emptyList()
+        }
+
+        val showDimmer = isSearchFocused && (query.isBlank() || currentSuggestions.isNotEmpty())
+
+        if (showDimmer) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    onClick = { focusManager.clearFocus() }
+                )
+            )
+        }
+        
+        if (isSearchFocused) {
+            if (query.isBlank()) {
+                SearchEmptyState(
+                    onGenreClick = { genre ->
+                        query = genre
+                        viewModel.search(genre)
+                        focusManager.clearFocus()
+                    }
+                )
+            } else if (currentSuggestions.isNotEmpty()) {
+                AutocompleteOverlay(
+                    query = query,
+                    suggestions = currentSuggestions,
+                    onSuggestionClick = { movie ->
+                        val title = movie.title ?: movie.name ?: ""
+                        query = title
+                        viewModel.search(title)
+                        focusManager.clearFocus()
+                    },
+                    onDismiss = { focusManager.clearFocus() }
+                )
+            }
+        }
+
         // 2. Search bar with progressive blur overlaid on top
         Column(
             modifier = Modifier
@@ -1103,6 +1155,7 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
                 placeholder = "Search targets...",
                 onFilterClick = { showFilterSheet = !showFilterSheet },
                 isFilterActive = showFilterSheet,
+                onFocusChange = { isSearchFocused = it },
                 modifier = Modifier
                     .padding(horizontal = 24.dp)
                     .fillMaxWidth()
@@ -1323,6 +1376,7 @@ fun RadarSearchBar(
     placeholder: String,
     onFilterClick: () -> Unit,
     isFilterActive: Boolean,
+    onFocusChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -1333,7 +1387,10 @@ fun RadarSearchBar(
             .fillMaxWidth()
             .height(50.dp)
             .shadow(elevation, com.loopa.ui.Loopa.PillShape)
-            .onFocusChanged { isFocused = it.isFocused },
+            .onFocusChanged { 
+                isFocused = it.isFocused
+                onFocusChange(it.isFocused)
+            },
         color = Color(0x66161512),
         shape = com.loopa.ui.Loopa.PillShape,
         border = BorderStroke(
@@ -1616,6 +1673,133 @@ fun <T> ResponsiveGrid(
             ) { index ->
                 androidx.compose.foundation.layout.Box(modifier = Modifier.animateItem()) {
                     itemContent(items[index])
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchEmptyState(onGenreClick: (String) -> Unit) {
+    val genres = listOf(
+        "Action" to com.loopa.ui.Loopa.Amber,
+        "Comedy" to Color(0xFF4ADE80),
+        "Drama" to Color(0xFF60A5FA),
+        "Horror" to Color(0xFFF87171),
+        "Sci-Fi" to Color(0xFFA78BFA),
+        "Anime" to Color(0xFFF472B6)
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 150.dp) // Below search bar
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            "Explore Genres",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = com.loopa.ui.Loopa.TextPrimary,
+            modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+        )
+        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(genres.size) { index ->
+                val (name, color) = genres[index]
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .clip(com.loopa.ui.Loopa.CardShape)
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(color.copy(alpha = 0.2f), Color(0x00000000))
+                            )
+                        )
+                        .border(1.dp, color.copy(alpha = 0.3f), com.loopa.ui.Loopa.CardShape)
+                        .clickable { onGenreClick(name) }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.BottomStart
+                ) {
+                    Text(
+                        text = name,
+                        color = com.loopa.ui.Loopa.TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AutocompleteOverlay(
+    query: String,
+    suggestions: List<com.loopa.model.TmdbMovie>,
+    onSuggestionClick: (com.loopa.model.TmdbMovie) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            ) // dismiss on background tap
+    ) {
+        if (suggestions.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .padding(top = 110.dp) // Just below search bar
+                    .padding(horizontal = 24.dp)
+                    .fillMaxWidth()
+                    .clip(com.loopa.ui.Loopa.CardShape)
+                    .background(com.loopa.ui.Loopa.Surface.copy(alpha = 0.95f))
+                    .border(1.dp, com.loopa.ui.Loopa.Border, com.loopa.ui.Loopa.CardShape)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        enabled = false
+                    ) {} // block clicks from dismissing
+            ) {
+                suggestions.take(5).forEach { movie ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSuggestionClick(movie) }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Search,
+                            contentDescription = null,
+                            tint = com.loopa.ui.Loopa.TextMuted,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = movie.title ?: movie.name ?: "",
+                            color = com.loopa.ui.Loopa.TextPrimary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = movie.mediaType?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() } ?: "Movie",
+                            color = com.loopa.ui.Loopa.TextMuted,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    if (movie != suggestions.take(5).last()) {
+                        androidx.compose.material3.HorizontalDivider(color = com.loopa.ui.Loopa.Border, thickness = 1.dp)
+                    }
                 }
             }
         }

@@ -221,10 +221,12 @@ const App = {
                 const state = document.getElementById('searchState');
                 const browseContent = document.getElementById('radar-browse-content');
                 const resultsContainer = document.getElementById('search-results-container');
+                const autoBox = document.getElementById('searchAutocomplete');
                 
                 if (q.length === 0) {
                     if (browseContent) browseContent.classList.remove('hidden');
                     if (resultsContainer) resultsContainer.classList.add('hidden');
+                    if (autoBox) autoBox.classList.add('hidden');
                     this.s.searchResults = [];
                     return;
                 } else {
@@ -234,20 +236,77 @@ const App = {
 
                 if (q.length < 2) {
                     if (grid) grid.innerHTML = '';
-                    if (state) {
-                        state.classList.remove('hidden');
-                        state.innerHTML = '<i class="fa-solid fa-radar text-4xl text-gray-800 mb-4 animate-pulse"></i><p class="font-headers text-2xl text-gray-600">AWAITING INPUT</p>';
-                    }
+                    if (state) state.classList.remove('hidden');
+                    if (autoBox) autoBox.classList.add('hidden');
                     this.s.searchResults = [];
                     return;
                 }
+
                 if (state) state.classList.add('hidden');
                 if (grid) grid.innerHTML = UI.skeletonGrid(8);
+                
+                // Show instant autocomplete from local indexed media
+                const matches = (typeof LoopaSearchEngine !== 'undefined') ? LoopaSearchEngine.search(q) : [];
+                UI.renderAutocomplete(q, matches);
+
                 this.s.searchDebounce = setTimeout(() => {
                     this._doSearch(q);
-                }, 420);
+                }, 90);
             });
         }
+
+        // Hide autocomplete on click outside
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('headerSearchContainer')?.contains(e.target)) {
+                document.getElementById('searchAutocomplete')?.classList.add('hidden');
+            }
+        });
+
+        // Genre tile clicks (Phase 4A)
+        document.querySelectorAll('#genreTiles .genre-tile').forEach(tile => {
+            tile.addEventListener('click', () => {
+                const genre = tile.dataset.genre;
+                if (searchInput) {
+                    searchInput.value = genre;
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        });
+
+        // See All links (Phase 4C + W3 Fix)
+        document.querySelectorAll('[data-see-all]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const cat = link.dataset.seeAll;
+                this.navigateTo('search', true);
+
+                const browseContent = document.getElementById('radar-browse-content');
+                const resultsContainer = document.getElementById('search-results-container');
+                const state = document.getElementById('searchState');
+
+                if (browseContent) browseContent.classList.add('hidden');
+                if (resultsContainer) resultsContainer.classList.remove('hidden');
+                if (state) state.classList.add('hidden');
+
+                const sfType = cat === 'trending' ? 'all' : cat === 'anime' ? 'anime' : cat === 'movies' ? 'movie' : cat === 'tv' ? 'tv' : 'all';
+                this.s.searchFilter = sfType;
+
+                document.querySelectorAll('[data-sf]').forEach(b => {
+                    if (b.dataset.sf === sfType) {
+                        b.classList.add('active');
+                    } else {
+                        b.classList.remove('active');
+                    }
+                });
+
+                const list = cat === 'anime' ? this.s.animeList
+                    : cat === 'movies' ? this.s.moviesList
+                    : cat === 'tv' ? this.s.tvList
+                    : this.s.trendingList;
+
+                UI.renderSearchGrid(list.length ? list : this.s.trendingList);
+            });
+        });
 
         // Filters
         document.querySelectorAll('[data-sf]').forEach(btn => {
@@ -353,6 +412,31 @@ const App = {
                 }
             }
         });
+
+        // Phase 2B: Scroll-transparent header — fade header over hero, restore when scrolled past
+        const header = document.querySelector('header');
+        const radarTab = document.getElementById('tab-search');
+        if (header) {
+            const updateHeaderTransparency = () => {
+                const heroSection = document.getElementById('hero-section');
+                const isRadarVisible = radarTab && !radarTab.classList.contains('hidden');
+                if (isRadarVisible && heroSection) {
+                    const scrollY = window.scrollY || document.documentElement.scrollTop;
+                    const heroHeight = heroSection.offsetHeight;
+                    // Transparent when within top 60% of hero height
+                    if (scrollY < heroHeight * 0.6) {
+                        header.classList.add('header-transparent');
+                    } else {
+                        header.classList.remove('header-transparent');
+                    }
+                } else {
+                    header.classList.remove('header-transparent');
+                }
+            };
+            window.addEventListener('scroll', updateHeaderTransparency, { passive: true });
+            // Run once immediately so state is correct on load
+            requestAnimationFrame(updateHeaderTransparency);
+        }
     },
 
     _updateSyncTime() {
@@ -425,6 +509,9 @@ const App = {
             btn.classList.toggle('active-nav', isActive);
         });
 
+        // Phase 2B: Re-evaluate header transparency on tab switch
+        window.dispatchEvent(new Event('scroll'));
+
         if (view === 'search') {
             if (!fromSearchInput) {
                 const searchInput = document.getElementById('searchInput');
@@ -452,7 +539,10 @@ const App = {
         if (this.s.dashboardLoaded && !forceRefresh) {
             const watching = this.s.watchlist.find(i => i.list_name === 'Watching');
             this._startHeroCarousel(this.s.trendingList.filter(i => i.backdropUrl || i.posterUrl).slice(0, 5), watching);
-            if (this.s.trendingList.length) UI.renderScrollRow('row-trending', this.s.trendingList.slice(0, 10));
+            if (this.s.trendingList.length) {
+                UI.renderScrollRow('row-trending', this.s.trendingList.slice(0, 10));
+                UI.renderTop10Row(this.s.trendingList.slice(0, 10));
+            }
             if (this.s.animeList.length)   UI.renderScrollRow('row-anime',    this.s.animeList.slice(0, 10));
             if (this.s.moviesList.length)  UI.renderScrollRow('row-movies',   this.s.moviesList.slice(0, 10));
             if (this.s.tvList.length)      UI.renderScrollRow('row-tv',       this.s.tvList.slice(0, 10));
@@ -489,7 +579,10 @@ const App = {
         const watching = this.s.watchlist.find(i => i.list_name === 'Watching');
         const heroItems = t.filter(i => i.backdropUrl || i.posterUrl).slice(0, 5);
         this._startHeroCarousel(heroItems, watching);
-        if (t.length) UI.renderScrollRow('row-trending', t.slice(0, 10));
+        if (t.length) {
+            UI.renderScrollRow('row-trending', t.slice(0, 10));
+            UI.renderTop10Row(t.slice(0, 10));
+        }
 
         // ── Tier 2: Above-fold rows — fire shortly after hero renders ─────────
         setTimeout(async () => {
@@ -530,14 +623,14 @@ const App = {
         if (!heroItems.length) return;
 
         let heroIndex = 0;
-        UI.renderHero(heroItems[heroIndex], watching);
+        UI.renderHero(heroItems[heroIndex], watching, heroItems, heroIndex);
 
         this.s.heroInterval = setInterval(() => {
             // Don't advance carousel if hero is paused (modal open / tab hidden)
             if (this.s.heroPaused) return;
             heroIndex = (heroIndex + 1) % heroItems.length;
-            UI.renderHero(heroItems[heroIndex], watching);
-        }, 5000);
+            UI.renderHero(heroItems[heroIndex], watching, heroItems, heroIndex);
+        }, 6000);  // Phase 2B: 6s — longer dwell time for cinematic hero
 
         // Pause hero when page is hidden (user switches browser tab) or modal is open
         if (!this.s._visibilityBound) {
@@ -547,6 +640,25 @@ const App = {
                 this.s.heroPaused = document.hidden || isModalOpen;
             });
         }
+
+        // Store ref to heroItems for jump method
+        this.s._heroItems = heroItems;
+        this.s._heroWatching = watching;
+        this.s._heroIndexRef = { value: heroIndex };
+
+        // Phase 2B: _jumpHero — jump to a specific slide from dot click
+        this._jumpHero = (idx) => {
+            if (idx < 0 || idx >= heroItems.length) return;
+            heroIndex = idx;
+            clearInterval(this.s.heroInterval);
+            UI.renderHero(heroItems[heroIndex], watching, heroItems, heroIndex);
+            // Restart interval so the next auto-advance starts fresh from this slide
+            this.s.heroInterval = setInterval(() => {
+                if (this.s.heroPaused) return;
+                heroIndex = (heroIndex + 1) % heroItems.length;
+                UI.renderHero(heroItems[heroIndex], watching, heroItems, heroIndex);
+            }, 6000);
+        };
     },
 
     // ── Tier-3 IntersectionObserver lazy rows ────────────────────────────────
@@ -613,91 +725,94 @@ const App = {
     async _doSearch(q) {
         try {
             let actualQuery = q;
-            
-            // Check if we have a cached correction
             const cached = LoopaSearchEngine.getCachedCorrection(q);
             if (cached) {
                 actualQuery = cached;
-                console.log(`[SearchEngine] Using cached correction for '${q}' -> '${actualQuery}'`);
-            } else if (q.length >= 3 && CONFIG.AI_PROXY_URL) {
-                // Call Gemini via AI Proxy to optimize/correct query
-                try {
-                    const prompt = `Correct any typos, spelling errors, or incomplete conceptual names in this media search query (movies, TV shows, anime): '${q}'. Return ONLY a JSON object in this format: {"correctedQuery":"<corrected title>","mediaTypeHint":"movie"|"tv"|"anime"|"all"}. Return nothing else. Do not include markdown code block formatting. Examples: "Mohabatein" -> {"correctedQuery":"Mohabbatein","mediaTypeHint":"movie"}, "Moha" -> {"correctedQuery":"Mohabbatein","mediaTypeHint":"movie"}, "Doraemon Japan" -> {"correctedQuery":"Doraemon: Nobita and the Birth of Japan","mediaTypeHint":"anime"}.`;
-                    
-                    const res = await fetch(CONFIG.AI_PROXY_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
-                        },
-                        body: JSON.stringify({ prompt })
-                    });
-                    
-                    if (res.ok) {
-                        let text = await res.text();
-                        text = text.replace(/```json?/g, '').replace(/```/g, '').trim();
-                        try {
-                            const parsed = JSON.parse(text);
-                            if (parsed.correctedQuery) {
-                                actualQuery = parsed.correctedQuery;
-                                LoopaSearchEngine.cacheCorrection(q, actualQuery);
-                                console.log(`[SearchEngine] Gemini corrected '${q}' -> '${actualQuery}'`);
-                            }
-                        } catch (e) {
-                            console.warn('[SearchEngine] Failed to parse query correction response:', text);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('[SearchEngine] Gemini query correction failed, falling back to original:', e.message);
-                }
             }
 
-            // Perform remote API search
-            let res = await API.searchAll(actualQuery);
-            
-            // Also fetch fuzzy matches from local index to merge (Personalization / Offline index search)
-            const localHits = LoopaSearchEngine.getSuggestions(q, 4);
-            
-            // Merge results: keep unique IDs, and prioritize watchlist matches
-            const merged = [];
-            const seen = new Set();
-            
-            const normalizedQ = q.toLowerCase().trim();
-            const normalizedAQ = actualQuery.toLowerCase().trim();
+            // 1. Perform instant fast search with unified Edge API (~20-80ms)
+            const fastResults = await API.searchFast(actualQuery);
 
-            // 1. Exact local matches first
-            localHits.forEach(item => {
-                const title = item.title.toLowerCase().trim();
-                if (title === normalizedQ || title === normalizedAQ) {
-                    const key = item.id + '_' + item.mediaType;
+            // Fetch fuzzy matches from local watchlist index
+            const localHits = LoopaSearchEngine.getSuggestions(q, 4);
+
+            const renderResults = (remoteItems) => {
+                const merged = [];
+                const seen = new Set();
+                const normalizedQ = q.toLowerCase().trim();
+                const normalizedAQ = actualQuery.toLowerCase().trim();
+
+                // 1. Exact local matches first
+                localHits.forEach(item => {
+                    const title = (item.title || '').toLowerCase().trim();
+                    if (title === normalizedQ || title === normalizedAQ) {
+                        const key = item.id + '_' + (item.mediaType || item.media_type);
+                        if (!seen.has(key)) {
+                            merged.push(item);
+                            seen.add(key);
+                        }
+                    }
+                });
+
+                // 2. Remote API results
+                remoteItems.forEach(item => {
+                    const key = item.id + '_' + (item.mediaType || item.media_type);
                     if (!seen.has(key)) {
                         merged.push(item);
                         seen.add(key);
                     }
-                }
-            });
-            
-            // 2. Remote API results
-            res.forEach(item => {
-                const key = item.id + '_' + item.mediaType;
-                if (!seen.has(key)) {
-                    merged.push(item);
-                    seen.add(key);
-                }
-            });
+                });
 
-            // 3. Other local fuzzy matches
-            localHits.forEach(item => {
-                const key = item.id + '_' + item.mediaType;
-                if (!seen.has(key)) {
-                    merged.push(item);
-                    seen.add(key);
-                }
-            });
+                // 3. Other local fuzzy matches
+                localHits.forEach(item => {
+                    const key = item.id + '_' + (item.mediaType || item.media_type);
+                    if (!seen.has(key)) {
+                        merged.push(item);
+                        seen.add(key);
+                    }
+                });
 
-            this.s.searchResults = merged;
-            const list = this.s.searchFilter === 'all' ? merged : merged.filter(i => i.mediaType === this.s.searchFilter);
-            UI.renderSearchGrid(list);
+                this.s.searchResults = merged;
+                const filter = this.s.searchFilter || 'all';
+                const list = filter === 'all' ? merged : merged.filter(i => (i.mediaType || i.media_type) === filter);
+                UI.renderSearchGrid(list);
+            };
+
+            // RENDER INSTANTLY NOW (< 50ms)!
+            renderResults(fastResults);
+
+            // 2. Asynchronously run AI query correction in background ONLY if results < 3 and query >= 4 chars
+            if (!cached && fastResults.length < 3 && q.length >= 4 && CONFIG.RECOMMENDATIONS_URL) {
+                (async () => {
+                    try {
+                        const prompt = `Correct any typos or spelling errors in this media search query: '${q}'. Return ONLY a raw JSON object: {"correctedQuery":"<corrected title>"}. Example: "Moha" -> {"correctedQuery":"Mohabbatein"}.`;
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 1200);
+                        const aiRes = await fetch(CONFIG.RECOMMENDATIONS_URL, {
+                            method: 'POST',
+                            signal: controller.signal,
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
+                            },
+                            body: JSON.stringify({ prompt })
+                        });
+                        clearTimeout(timeoutId);
+                        if (aiRes.ok) {
+                            let text = await aiRes.text();
+                            text = text.replace(/```json?/g, '').replace(/```/g, '').trim();
+                            const parsed = JSON.parse(text);
+                            if (parsed.correctedQuery && parsed.correctedQuery.toLowerCase() !== q.toLowerCase()) {
+                                LoopaSearchEngine.cacheCorrection(q, parsed.correctedQuery);
+                                const extraRes = await API.searchFast(parsed.correctedQuery);
+                                if (extraRes.length > 0) {
+                                    renderResults([...fastResults, ...extraRes]);
+                                }
+                            }
+                        }
+                    } catch {}
+                })();
+            }
         } catch (err) {
             document.getElementById('searchResults').innerHTML = '';
             const state = document.getElementById('searchState');
@@ -930,6 +1045,9 @@ const App = {
                 }
             }
         } catch {}
+
+        // Phase 3C: Fetch and render More Like This row after details load
+        UI._fetchAndRenderSimilar(item.id, item.mediaType || item.media_type);
     },
 
     async openDrawerFromDB(dbItem) {
@@ -958,6 +1076,9 @@ const App = {
                 }
             }
         } catch {}
+
+        // Phase 3C: Fetch and render More Like This row after details load
+        UI._fetchAndRenderSimilar(dbItem.id, dbItem.media_type);
     },
 
     closeDrawer() {
@@ -981,6 +1102,10 @@ const App = {
             const idx = this.s.watchlist.findIndex(w => w.id === row.id && w.media_type === row.media_type);
             if (idx >= 0) this.s.watchlist[idx] = row;
             else this.s.watchlist.unshift(row);
+
+            if (listName === 'Watched') {
+                await this.markAllEpisodesWatched(item, row);
+            }
 
             this.s.drawerItem = item;
             this.s.drawerDBEntry = row;
@@ -1013,25 +1138,41 @@ const App = {
         const mediaType = (dbEntry.media_type || item?.mediaType || '').toLowerCase();
         if (mediaType !== 'tv' && mediaType !== 'anime') return;
 
-        const totalSeasons = item?.totalSeasons || dbEntry.total_seasons || 1;
-        const isAniList = item?.provider === 'anilist' || item?.provider === 'jikan';
+        let totalSeasons = item?.totalSeasons || dbEntry.total_seasons || 1;
+        let isAnime = mediaType === 'anime' || item?.provider === 'anilist' || item?.provider === 'jikan' || item?.provider === 'kitsu';
 
-        for (let s = 1; s <= totalSeasons; s++) {
+        const currentData = this.s.drawerWatchedEpisodes || [];
+        if (currentData.length > 0) {
+            await SBList.update(this.s.user.id, dbEntry.id, dbEntry.media_type, { progress_backup: JSON.stringify(currentData) });
+            dbEntry.progress_backup = JSON.stringify(currentData);
+        }
+
+        const episodesToAdd = [];
+
+        if (isAnime) {
             let epCount = dbEntry.total_episodes || item?.totalEpisodes || 0;
-            if (!isAniList && epCount === 0) {
-                try {
-                    const seasonData = await API.fetchTVSeasonDetails(dbEntry.id, s);
-                    if (seasonData?.episodes?.length > 0) {
-                        epCount = seasonData.episodes.length;
-                    }
-                } catch {}
+            for (let ep = 1; ep <= epCount; ep++) {
+                episodesToAdd.push({ season_number: 1, episode_number: ep });
             }
-            if (epCount > 0) {
+        } else {
+            const seasonPromises = [];
+            for (let s = 1; s <= totalSeasons; s++) {
+                seasonPromises.push(API.fetchTVSeasonDetails(dbEntry.id, s).catch(() => null));
+            }
+            const seasonsData = await Promise.all(seasonPromises);
+            for (let s = 1; s <= totalSeasons; s++) {
+                const seasonData = seasonsData[s - 1];
+                let epCount = seasonData?.episodes?.length || 0;
                 for (let ep = 1; ep <= epCount; ep++) {
-                    await SBWatchedEpisodes.add(this.s.user.id, dbEntry.id, dbEntry.media_type, s, ep);
+                    episodesToAdd.push({ season_number: s, episode_number: ep });
                 }
             }
         }
+
+        if (episodesToAdd.length > 0) {
+            await SBWatchedEpisodes.addBulk(this.s.user.id, dbEntry.id, dbEntry.media_type, episodesToAdd);
+        }
+
         this.s.drawerWatchedEpisodes = JSON.parse(
             localStorage.getItem(`loopa_episodes_${this.s.user.id}_${dbEntry.id}`) || '[]'
         );
@@ -1043,17 +1184,66 @@ const App = {
         }
     },
 
+    async markSeasonWatched(item, dbEntry, seasonNum, epCount) {
+        if (!dbEntry || this.s.isGuest || !epCount) return;
+        const episodesToAdd = [];
+        for (let ep = 1; ep <= epCount; ep++) {
+            episodesToAdd.push({ season_number: seasonNum, episode_number: ep });
+        }
+        await SBWatchedEpisodes.addBulk(this.s.user.id, dbEntry.id, dbEntry.media_type, episodesToAdd);
+        
+        this.s.drawerWatchedEpisodes = await SBWatchedEpisodes.getForMedia(this.s.user.id, dbEntry.id, dbEntry.media_type);
+        const newCount = this.s.drawerWatchedEpisodes.length;
+        const idx = this.s.watchlist.findIndex(w => w.id === dbEntry.id && w.media_type === dbEntry.media_type);
+        
+        // Auto-shift status
+        const totalEps = dbEntry.total_episodes || item?.totalEpisodes || 0;
+        let newStatus = dbEntry.list_name;
+        if (newCount > 0 && newCount < totalEps) newStatus = 'Watching';
+        else if (newCount > 0 && newCount >= totalEps) newStatus = 'Watched';
+        else if (newCount === 0) newStatus = 'Watching';
+
+        if (newStatus !== dbEntry.list_name) {
+            await this.updateStatus(newStatus);
+        }
+
+        if (idx >= 0) {
+            this.s.watchlist[idx].current_episode = newCount;
+            this.s.drawerDBEntry.current_episode = newCount;
+        }
+        UI.renderDrawer(item, dbEntry, this.s.drawerWatchedEpisodes);
+        UI.toast(`SEASON ${seasonNum} WATCHED`);
+    },
+
     async updateStatus(status) {
         const e = this.s.drawerDBEntry;
         if (!e || this.s.isGuest) return;
         try {
+            const prevStatus = e.list_name;
             await SBList.update(this.s.user.id, e.id, e.media_type, { list_name: status });
             e.list_name = status;
             const idx = this.s.watchlist.findIndex(w => w.id === e.id && w.media_type === e.media_type);
             if (idx >= 0) this.s.watchlist[idx].list_name = status;
-            if (status === 'Watched' || status === 'Completed') {
+            
+            if (status === 'Watched') {
                 await this.markAllEpisodesWatched(this.s.drawerItem, e);
+            } else if (status === 'Watching' && prevStatus === 'Watched') {
+                const backupRaw = e.progress_backup;
+                if (backupRaw) {
+                    await SBWatchedEpisodes.removeAll(this.s.user.id, e.id, e.media_type);
+                    const backup = JSON.parse(backupRaw);
+                    if (backup.length > 0) {
+                        await SBWatchedEpisodes.addBulk(this.s.user.id, e.id, e.media_type, backup);
+                    }
+                    this.s.drawerWatchedEpisodes = backup;
+                    e.current_episode = backup.length;
+                    if (idx >= 0) this.s.watchlist[idx].current_episode = backup.length;
+                    
+                    await SBList.update(this.s.user.id, e.id, e.media_type, { progress_backup: null });
+                    e.progress_backup = null;
+                }
             }
+
             UI.renderDrawer(this.s.drawerItem, e, this.s.drawerWatchedEpisodes);
             UI.toast('STATUS UPDATED');
         } catch (err) {}
@@ -1073,8 +1263,19 @@ const App = {
             // Refresh local episode count
             this.s.drawerWatchedEpisodes = await SBWatchedEpisodes.getForMedia(this.s.user.id, e.id, e.media_type);
             const newCount = this.s.drawerWatchedEpisodes.length;
-            // Update the watchlist entry in local state
             const idx = this.s.watchlist.findIndex(w => w.id === e.id && w.media_type === e.media_type);
+            
+            // Auto-shift status
+            const totalEps = e.total_episodes || this.s.drawerItem?.totalEpisodes || 0;
+            let newStatus = e.list_name;
+            if (newCount > 0 && newCount < totalEps) newStatus = 'Watching';
+            else if (newCount > 0 && newCount >= totalEps) newStatus = 'Watched';
+            else if (newCount === 0) newStatus = 'Watching';
+
+            if (newStatus !== e.list_name) {
+                await this.updateStatus(newStatus);
+            }
+
             if (idx >= 0) {
                 this.s.watchlist[idx].current_episode = newCount;
                 this.s.drawerDBEntry.current_episode = newCount;
@@ -1156,7 +1357,7 @@ const App = {
             const btnAdd = document.createElement('div');
             btnAdd.className = 'px-4 py-2 hover:bg-loopRaised cursor-pointer flex items-center gap-3 transition-colors';
             btnAdd.innerHTML = '<i class="fa-solid fa-plus w-4 text-center text-loopAmber"></i> <span>Add to Watchlist</span>';
-            btnAdd.onclick = () => { this.closeContextMenu(); this.addToWatchlist(item, 'To Watch'); };
+            btnAdd.onclick = () => { this.closeContextMenu(); this.addToWatchlist(item, 'Watching'); };
             cm.appendChild(btnAdd);
         } else if (actualInList && !this.s.isGuest) {
             if (listName !== 'Watched') {

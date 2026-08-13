@@ -64,7 +64,7 @@ Under the hood, Loopa is architected for resilience. A battle-tested **Offline-F
 | <img src="assets/icons/wifi-off.svg" width="16" align="center" alt=""> &nbsp; **Offline-First Resilience** | A robust LWW conflict resolution engine. Every action is persisted locally first (`Room DB` / `LocalStorage`), queued if offline, and flushed to the cloud on reconnection. |
 | <img src="assets/icons/tv.svg" width="16" align="center" alt=""> &nbsp; **Unified Media Universe** | Track movies, multi-season TV shows with per-episode logging, and anime — all from a single, unified interface powered by **TMDB** and **Jikan**. |
 | <img src="assets/icons/palette.svg" width="16" align="center" alt=""> &nbsp; **Cinematic Dark Mode UI** | A strictly dark-mode-only interface — because some design decisions aren't negotiable. Features custom design tokens, DM Sans typography, and hard directional shadows. |
-| <img src="assets/icons/rocket.svg" width="16" align="center" alt=""> &nbsp; **High-Performance Web PWA** | Static Tailwind CSS build, Service Worker caching (`sw.js`), and `IntersectionObserver`-powered virtual rendering deliver a butter-smooth web experience. |
+| <img src="assets/icons/rocket.svg" width="16" align="center" alt=""> &nbsp; **High-Performance Web PWA** | Static Tailwind CSS build, Service Worker caching (`js/sw.js`), and `IntersectionObserver`-powered virtual rendering deliver a butter-smooth web experience. |
 | <img src="assets/icons/smartphone.svg" width="16" align="center" alt=""> &nbsp; **Native Android App** | A bespoke Jetpack Compose UI built from scratch using custom design tokens — intentionally bypassing generic Material 3 artifacts for a pixel-perfect, branded experience. |
 | <img src="assets/icons/lock.svg" width="16" align="center" alt=""> &nbsp; **Secure AI Proxy** | API keys never touch the client. All Gemini AI requests route through a hardened Cloudflare Worker edge proxy, keeping credentials server-side at all times. |
 
@@ -296,10 +296,11 @@ loopa/
 ├── website/                      # Web Frontend (HTML/JS/CSS)
 │   ├── index.html                # Main SPA interface
 │   ├── output.css                # Compiled Tailwind CSS (static build artifact)
-│   ├── sw.js                     # Service Worker (offline caching)
 │   └── js/
-│       ├── api.js                # TMDB & Jikan API integrations
+│       ├── api.js                # Edge Search & TMDB/AniList/Jikan API integrations
 │       ├── app.js                # App state, listeners, view switching
+│       ├── search-engine.js      # Client-side Trie fuzzy index & search engine
+│       ├── sw.js                 # Service Worker (stale-while-revalidate offline caching)
 │       ├── supabase.js           # Supabase DB operations & offline sync queue
 │       └── ui.js                 # DOM manipulation & component generation
 │

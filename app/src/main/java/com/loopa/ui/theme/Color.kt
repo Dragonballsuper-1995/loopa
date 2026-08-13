@@ -2,23 +2,27 @@ package com.loopa.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ── Loopa v2.0 Color System ───────────────────────────────────────────────────
-// Design: Warm dark palette + single Loopa Amber accent
+// ── Loopa v2.1 Color System ───────────────────────────────────────────────────
+// Design: Warm dark palette + single Loopa Amber accent + Terracotta secondary
+// Phase 1 update: deeper surface layers, raised TextMuted for accessibility
 
 // Canvas / Background layers
-val LoopBase    = Color(0xFF0F0E0C)   // Primary canvas — warm near-black
-val LoopSurface = Color(0xFF1A1915)   // Cards, containers
-val LoopRaised  = Color(0xFF242320)   // Hover states, elevated elements
+val LoopBase    = Color(0xFF0C0B09)   // Primary canvas — warm near-black (deepened)
+val LoopSurface = Color(0xFF1C1A17)   // Cards, containers (warmer mid-dark)
+val LoopRaised  = Color(0xFF2A2823)   // Hover states, elevated elements (more contrast)
 
-// Brand Accent — Loopa Amber
-val LoopAmber       = Color(0xFFE8A87C)   // Primary accent
+// Brand Accent — Loopa Amber (CTA-only)
+val LoopAmber       = Color(0xFFE8A87C)   // Primary accent — buttons, active states, ratings
 val LoopAmberStrong = Color(0xFFD4845A)   // Active / pressed states
 val LoopAmberSubtle = Color(0xFF2A1F17)   // Chip / tag backgrounds
+
+// Secondary Accent — Terracotta (non-CTA highlights)
+val LoopTerracotta  = Color(0xFFC47A5A)   // Secondary accent for decorative / non-interactive highlights
 
 // Foreground / Typography
 val TextPrimary   = Color(0xFFF0EDE8)   // Warm off-white — headlines, primary UI
 val TextSecondary = Color(0xFFA09990)   // Warm medium gray — labels, meta
-val TextMuted     = Color(0xFF5C574F)   // Low-emphasis — captions, placeholders
+val TextMuted     = Color(0xFF7A746D)   // Low-emphasis — captions, placeholders (raised for readability)
 
 // Semantic
 val LoopSuccess = Color(0xFF7AB87A)   // Watched state
@@ -58,4 +62,4 @@ val md_theme_dark_inverseOnSurface    = LoopBase
 val md_theme_dark_inversePrimary      = LoopAmberStrong
 val md_theme_dark_surfaceTint         = LoopAmber
 val md_theme_dark_outlineVariant      = BorderSubtle
-val md_theme_dark_scrim               = Color(0xCC0F0E0C)
+val md_theme_dark_scrim               = Color(0xCC0C0B09)

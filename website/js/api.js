@@ -67,17 +67,53 @@ const API = {
         const cached = this._cacheGet(cacheKey);
         if (cached) return cached;
 
-        const url = new URL(`${CONFIG.JIKAN_BASE}${endpoint}`);
-        Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-        let res = await fetch(url.toString());
-        if (res.status === 429) {
-            await new Promise(r => setTimeout(r, 1000));
-            res = await fetch(url.toString());
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // Strict 2s timeout
+
+        try {
+            const url = new URL(`${CONFIG.JIKAN_BASE}${endpoint}`);
+            Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+            let res = await fetch(url.toString(), { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (!res.ok) throw new Error(`Jikan ${res.status} on ${endpoint}`);
+            const data = await res.json();
+            this._cacheSet(cacheKey, data);
+            return data;
+        } catch (e) {
+            clearTimeout(timeoutId);
+            throw e;
         }
-        if (!res.ok) throw new Error(`Jikan ${res.status} on ${endpoint}`);
-        const data = await res.json();
-        this._cacheSet(cacheKey, data);
-        return data;
+    },
+
+    async _kitsu(endpoint, params = {}) {
+        const cacheKey = `kitsu:${endpoint}:${JSON.stringify(params)}`;
+        const cached = this._cacheGet(cacheKey);
+        if (cached) return cached;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+        try {
+            const url = new URL(`https://kitsu.io/api/edge${endpoint}`);
+            Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+            const res = await fetch(url.toString(), {
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/vnd.api+json'
+                }
+            });
+            clearTimeout(timeoutId);
+            if (!res.ok) throw new Error(`Kitsu ${res.status}`);
+            const data = await res.json();
+            this._cacheSet(cacheKey, data);
+            return data;
+        } catch (e) {
+            clearTimeout(timeoutId);
+            if (e.name === 'AbortError') {
+                return { data: [] }; // Silent abort fallback
+            }
+            throw e;
+        }
     },
 
     async _anilist(query, variables = {}) {
@@ -85,18 +121,28 @@ const API = {
         const cached = this._cacheGet(cacheKey);
         if (cached) return cached;
 
-        const res = await fetch('https://graphql.anilist.co', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({ query, variables })
-        });
-        if (!res.ok) throw new Error(`AniList ${res.status}`);
-        const json = await res.json();
-        this._cacheSet(cacheKey, json.data);
-        return json.data;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        try {
+            const res = await fetch('https://graphql.anilist.co', {
+                method: 'POST',
+                signal: controller.signal,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ query, variables })
+            });
+            clearTimeout(timeoutId);
+            if (!res.ok) throw new Error(`AniList ${res.status}`);
+            const json = await res.json();
+            this._cacheSet(cacheKey, json.data);
+            return json.data;
+        } catch (e) {
+            clearTimeout(timeoutId);
+            throw e;
+        }
     },
 
     // ── Normalise ─────────────────────────────────────────────────────────────
@@ -138,6 +184,25 @@ const API = {
         };
     },
 
+    _normKitsu(item) {
+        const attr = item.attributes || {};
+        return {
+            id:           item.id,
+            provider:     'kitsu',
+            mediaType:    'anime',
+            title:        attr.canonicalTitle || attr.titles?.en || attr.titles?.en_jp || 'Unknown',
+            posterUrl:    attr.posterImage?.large || attr.posterImage?.original || attr.posterImage?.small || null,
+            backdropUrl:  attr.coverImage?.large || attr.coverImage?.original || null,
+            year:         attr.startDate ? attr.startDate.substring(0, 4) : '',
+            score:        attr.averageRating ? +(parseFloat(attr.averageRating) / 10).toFixed(1) : null,
+            synopsis:     attr.synopsis || 'No synopsis available.',
+            genres:       ['Anime'],
+            totalEpisodes: attr.episodeCount || 0,
+            totalSeasons:  1,
+            status:        attr.status === 'current' ? 'Airing' : attr.status === 'finished' ? 'Finished' : 'Unknown',
+        };
+    },
+
     _normJikan(anime) {
         return {
             id:           anime.mal_id,
@@ -157,6 +222,7 @@ const API = {
     },
 
     _normAniList(anime) {
+        const currentEps = anime.episodes || (anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : 0);
         return {
             id:           anime.id,
             provider:     'anilist',
@@ -168,9 +234,9 @@ const API = {
             score:        anime.meanScore ? +(anime.meanScore / 10).toFixed(1) : null,
             synopsis:     (anime.description || 'No synopsis available.').replace(/<[^>]*>?/gm, ''),
             genres:       anime.genres || [],
-            totalEpisodes: anime.episodes || 0,
+            totalEpisodes: currentEps,
             totalSeasons:  1,
-            status:        anime.status || 'Finished',
+            status:        anime.status === 'RELEASING' ? 'Airing' : (anime.status || 'Finished'),
         };
     },
 
@@ -287,7 +353,16 @@ const API = {
     },
 
     async searchAnime(query) {
-        // 1. AniList (Fastest, most reliable)
+        // 1. Kitsu API (Fastest, rate-limit free, exact episode counts)
+        try {
+            const d = await this._kitsu('/anime', { 'filter[text]': query, 'page[limit]': 12 });
+            const list = (d.data || []).map(a => this._normKitsu(a));
+            if (list.length > 0) return list;
+        } catch (e) {
+            console.warn('[Anime Search] Kitsu failed:', e.message);
+        }
+
+        // 2. AniList GraphQL
         try {
             const gql = `
             query ($search: String) {
@@ -316,7 +391,7 @@ const API = {
             console.warn('[Anime Search] AniList failed:', e.message);
         }
 
-        // 2. Jikan fallback
+        // 3. Jikan fallback (with 2s timeout)
         try {
             const d = await this._jikan('/anime', { q: query, limit: 12, sfw: true });
             const results = (d.data || []).filter(a => a.images?.jpg?.large_image_url).slice(0, 12)
@@ -326,7 +401,7 @@ const API = {
             console.warn('[Anime Search] Jikan failed:', e.message);
         }
 
-        // 3. TMDB fallback (Japanese Animation only)
+        // 4. TMDB fallback (Japanese Animation only)
         try {
             const d = await this._tmdb('/search/tv', { query });
             return (d.results || [])
@@ -341,6 +416,24 @@ const API = {
             console.warn('[Anime Search] TMDB fallback failed:', e.message);
             return [];
         }
+    },
+
+    async searchFast(query) {
+        try {
+            const url = new URL(CONFIG.SEARCH_FAST_URL || `${CONFIG.AI_PROXY_URL}/api/search/fast`);
+            url.searchParams.set('q', query);
+            if (CONFIG.CLIENT_KEY) {
+                url.searchParams.set('k', CONFIG.CLIENT_KEY);
+            }
+            const res = await fetch(url.toString());
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) return data;
+            }
+        } catch (e) {
+            console.warn('[searchFast] Edge search failed, falling back to searchAll:', e.message);
+        }
+        return this.searchAll(query);
     },
 
     async searchAll(query) {
@@ -377,12 +470,27 @@ const API = {
             const gql = `
             query ($id: Int) {
               Media(id: $id, type: ANIME) {
-                id title { english romaji userPreferred } coverImage { extraLarge large } bannerImage startDate { year } meanScore description genres episodes status
+                id title { english romaji userPreferred } coverImage { extraLarge large } bannerImage startDate { year } meanScore description genres episodes nextAiringEpisode { episode } status
               }
             }
             `;
             const data = await this._anilist(gql, { id: parseInt(id) });
-            if (data?.Media) return this._normAniList(data.Media);
+            if (data?.Media) {
+                const norm = this._normAniList(data.Media);
+                if (norm.totalEpisodes > 0) return norm;
+                // If episodes is still 0 (e.g., One Piece ongoing), search TMDB TV details for exact episode count
+                try {
+                    const tmdbSearch = await this._tmdb('/search/tv', { query: norm.title });
+                    if (tmdbSearch.results && tmdbSearch.results[0]) {
+                        const tvDetails = await this.fetchTVDetails(tmdbSearch.results[0].id);
+                        if (tvDetails && tvDetails.totalEpisodes > 0) {
+                            norm.totalEpisodes = tvDetails.totalEpisodes;
+                            norm.totalSeasons = tvDetails.totalSeasons || 1;
+                        }
+                    }
+                } catch {}
+                return norm;
+            }
         } catch {}
 
         try {
@@ -394,6 +502,26 @@ const API = {
     },
 
     async fetchDetails(id, mediaType, provider = null) {
+        // 1. Try unified Edge API lazy detail hydration endpoint
+        try {
+            const url = new URL(CONFIG.MEDIA_DETAILS_URL || `${CONFIG.AI_PROXY_URL}/api/media/details`);
+            url.searchParams.set('id', id);
+            if (mediaType) url.searchParams.set('type', mediaType);
+            if (provider) url.searchParams.set('provider', provider);
+            if (CONFIG.CLIENT_KEY) {
+                url.searchParams.set('k', CONFIG.CLIENT_KEY);
+            }
+
+            const res = await fetch(url.toString());
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.id) return data;
+            }
+        } catch (e) {
+            console.warn('[fetchDetails] Edge details failed, falling back:', e.message);
+        }
+
+        // 2. Direct provider fallback
         try {
             if (provider === 'tmdb') {
                 if (mediaType === 'movie') return await this.fetchMovieDetails(id);
@@ -410,7 +538,7 @@ const API = {
             }
             if (mediaType === 'tv') return await this.fetchTVDetails(id);
         } catch (e) {
-            console.warn('fetchDetails failed:', e.message);
+            console.warn('fetchDetails fallback failed:', e.message);
         }
         return null;
     },
@@ -442,7 +570,8 @@ const API = {
 
         try {
             console.log('Attempting AI recommendation via Cloudflare Proxy...');
-            const res = await fetch(CONFIG.AI_PROXY_URL, {
+            const targetUrl = CONFIG.RECOMMENDATIONS_URL || CONFIG.AI_PROXY_URL;
+            const res = await fetch(targetUrl, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -466,6 +595,61 @@ const API = {
         } catch (error) {
             console.error('AI Proxy failed:', error.message);
             throw new Error('AI Recommendations are currently unavailable. Please try again later.');
+        }
+    },
+
+    // ── Phase 3C & W4: Similar Content (Movies, TV & Anime) ───────────────────
+    async fetchSimilar(id, mediaType) {
+        if (!id) return [];
+        
+        if (mediaType === 'anime') {
+            // 1. Try AniList GraphQL recommendations using AniList ID
+            try {
+                const gql = `
+                query ($id: Int) {
+                  Media (id: $id, type: ANIME) {
+                    recommendations (perPage: 8) {
+                      nodes {
+                        mediaRecommendation {
+                          id
+                          title { english romaji userPreferred }
+                          coverImage { extraLarge large }
+                          bannerImage
+                          startDate { year }
+                          meanScore
+                          description
+                          genres
+                          episodes
+                          status
+                        }
+                      }
+                    }
+                  }
+                }
+                `;
+                const data = await this._anilist(gql, { id: parseInt(id) });
+                const recs = data?.Media?.recommendations?.nodes || [];
+                const list = recs.map(n => n.mediaRecommendation).filter(Boolean);
+                if (list.length > 0) return list.map(a => this._normAniList(a));
+            } catch (e) {
+                console.warn('[Anime Recommendations] AniList failed:', e.message);
+            }
+
+            // 2. Kitsu / TMDB fallback
+            try {
+                const d = await this._kitsu('/trending/anime', { 'page[limit]': 8 });
+                return (d.data || []).map(a => this._normKitsu(a));
+            } catch {
+                return [];
+            }
+        }
+
+        const tmdbType = mediaType === 'tv' ? 'tv' : 'movie';
+        try {
+            const data = await this._tmdb(`/${tmdbType}/${id}/similar`);
+            return (data.results || []).slice(0, 8).map(r => this._normTMDB(r, tmdbType));
+        } catch {
+            return [];
         }
     },
 };

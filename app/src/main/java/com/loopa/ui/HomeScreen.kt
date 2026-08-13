@@ -3,24 +3,33 @@ package com.loopa.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -79,7 +88,11 @@ fun HomeScreen(
 
             // ── 2. Trending Row ────────────────────────────────────────────
             item {
-                LoopSectionHeader(title = "Trending", showDivider = false)
+                LoopSectionHeader(
+                    title = "Trending Today",
+                    showDivider = false,
+                    onSeeAll = { navController.navigate("discover") }
+                )
                 Spacer(Modifier.height(12.dp))
                 when (val state = uiState) {
                     is MediaUiState.Loading -> LoadingRow()
@@ -104,6 +117,44 @@ fun HomeScreen(
                         }
                     }
                     is MediaUiState.Error -> ErrorRow("Failed to load trending items")
+                    else -> {}
+                }
+                Spacer(Modifier.height(28.dp))
+            }
+
+            // ── Phase 4B: Top 10 Today Row ─────────────────────────────────
+            item {
+                LoopSectionHeader(
+                    title = "TOP 10 Today",
+                    subtitle = "In your region",
+                    showDivider = false,
+                    onSeeAll = { navController.navigate("discover") }
+                )
+                Spacer(Modifier.height(12.dp))
+                when (val state = uiState) {
+                    is MediaUiState.Loading -> LoadingRow()
+                    is MediaUiState.Success -> {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(0.dp)
+                        ) {
+                            itemsIndexed(state.trending.take(10)) { index, movie ->
+                                val imageUrl = movie.posterPath?.let {
+                                    "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
+                                }
+                                Top10PosterCard(
+                                    rank = index + 1,
+                                    title = movie.title ?: movie.name ?: "Unknown",
+                                    imageUrl = imageUrl,
+                                    mediaType = movie.mediaType ?: "movie",
+                                    onClick = { activeTrackMovie = movie },
+                                    onLongPress = { hoverMovie = movie },
+                                    onRelease = { hoverMovie = null }
+                                )
+                            }
+                        }
+                    }
+                    is MediaUiState.Error -> ErrorRow("Failed to load Top 10")
                     else -> {}
                 }
                 Spacer(Modifier.height(28.dp))
@@ -372,108 +423,186 @@ fun HomeScreen(
             viewModel.setDetailOpen(activeTrackMovie != null)
         }
 
-        activeTrackMovie?.let { movie ->
+        // ── Unified Media Detail & Quick Preview Sheet (A3 & A4 Fixes) ───────
+        val selectedMovie = activeTrackMovie ?: hoverMovie
+        selectedMovie?.let { movie ->
             val title = movie.title ?: movie.name ?: "Unknown Title"
             val imageUrl = if (movie.mediaType == "anime") movie.posterPath else {
                 movie.backdropPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it" }
                     ?: movie.posterPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it" }
             }
-            val date = movie.releaseDate ?: movie.firstAirDate ?: "Unknown Date"
-            val mediaTypeStr = when (movie.mediaType) { "tv" -> "SERIES"; "movie" -> "MOVIE"; "anime" -> "ANIME"; else -> "MEDIA" }
-            val mediaTypeVal = if (movie.mediaType == "anime") "anime" else movie.mediaType ?: "movie"
-
-            LoopTrackDialog(
-                title = title,
-                mediaTypeStr = mediaTypeStr,
-                overview = movie.overview,
-                onDismiss = { activeTrackMovie = null },
-                onWatched = {
-                    viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "Watched", mediaTypeVal)
-                    activeTrackMovie = null
-                },
-                onToWatch = {
-                    viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "To Watch", mediaTypeVal)
-                    activeTrackMovie = null
-                }
-            )
-        }
-
-        // ── Hover Quick Preview ────────────────────────────────────────────
-        hoverMovie?.let { movie ->
-            val title = movie.title ?: movie.name ?: "Unknown"
-            val imageUrl = if (movie.mediaType == "anime") movie.posterPath else {
-                movie.backdropPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it" }
-                    ?: movie.posterPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it" }
+            val backdropUrl = (movie.backdropPath)?.let {
+                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w780$it"
+            } ?: movie.posterPath?.let {
+                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
             }
-            val date = movie.releaseDate ?: movie.firstAirDate
-            val mediaTypeVal = movie.mediaType ?: "movie"
+            val date = movie.releaseDate ?: movie.firstAirDate ?: "Unknown Date"
+            val mediaTypeVal = if (movie.mediaType == "anime") "anime" else movie.mediaType ?: "movie"
+            val year = date.take(4)
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.75f))
-                    .clickable { hoverMovie = null },
-                contentAlignment = Alignment.Center
+            LaunchedEffect(movie.id) {
+                viewModel.fetchSimilarItems(movie.id ?: 0, movie.mediaType)
+            }
+
+            val similarItems by viewModel.similarItems.collectAsState()
+
+            @OptIn(ExperimentalMaterial3Api::class)
+            ModalBottomSheet(
+                onDismissRequest = {
+                    activeTrackMovie = null
+                    hoverMovie = null
+                },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                containerColor = Loopa.Surface,
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                dragHandle = {
+                    Box(
+                        Modifier
+                            .padding(top = 12.dp, bottom = 6.dp)
+                            .width(36.dp)
+                            .height(4.dp)
+                            .clip(Loopa.PillShape)
+                            .background(Loopa.BorderMd)
+                    )
+                }
             ) {
-                // Loopa quick-view card
-                Box(
+                LazyColumn(
                     modifier = Modifier
-                        .width(300.dp)
-                        .clip(Loopa.DialogShape)
-                        .background(Loopa.Surface)
-                        .border(1.dp, Loopa.Border, Loopa.DialogShape)
-                        .padding(20.dp)
-                        .clickable(enabled = false) {}
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (imageUrl != null) {
-                            AsyncImage(
-                                model = imageUrl,
-                                contentDescription = title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
+                    // 1. Backdrop Hero Image
+                    item {
+                        if (backdropUrl != null) {
+                            Box(
+                                Modifier
                                     .fillMaxWidth()
-                                    .height(150.dp)
-                                    .clip(Loopa.CardShape)
-                            )
-                        }
-
-                        Text(
-                            text = title,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = Loopa.TextPrimary,
-                            lineHeight = 22.sp
-                        )
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            LoopBadge(
-                                text = mediaTypeVal.uppercase(),
-                                textColor = if (mediaTypeVal == "tv" || mediaTypeVal == "anime") Loopa.Amber else Loopa.TextSecondary,
-                                borderColor = if (mediaTypeVal == "tv" || mediaTypeVal == "anime") Loopa.Amber.copy(0.4f) else Loopa.BorderMd
-                            )
-                            val year = if (!date.isNullOrBlank() && date.length >= 4) date.substring(0, 4) else null
-                            if (year != null) Text(year, color = Loopa.TextSecondary, fontSize = 12.sp)
-                            Spacer(Modifier.weight(1f))
-                            if (movie.voteAverage != null && movie.voteAverage > 0.0) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Icon(Icons.Filled.Star, null, tint = Loopa.Amber, modifier = Modifier.size(12.dp))
-                                    Text(String.format("%.1f", movie.voteAverage), color = Loopa.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                }
+                                    .height(210.dp)
+                            ) {
+                                AsyncImage(
+                                    model = backdropUrl,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                0.30f to Color.Transparent,
+                                                1.00f to Loopa.Surface
+                                            )
+                                        )
+                                )
                             }
                         }
+                    }
 
-                        if (!movie.overview.isNullOrBlank()) {
+                    // 2. Title & Metadata
+                    item {
+                        Column(
+                            Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
-                                text = movie.overview,
-                                fontSize = 12.sp,
-                                color = Loopa.TextSecondary,
-                                lineHeight = 17.sp,
-                                maxLines = 4
+                                text = title,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 24.sp,
+                                color = Loopa.TextPrimary,
+                                lineHeight = 28.sp
                             )
+
+                            // Metadata tag row: Year · Type · ★ Rating
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (year.isNotBlank() && year != "Unkn") {
+                                    Text(year, color = Loopa.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                    Box(Modifier.size(3.dp).clip(CircleShape).background(Loopa.TextMuted))
+                                }
+                                Text(mediaTypeVal.uppercase(), color = Loopa.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                if (movie.voteAverage != null && movie.voteAverage > 0.0) {
+                                    Box(Modifier.size(3.dp).clip(CircleShape).background(Loopa.TextMuted))
+                                    Icon(Icons.Filled.Star, null, tint = Loopa.Amber, modifier = Modifier.size(12.dp))
+                                    Text(String.format("%.1f", movie.voteAverage), color = Loopa.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // Overview
+                            if (!movie.overview.isNullOrBlank()) {
+                                Text(
+                                    text = movie.overview,
+                                    fontSize = 13.sp,
+                                    color = Loopa.TextSecondary,
+                                    lineHeight = 19.sp,
+                                    maxLines = 4,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            // Action buttons
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                LoopButton(
+                                    text = "✓ Watched",
+                                    onClick = {
+                                        viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "Watched", mediaTypeVal)
+                                        activeTrackMovie = null
+                                        hoverMovie = null
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                LoopButton(
+                                    text = "+ Watching",
+                                    isSecondary = true,
+                                    onClick = {
+                                        viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "Watching", mediaTypeVal)
+                                        activeTrackMovie = null
+                                        hoverMovie = null
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+
+                    // 3. More Like This Section (A4 Fix)
+                    item {
+                        if (similarItems.isNotEmpty()) {
+                            Column(Modifier.padding(top = 16.dp)) {
+                                Text(
+                                    text = "More Like This",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Loopa.TextPrimary,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                )
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 20.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    items(similarItems.take(8)) { simMovie ->
+                                        val simImg = simMovie.posterPath?.let {
+                                            "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
+                                        }
+                                        HomePosterCard(
+                                            title = simMovie.title ?: simMovie.name ?: "Unknown",
+                                            imageUrl = simImg,
+                                            mediaType = simMovie.mediaType ?: "movie",
+                                            onClick = {
+                                                activeTrackMovie = simMovie
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -507,11 +636,28 @@ fun HeroCarousel(
 
     val heroItem = heroItems.getOrNull(currentHeroIndex)
 
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(420.dp)
+            .height(520.dp)  // Phase 2A: taller hero — more cinematic
             .background(Loopa.Surface)
+            .pointerInput(heroItems) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (dragOffsetX < -50f && heroItems.isNotEmpty()) {
+                            currentHeroIndex = (currentHeroIndex + 1) % heroItems.size
+                        } else if (dragOffsetX > 50f && heroItems.isNotEmpty()) {
+                            currentHeroIndex = (currentHeroIndex - 1 + heroItems.size) % heroItems.size
+                        }
+                        dragOffsetX = 0f
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        dragOffsetX += dragAmount
+                    }
+                )
+            }
     ) {
         androidx.compose.animation.Crossfade(
             targetState = heroItem,
@@ -522,7 +668,7 @@ fun HeroCarousel(
             if (item != null) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     val imageUrl = (item.backdropPath ?: item.posterPath)?.let {
-                        "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w780$it"
+                        "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w1280$it"
                     }
                     if (imageUrl != null) {
                         AsyncImage(
@@ -530,33 +676,46 @@ fun HeroCarousel(
                             contentDescription = item.title,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
-                            alpha = 0.65f
+                            alpha = 0.82f
                         )
                     }
 
-                    // Gradient fade to Loopa base
+                    // Phase 2A: 4-zone cinematic gradient — top subtle, open art window, strong bottom
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
                                     colorStops = arrayOf(
-                                        0.0f to Loopa.Base.copy(alpha = 0.5f),
-                                        0.18f to Loopa.Base.copy(alpha = 0.15f),
-                                        0.35f to Color.Transparent,
-                                        0.70f to Color.Transparent,
-                                        0.88f to Loopa.Base.copy(alpha = 0.6f),
-                                        1.0f to Loopa.Base
+                                        0.00f to Loopa.Base.copy(alpha = 0.35f),  // subtle top fade
+                                        0.15f to Color.Transparent,                // open window starts
+                                        0.52f to Color.Transparent,                // open window ends
+                                        0.78f to Loopa.Base.copy(alpha = 0.55f),  // strong base fade begins
+                                        1.00f to Loopa.Base                        // solid at bottom
                                     )
                                 )
                             )
                     )
 
-                    // Content overlay
+                    // Phase 2A: Left-side vignette — editorial depth between overlay and art
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colorStops = arrayOf(
+                                        0.00f to Loopa.Base.copy(alpha = 0.72f),
+                                        0.42f to Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+
+                    // Content overlay — bottom-aligned, left-padded
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(start = 20.dp, end = 20.dp, bottom = 20.dp, top = 80.dp),
+                            .padding(start = 20.dp, end = 60.dp, bottom = 24.dp, top = 80.dp),
                         verticalArrangement = Arrangement.Bottom
                     ) {
                         // Continue badge (if currently watching something)
@@ -591,31 +750,101 @@ fun HeroCarousel(
                             Spacer(Modifier.height(10.dp))
                         }
 
-                        // Hero Title
-                        Text(
-                            text = item.title ?: item.name ?: "Loopa",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 34.sp,
-                            color = Loopa.TextPrimary,
-                            lineHeight = 38.sp,
-                            maxLines = 2
-                        )
-
-                        Spacer(Modifier.height(14.dp))
-
-                        // View Details pill button
-                        LoopButton(
-                            text = "View Details",
-                            onClick = { onActiveTrackMovieChange(item) },
-                            leadingIcon = {
+                        // Phase 2A: Metadata row — Year · Type · ★ Rating
+                        val year = (item.releaseDate ?: item.firstAirDate)?.take(4)
+                        val mediaType = (item.mediaType ?: "").uppercase()
+                        val rating = item.voteAverage?.takeIf { it > 0.0 }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            if (!year.isNullOrBlank()) {
+                                Text(year, color = Loopa.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                Box(Modifier.size(3.dp).clip(CircleShape).background(Loopa.TextMuted))
+                            }
+                            if (mediaType.isNotBlank()) {
+                                Text(mediaType, color = Loopa.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            }
+                            if (rating != null) {
+                                Box(Modifier.size(3.dp).clip(CircleShape).background(Loopa.TextMuted))
                                 Icon(
-                                    imageVector = Icons.Filled.PlayArrow,
+                                    imageVector = Icons.Filled.Star,
                                     contentDescription = null,
-                                    tint = Loopa.Base,
-                                    modifier = Modifier.size(16.dp)
+                                    tint = Loopa.Amber,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Text(
+                                    text = String.format("%.1f", rating),
+                                    color = Loopa.TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Hero Title — 46sp ExtraBold, tight tracking
+                        Text(
+                            text = item.title ?: item.name ?: "Loopa",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 46.sp,
+                            color = Loopa.TextPrimary,
+                            lineHeight = 50.sp,
+                            letterSpacing = (-1.5).sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Phase 2A: Dual CTA — primary Track + ghost More Info
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            LoopButton(
+                                text = "Track This",
+                                onClick = { onActiveTrackMovieChange(item) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlayArrow,
+                                        contentDescription = null,
+                                        tint = Loopa.Base,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            )
+                            LoopButton(
+                                text = "More Info",
+                                isSecondary = true,
+                                onClick = { onActiveTrackMovieChange(item) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Filled.Info,
+                                        contentDescription = null,
+                                        tint = Loopa.TextPrimary,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                            )
+                        }
+
+                        Spacer(Modifier.height(18.dp))
+
+                        // Phase 2A: Carousel pagination dots
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            heroItems.indices.forEach { i ->
+                                val isActive = i == currentHeroIndex
+                                Box(
+                                    Modifier
+                                        .height(6.dp)
+                                        .width(if (isActive) 22.dp else 6.dp)
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(
+                                            if (isActive) Loopa.Amber
+                                            else Loopa.TextMuted.copy(alpha = 0.4f)
+                                        )
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -657,4 +886,40 @@ fun HomePosterCard(
         onRelease = onRelease,
         modifier = Modifier.width(130.dp)
     )
+}
+
+// Phase 4B: Top 10 Poster Card with giant overlapping rank number
+@Composable
+fun Top10PosterCard(
+    rank: Int,
+    title: String,
+    imageUrl: String?,
+    mediaType: String,
+    onClick: () -> Unit,
+    onLongPress: (() -> Unit)? = null,
+    onRelease: (() -> Unit)? = null
+) {
+    Box(
+        modifier = Modifier.width(155.dp)
+    ) {
+        Text(
+            text = rank.toString(),
+            fontSize = 76.sp,
+            fontWeight = FontWeight.Black,
+            color = if (rank <= 3) Loopa.Amber.copy(alpha = 0.50f) else Loopa.TextMuted.copy(alpha = 0.28f),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = (-4).dp, y = 8.dp)
+        )
+        Box(modifier = Modifier.padding(start = 32.dp)) {
+            HomePosterCard(
+                title = title,
+                imageUrl = imageUrl,
+                mediaType = mediaType,
+                onClick = onClick,
+                onLongPress = onLongPress,
+                onRelease = onRelease
+            )
+        }
+    }
 }

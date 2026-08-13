@@ -67,5 +67,7 @@ data class TmdbCreator(@Json(name = "name") val name: String)
 data class TmdbTvDetailResponse(
     @Json(name = "episode_run_time") val episodeRunTime: List<Int>?,
     @Json(name = "genres") val genres: List<TmdbGenre>?,
-    @Json(name = "created_by") val createdBy: List<TmdbCreator>?
+    @Json(name = "created_by") val createdBy: List<TmdbCreator>?,
+    @Json(name = "number_of_seasons") val numberOfSeasons: Int?,
+    @Json(name = "number_of_episodes") val numberOfEpisodes: Int?
 )

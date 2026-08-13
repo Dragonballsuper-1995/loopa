@@ -34,12 +34,13 @@ fun EpisodeProgressSection(
     mediaId: Int,
     mediaType: String,
     totalSeasons: Int,
+    totalEpisodes: Int,
     currentSeason: Int,
     viewModel: MediaViewModel,
     onSeasonChange: (Int) -> Unit
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-    var selectedSeason by remember(currentSeason) { mutableStateOf(currentSeason) }
+    var selectedSeason by remember(mediaId) { mutableStateOf(currentSeason) }
     var seasonData by remember(mediaId, selectedSeason) { mutableStateOf<TmdbSeasonResponse?>(null) }
     var isLoading by remember(mediaId, selectedSeason) { mutableStateOf(true) }
     
@@ -47,6 +48,9 @@ fun EpisodeProgressSection(
 
     LaunchedEffect(mediaId, selectedSeason) {
         isLoading = true
+        if (totalSeasons == 0 || totalEpisodes == 0) {
+            viewModel.repairMediaItem(mediaId, mediaType)
+        }
         seasonData = viewModel.fetchTvSeasonDetails(mediaId, selectedSeason)
         isLoading = false
     }
@@ -54,10 +58,20 @@ fun EpisodeProgressSection(
     val episodesInSeason = seasonData?.episodes ?: emptyList()
     val watchedInCurSeasonCount = watchedEpisodes.count { it.seasonNumber == selectedSeason }
     val totalEpCount = episodesInSeason.size
+    val watchedAllTimeCount = watchedEpisodes.size
 
     val seasonProgressFraction = if (totalSeasons > 0) (selectedSeason.toFloat() / totalSeasons.toFloat()) else 0f
-    val epProgressFraction = if (totalEpCount > 0) (watchedInCurSeasonCount.toFloat() / totalEpCount.toFloat()).coerceIn(0f, 1f) else 0f
+    val epProgressFraction = if (totalEpisodes > 0) (watchedAllTimeCount.toFloat() / totalEpisodes.toFloat()).coerceIn(0f, 1f) else 0f
     val epPercentage = (epProgressFraction * 100).toInt()
+
+    var selectedChunk by remember(selectedSeason) { mutableStateOf(0) }
+    val chunkSize = 50
+    val totalChunks = (episodesInSeason.size + chunkSize - 1) / chunkSize
+    val currentEpisodes = if (totalChunks > 1) {
+        episodesInSeason.drop(selectedChunk * chunkSize).take(chunkSize)
+    } else {
+        episodesInSeason
+    }
 
     Column(
         modifier = Modifier
@@ -136,7 +150,7 @@ fun EpisodeProgressSection(
                         )
                     }
                     Text(
-                        text = "EP $watchedInCurSeasonCount/${if (totalEpCount > 0) totalEpCount else "?"}",
+                        text = "TOTAL $watchedAllTimeCount/${if (totalEpisodes > 0) totalEpisodes else "?"}",
                         color = Loopa.TextPrimary,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
@@ -200,8 +214,8 @@ fun EpisodeProgressSection(
                     // Episode Progress Gradient Bar
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("EPISODE PROGRESS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Loopa.Amber)
-                            Text("$watchedInCurSeasonCount / ${if (totalEpCount > 0) totalEpCount else "?"} ($epPercentage%)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Loopa.TextPrimary)
+                            Text("OVERALL PROGRESS", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Loopa.Amber)
+                            Text("$watchedAllTimeCount / ${if (totalEpisodes > 0) totalEpisodes else "?"} ($epPercentage%)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Loopa.TextPrimary)
                         }
                         Box(
                             modifier = Modifier
@@ -255,12 +269,75 @@ fun EpisodeProgressSection(
                     }
                 }
 
+                if (episodesInSeason.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Episodes",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = Loopa.TextPrimary
+                        )
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Loopa.Amber.copy(alpha = 0.15f))
+                                .clickable {
+                                    val episodeNumbers = episodesInSeason.map { it.episodeNumber }
+                                    viewModel.markSeasonWatched(mediaId, mediaType, selectedSeason, episodeNumbers, totalEpisodes)
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(Icons.Filled.Check, contentDescription = "Mark Season", tint = Loopa.Amber, modifier = Modifier.size(12.dp))
+                            Text("Mark Season Watched", color = Loopa.Amber, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                // Chunk Selector for > 50 episodes
+                if (totalChunks > 1) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items((0 until totalChunks).toList()) { chunk ->
+                            val isSelected = chunk == selectedChunk
+                            val startEp = chunk * chunkSize + 1
+                            val endEp = minOf((chunk + 1) * chunkSize, episodesInSeason.size)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isSelected) Loopa.Raised else Color.Transparent)
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) Loopa.Border else Color.Transparent,
+                                        RoundedCornerShape(6.dp)
+                                    )
+                                    .clickable { selectedChunk = chunk }
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "$startEp-$endEp",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Loopa.TextPrimary else Loopa.TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Episode List
                 if (isLoading) {
                     Text("Loading episodes...", color = Loopa.TextMuted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 8.dp))
-                } else if (episodesInSeason.isNotEmpty()) {
+                } else if (currentEpisodes.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        episodesInSeason.forEach { ep ->
+                        currentEpisodes.forEach { ep ->
                             val isWatched = watchedEpisodes.any { it.seasonNumber == selectedSeason && it.episodeNumber == ep.episodeNumber }
                             Row(
                                 modifier = Modifier
@@ -273,7 +350,7 @@ fun EpisodeProgressSection(
                                         RoundedCornerShape(10.dp)
                                     )
                                     .clickable {
-                                        viewModel.toggleEpisodeWatched(mediaId, mediaType, selectedSeason, ep.episodeNumber, !isWatched)
+                                        viewModel.toggleEpisodeWatched(mediaId, mediaType, selectedSeason, ep.episodeNumber, !isWatched, totalEpisodes)
                                     }
                                     .padding(horizontal = 12.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.firstOrNull
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
 import io.github.jan.supabase.auth.auth
 
@@ -30,6 +31,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
@@ -57,6 +59,72 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     
     private val _lastSyncTime = MutableStateFlow(prefs.getLong("last_sync_time", 0L))
     val lastSyncTime: StateFlow<Long> = _lastSyncTime.asStateFlow()
+
+    private val _similarItems = MutableStateFlow<List<TmdbMovie>>(emptyList())
+    val similarItems: StateFlow<List<TmdbMovie>> = _similarItems.asStateFlow()
+
+    fun fetchSimilarItems(id: Int, mediaType: String?) {
+        viewModelScope.launch {
+            _similarItems.value = emptyList()
+            if (id <= 0) return@launch
+            try {
+                if (mediaType == "anime") {
+                    val gql = """
+                    query (${"$"}id: Int) {
+                      Media (id: ${"$"}id, type: ANIME) {
+                        recommendations (perPage: 8) {
+                          nodes {
+                            mediaRecommendation {
+                              id
+                              title { english romaji userPreferred }
+                              coverImage { extraLarge large }
+                              bannerImage
+                              startDate { year }
+                              meanScore
+                              description
+                              genres
+                              episodes
+                              status
+                            }
+                          }
+                        }
+                      }
+                    }
+                    """.trimIndent()
+                    val req = com.loopa.network.AniListRequest(gql, mapOf("id" to id))
+                    val response = com.loopa.network.NetworkModule.anilistApi.query(req)
+                    val recs = response.data?.Media?.recommendations?.nodes?.mapNotNull { it.mediaRecommendation } ?: emptyList()
+                    val results = recs.map { a ->
+                        com.loopa.model.TmdbMovie(
+                            id = a.id,
+                            title = a.title?.english ?: a.title?.romaji ?: a.title?.userPreferred ?: "",
+                            name = a.title?.english ?: a.title?.romaji ?: a.title?.userPreferred ?: "",
+                            overview = a.description,
+                            posterPath = a.coverImage?.extraLarge ?: a.coverImage?.large,
+                            backdropPath = a.bannerImage,
+                            voteAverage = (a.meanScore ?: 0) / 10.0,
+                            releaseDate = a.startDate?.year?.toString(),
+                            firstAirDate = a.startDate?.year?.toString(),
+                            mediaType = "anime",
+                            popularity = 0.0,
+                            genreIds = null
+                        )
+                    }
+                    _similarItems.value = results
+                } else {
+                    val apiKey = com.loopa.app.BuildConfig.TMDB_API_KEY
+                    val results = if (mediaType == "tv") {
+                        NetworkModule.tmdbApi.getSimilarTv(id, apiKey).results
+                    } else {
+                        NetworkModule.tmdbApi.getSimilarMovies(id, apiKey).results
+                    }
+                    _similarItems.value = results ?: emptyList()
+                }
+            } catch (e: Exception) {
+                _similarItems.value = emptyList()
+            }
+        }
+    }
     
     private val _aiRecommendations = MutableStateFlow<List<com.loopa.model.AiRecommendationResult>>(emptyList())
     val aiRecommendations: StateFlow<List<com.loopa.model.AiRecommendationResult>> = _aiRecommendations.asStateFlow()
@@ -293,11 +361,15 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
             var finalRuntime: Int? = null
             var finalGenres: String? = null
             var finalDirector: String? = null
+            var finalSeasons = 0
+            var finalEpisodes = 0
 
             try {
                 if (mediaType == "anime") {
                     val detail = com.loopa.network.NetworkModule.jikanApi.getAnimeDetails(id).data
                     finalGenres = detail.genres?.joinToString(", ") { it.name }
+                    finalEpisodes = detail.episodes ?: 0
+                    finalSeasons = if (finalEpisodes > 0) 1 else 0
                     // Jikan doesn't expose director easily in details, leave null
                 } else if (mediaType == "movie") {
                     val detail = com.loopa.network.NetworkModule.tmdbApi.getMovieDetails(id, com.loopa.app.BuildConfig.TMDB_API_KEY)
@@ -309,6 +381,8 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                     finalRuntime = detail.episodeRunTime?.firstOrNull()
                     finalGenres = detail.genres?.joinToString(", ") { it.name }
                     finalDirector = detail.createdBy?.firstOrNull()?.name
+                    finalSeasons = detail.numberOfSeasons ?: 0
+                    finalEpisodes = detail.numberOfEpisodes ?: 0
                 }
             } catch (e: Exception) {
                 android.util.Log.e("MediaViewModel", "Failed to fetch details for $id: ${e.message}")
@@ -325,8 +399,8 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                     mediaType = mediaType,
                     currentEpisode = 0,
                     currentSeason = 1,
-                    totalEpisodes = 0,
-                    totalSeasons = 0,
+                    totalEpisodes = finalEpisodes,
+                    totalSeasons = finalSeasons,
                     runtime = finalRuntime,
                     genres = finalGenres,
                     directorStudio = finalDirector
@@ -335,9 +409,69 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateMediaItem(item: MediaItemEntity) {
-        viewModelScope.launch {
-            repository.insertMediaItem(item)
+    fun updateMediaItem(item: MediaItemEntity, oldItem: MediaItemEntity? = null) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var updatedItem = item
+            
+            if (oldItem != null && oldItem.listName != item.listName && (item.mediaType == "tv" || item.mediaType == "anime")) {
+                if (item.listName == "Watched") {
+                    val currentWatched = watchedEpisodeDao.getAllWatchedEpisodesSync().filter { it.mediaId == item.id && it.mediaType == item.mediaType }
+                    val jsonArray = org.json.JSONArray()
+                    currentWatched.forEach { ep ->
+                        val obj = org.json.JSONObject()
+                        obj.put("season_number", ep.seasonNumber)
+                        obj.put("episode_number", ep.episodeNumber)
+                        jsonArray.put(obj)
+                    }
+                    updatedItem = updatedItem.copy(progressBackup = jsonArray.toString())
+                    
+                    val allEps = mutableListOf<com.loopa.db.WatchedEpisodeEntity>()
+                    for (s in 1..(item.totalSeasons ?: 1)) {
+                        val seasonDetails = fetchTvSeasonDetails(item.id, s)
+                        seasonDetails?.episodes?.forEach { ep ->
+                            allEps.add(com.loopa.db.WatchedEpisodeEntity(item.id, item.mediaType, s, ep.episodeNumber))
+                        }
+                    }
+                    val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
+                    if (userId != null) repository.insertAllEpisodesWatched(allEps, userId)
+                    else allEps.forEach { watchedEpisodeDao.insertWatchedEpisode(it) }
+                } else if (item.listName == "Watching" && oldItem.listName == "Watched") {
+                    val backupRaw = oldItem.progressBackup
+                    if (!backupRaw.isNullOrBlank()) {
+                        val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
+                        if (userId != null) {
+                            try {
+                                NetworkModule.supabase.postgrest["watched_episodes"].delete {
+                                    filter {
+                                        eq("user_id", userId)
+                                        eq("media_id", item.id)
+                                        eq("media_type", item.mediaType)
+                                    }
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        watchedEpisodeDao.deleteAllForMedia(item.id, item.mediaType)
+
+                        try {
+                            val jsonArray = org.json.JSONArray(backupRaw)
+                            val toRestore = mutableListOf<com.loopa.db.WatchedEpisodeEntity>()
+                            for (i in 0 until jsonArray.length()) {
+                                val obj = jsonArray.getJSONObject(i)
+                                val s = obj.optInt("season_number", -1)
+                                val e = obj.optInt("episode_number", -1)
+                                if (s != -1 && e != -1) {
+                                    toRestore.add(com.loopa.db.WatchedEpisodeEntity(item.id, item.mediaType, s, e))
+                                }
+                            }
+                            if (userId != null) repository.insertAllEpisodesWatched(toRestore, userId)
+                            else toRestore.forEach { watchedEpisodeDao.insertWatchedEpisode(it) }
+                        } catch (_: Exception) {}
+                        
+                        updatedItem = updatedItem.copy(progressBackup = null)
+                    }
+                }
+            }
+            repository.insertMediaItem(updatedItem)
         }
     }
 
@@ -471,7 +605,7 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            if (query.isNotBlank()) kotlinx.coroutines.delay(500)
+            if (query.isNotBlank()) kotlinx.coroutines.delay(100)
             
             if (query.isBlank()) {
                 _searchState.value = MediaUiState.Loading
@@ -495,88 +629,98 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
             }
             
             var actualQuery = query
-            
-            // Check if we have cached correction
             val cached = com.loopa.search.SearchEngine.getCachedCorrection(query)
             if (cached != null) {
                 actualQuery = cached
-            } else {
-                val proxyUrl = BuildConfig.AI_PROXY_URL
-                if (proxyUrl.isNotEmpty() && proxyUrl != "YOUR_CLOUDFLARE_WORKER_URL" && query.length >= 3) {
-                    try {
-                        val prompt = "Correct any typos, spelling errors, or incomplete conceptual names in this media search query (movies, TV shows, anime): '$query'. Return ONLY a JSON object in this format: {\"correctedQuery\":\"<corrected title>\",\"mediaType\":\"movie\"|\"tv\"|\"anime\"|\"all\"}. Return nothing else. Do not include markdown code block formatting."
-                        val jsonBody = org.json.JSONObject().apply {
-                            put("prompt", prompt)
-                        }
-                        val reqBody = okhttp3.RequestBody.create("application/json".toMediaType(), jsonBody.toString())
-                        val req = okhttp3.Request.Builder()
-                            .url(proxyUrl)
-                            .post(reqBody)
-                            .build()
-                        val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.loopa.network.NetworkModule.okHttpClient.newCall(req).execute() }
-                        if (response.isSuccessful) {
-                            var text = response.body?.string()?.trim() ?: ""
-                            text = text.replace("```json", "").replace("```", "").trim()
-                            if (text.isNotEmpty() && text.startsWith("{")) {
-                                try {
-                                    val parsed = org.json.JSONObject(text)
-                                    val corrected = parsed.optString("correctedQuery")
-                                    if (!corrected.isNullOrEmpty()) {
-                                        actualQuery = corrected
-                                        com.loopa.search.SearchEngine.cacheCorrection(query, actualQuery)
-                                    }
-                                } catch (e: Exception) {
-                                    // Parse failed, fallback
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        // ignore and fallback to original
-                    }
-                }
             }
 
+            // Function to render results from remote fast search + local watchlist index
+            val updateResults = { remoteItems: List<TmdbMovie> ->
+                val localHits = com.loopa.search.SearchEngine.getSuggestions(query, 4)
+                val mergedList = mutableListOf<TmdbMovie>()
+                val seenKeys = mutableSetOf<String>()
+
+                val normalizedQ = query.lowercase(java.util.Locale.getDefault()).trim()
+                val normalizedAQ = actualQuery.lowercase(java.util.Locale.getDefault()).trim()
+
+                // 1. Exact local matches first
+                for (item in localHits) {
+                    val title = (item.title ?: item.name ?: "").lowercase(java.util.Locale.getDefault()).trim()
+                    if (title == normalizedQ || title == normalizedAQ) {
+                        val key = "${item.id}_${item.mediaType ?: "movie"}"
+                        if (seenKeys.add(key)) {
+                            mergedList.add(item)
+                        }
+                    }
+                }
+
+                // 2. Remote Edge API results
+                for (item in remoteItems) {
+                    val key = "${item.id}_${item.mediaType ?: "movie"}"
+                    if (seenKeys.add(key)) {
+                        mergedList.add(item)
+                    }
+                }
+
+                // 3. Other local suggestions (fuzzy matches)
+                for (item in localHits) {
+                    val key = "${item.id}_${item.mediaType ?: "movie"}"
+                    if (seenKeys.add(key)) {
+                        mergedList.add(item)
+                    }
+                }
+
+                _searchState.value = MediaUiState.Success(mergedList)
+            }
+
+            // 1. INSTANT EXECUTION (< 50ms): Execute Edge search immediately
             repository.searchAllMedia(apiKey, actualQuery)
                 .catch { e ->
                     _searchState.value = MediaUiState.Error(e.localizedMessage ?: "Unknown error occurred")
                 }
                 .collect { movies ->
-                    // Merge TMDB remote results and local index suggestions (watchlist/caching matches)
-                    val localHits = com.loopa.search.SearchEngine.getSuggestions(query, 4)
-                    val mergedList = mutableListOf<TmdbMovie>()
-                    val seenKeys = mutableSetOf<String>()
+                    updateResults(movies)
 
-                    val normalizedQ = query.lowercase(java.util.Locale.getDefault()).trim()
-                    val normalizedAQ = actualQuery.lowercase(java.util.Locale.getDefault()).trim()
-
-                    // 1. Exact local matches first
-                    for (item in localHits) {
-                        val title = (item.title ?: item.name ?: "").lowercase(java.util.Locale.getDefault()).trim()
-                        if (title == normalizedQ || title == normalizedAQ) {
-                            val key = "${item.id}_${item.mediaType ?: "movie"}"
-                            if (seenKeys.add(key)) {
-                                mergedList.add(item)
+                    // 2. NON-BLOCKING BACKGROUND AI TYPO CORRECTION
+                    // Run AI query correction in background ONLY if results < 3 and query >= 4 chars
+                    if (cached == null && movies.size < 3 && query.length >= 4) {
+                        val proxyUrl = BuildConfig.AI_PROXY_URL
+                        if (proxyUrl.isNotEmpty() && proxyUrl != "YOUR_CLOUDFLARE_WORKER_URL") {
+                            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                try {
+                                    val prompt = "Correct any typos, spelling errors, or incomplete conceptual names in this media search query (movies, TV shows, anime): '$query'. Return ONLY a JSON object in this format: {\"correctedQuery\":\"<corrected title>\",\"mediaType\":\"movie\"|\"tv\"|\"anime\"|\"all\"}. Return nothing else. Do not include markdown code block formatting."
+                                    val jsonBody = org.json.JSONObject().apply {
+                                        put("prompt", prompt)
+                                    }
+                                    val mediaType = "application/json".toMediaType()
+                                    val reqBody = jsonBody.toString().toRequestBody(mediaType)
+                                    val recUrl = if (proxyUrl.endsWith("/")) "${proxyUrl}api/recommendations" else "$proxyUrl/api/recommendations"
+                                    val req = okhttp3.Request.Builder()
+                                        .url(recUrl)
+                                        .post(reqBody)
+                                        .header("X-Loopa-Client-Key", "loopa_secure_client_auth_secret_2026_x")
+                                        .build()
+                                    val response = com.loopa.network.NetworkModule.okHttpClient.newCall(req).execute()
+                                    if (response.isSuccessful) {
+                                        var text = response.body?.string()?.trim() ?: ""
+                                        text = text.replace("```json", "").replace("```", "").trim()
+                                        if (text.isNotEmpty() && text.startsWith("{")) {
+                                            val parsed = org.json.JSONObject(text)
+                                            val corrected = parsed.optString("correctedQuery")
+                                            if (!corrected.isNullOrEmpty() && !corrected.equals(query, ignoreCase = true)) {
+                                                com.loopa.search.SearchEngine.cacheCorrection(query, corrected)
+                                                repository.searchAllMedia(apiKey, corrected).collect { extraMovies ->
+                                                    if (extraMovies.isNotEmpty()) {
+                                                        updateResults(movies + extraMovies)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch (_: Exception) {}
                             }
                         }
                     }
-
-                    // 2. Remote API results
-                    for (item in movies) {
-                        val key = "${item.id}_${item.mediaType ?: "movie"}"
-                        if (seenKeys.add(key)) {
-                            mergedList.add(item)
-                        }
-                    }
-
-                    // 3. Other local suggestions (fuzzy matches)
-                    for (item in localHits) {
-                        val key = "${item.id}_${item.mediaType ?: "movie"}"
-                        if (seenKeys.add(key)) {
-                            mergedList.add(item)
-                        }
-                    }
-
-                    _searchState.value = MediaUiState.Success(mergedList)
                 }
         }
     }
@@ -726,10 +870,16 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getWatchedEpisodesForMedia(mediaId: Int, mediaType: String): kotlinx.coroutines.flow.Flow<List<com.loopa.db.WatchedEpisodeEntity>> {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
+            if (userId != null) {
+                repository.fetchWatchedEpisodes(mediaId, mediaType, userId)
+            }
+        }
         return watchedEpisodeDao.getWatchedEpisodesForMedia(mediaId, mediaType)
     }
 
-    fun toggleEpisodeWatched(mediaId: Int, mediaType: String, seasonNumber: Int, episodeNumber: Int, isWatched: Boolean) {
+    fun toggleEpisodeWatched(mediaId: Int, mediaType: String, seasonNumber: Int, episodeNumber: Int, isWatched: Boolean, totalEpisodes: Int = 0) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
             if (isWatched) {
@@ -746,6 +896,67 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     watchedEpisodeDao.deleteWatchedEpisode(mediaId, mediaType, seasonNumber, episodeNumber)
                 }
+            }
+            autoUpdateWatchStatus(mediaId, mediaType, totalEpisodes)
+        }
+    }
+
+    fun markSeasonWatched(mediaId: Int, mediaType: String, seasonNumber: Int, episodeNumbers: List<Int>, totalEpisodes: Int = 0) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
+            val entities = episodeNumbers.map { com.loopa.db.WatchedEpisodeEntity(mediaId, mediaType, seasonNumber, it) }
+            if (userId != null) {
+                repository.insertAllEpisodesWatched(entities, userId)
+            } else {
+                entities.forEach { watchedEpisodeDao.insertWatchedEpisode(it) }
+            }
+            autoUpdateWatchStatus(mediaId, mediaType, totalEpisodes)
+        }
+    }
+
+    private suspend fun autoUpdateWatchStatus(mediaId: Int, mediaType: String, totalEpisodes: Int) {
+        val currentCount = watchedEpisodeDao.getAllWatchedEpisodesSync().filter { it.mediaId == mediaId && it.mediaType == mediaType }.size
+        val item = mediaItemDao.getAllMediaItemsSync().find { it.id == mediaId && it.mediaType == mediaType } ?: return
+        
+        val newStatus = when {
+            totalEpisodes > 0 && currentCount >= totalEpisodes -> "Watched"
+            else -> "Watching"
+        }
+        
+        if (item.listName != newStatus) {
+            val updated = item.copy(listName = newStatus)
+            repository.insertMediaItem(updated)
+        }
+    }
+
+    fun repairMediaItem(mediaId: Int, mediaType: String) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val item = mediaItemDao.getAllMediaItemsSync().find { it.id == mediaId && it.mediaType == mediaType } ?: return@launch
+            if (item.totalSeasons > 0 && item.totalEpisodes > 0) return@launch // Already repaired
+
+            var finalSeasons = item.totalSeasons
+            var finalEpisodes = item.totalEpisodes
+
+            try {
+                if (mediaType == "anime") {
+                    val detail = com.loopa.network.NetworkModule.jikanApi.getAnimeDetails(mediaId).data
+                    finalEpisodes = detail.episodes ?: 0
+                    finalSeasons = if (finalEpisodes > 0) 1 else 0
+                } else if (mediaType == "tv") {
+                    val detail = com.loopa.network.NetworkModule.tmdbApi.getTvDetails(mediaId, BuildConfig.TMDB_API_KEY)
+                    finalSeasons = detail.numberOfSeasons ?: 0
+                    finalEpisodes = detail.numberOfEpisodes ?: 0
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MediaViewModel", "Failed to repair media item $mediaId: ${e.message}")
+            }
+
+            if (finalSeasons != item.totalSeasons || finalEpisodes != item.totalEpisodes) {
+                val updated = item.copy(
+                    totalSeasons = finalSeasons,
+                    totalEpisodes = finalEpisodes
+                )
+                repository.insertMediaItem(updated)
             }
         }
     }

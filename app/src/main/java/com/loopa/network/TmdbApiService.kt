@@ -94,4 +94,18 @@ interface TmdbApiService {
         @Query("append_to_response") appendToResponse: String = "credits",
         @Query("language") language: String = "en-US"
     ): com.loopa.model.TmdbTvDetailResponse
+
+    @GET("3/movie/{movie_id}/similar")
+    suspend fun getSimilarMovies(
+        @Path("movie_id") movieId: Int,
+        @Query("api_key") apiKey: String,
+        @Query("language") language: String = "en-US"
+    ): TmdbResponse<TmdbMovie>
+
+    @GET("3/tv/{tv_id}/similar")
+    suspend fun getSimilarTv(
+        @Path("tv_id") tvId: Int,
+        @Query("api_key") apiKey: String,
+        @Query("language") language: String = "en-US"
+    ): TmdbResponse<TmdbMovie>
 }

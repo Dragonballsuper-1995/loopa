@@ -210,6 +210,13 @@ const LoopaSearchEngine = {
     },
 
     /**
+     * Alias for getSuggestions — allows LoopaSearchEngine.search(query, limit) calls.
+     */
+    search(query, limit = 5) {
+        return this.getSuggestions(query, limit);
+    },
+
+    /**
      * Cache a corrected query mapping.
      */
     cacheCorrection(query, corrected) {

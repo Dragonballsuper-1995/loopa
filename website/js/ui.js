@@ -97,9 +97,8 @@ const UI = {
     },
 
     _statusBadgeClass(status) {
-        if (status === 'Watching') return 'status-badge-watching';
         if (status === 'Watched')  return 'status-badge-watched';
-        return 'status-badge-planned';
+        return 'status-badge-watching';
     },
 
     // ── Card (Horizontal Row) ─────────────────────────────────────────────────
@@ -141,6 +140,12 @@ const UI = {
                 </div>`;
         }
 
+        const year = (item.releaseDate || item.firstAirDate || item.year || '').toString().slice(0, 4);
+        const rating = item.score || item.voteAverage;
+        const ratingHtml = rating && Number(rating) > 0
+            ? `<span class="ml-auto text-loopAmber text-[11px] font-bold">★ ${Number(rating).toFixed(1)}</span>`
+            : '';
+
         const el = document.createElement('div');
         el.className = 'w-[160px] md:w-[200px] shrink-0 cursor-pointer snap-start group relative';
         el.innerHTML = `
@@ -148,15 +153,38 @@ const UI = {
                 ${statusBadge}
                 <img src="${this._escapeHTML(src)}" alt="${this._escapeHTML(item.title)}" loading="lazy"
                      class="poster-img w-full h-full object-cover relative z-10">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none group-hover:opacity-0 transition-opacity duration-300 delay-500"></div>
-                <div class="absolute bottom-0 left-0 right-0 p-3 z-10 pointer-events-none group-hover:opacity-0 transition-opacity duration-300 delay-500">
+                <!-- Default bottom label — fades out on hover -->
+                <div class="card-default-label absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none transition-opacity duration-200 group-hover:opacity-0"></div>
+                <div class="card-default-label absolute bottom-0 left-0 right-0 p-3 z-10 pointer-events-none transition-opacity duration-200 group-hover:opacity-0">
                     <span class="text-[9px] font-semibold tracking-wider uppercase ${this._typeBadgeClass(type)} block mb-1">${this._escapeHTML(type)}</span>
                     <h3 class="text-sm font-semibold text-white leading-tight line-clamp-2">${this._escapeHTML(item.title)}</h3>
+                </div>
+                <!-- New sleek fade-in hover panel -->
+                <div class="card-hover-overlay absolute inset-0 bg-gradient-to-t from-loopBase/95 via-loopBase/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 flex flex-col justify-end p-3 pointer-events-none">
+                    <p class="text-textPrimary text-xs font-bold leading-tight line-clamp-2 mb-0.5">${this._escapeHTML(item.title)}</p>
+                    <p class="text-textMuted text-[10px] font-medium mb-2.5">${year ? year + ' · ' : ''}${this._escapeHTML(type.toUpperCase())}</p>
+                    <div class="card-action-row pointer-events-auto">
+                        <button class="card-action-btn primary" title="Track This" data-hover-track>
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <button class="card-action-btn" title="More Info" data-hover-info>
+                            <i class="fa-solid fa-circle-info"></i>
+                        </button>
+                        ${ratingHtml}
+                    </div>
                 </div>
                 ${progressBar}
             </div>
         `;
         el.addEventListener('click', () => onClick(item));
+        el.querySelector('[data-hover-track]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof App !== 'undefined') App.openDrawer(item);
+        });
+        el.querySelector('[data-hover-info]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof App !== 'undefined') App.openDrawer(item);
+        });
         el.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             if (typeof App !== 'undefined' && typeof App.showContextMenu === 'function') {
@@ -258,15 +286,38 @@ const UI = {
         return el;
     },
 
-    // ── Hero Banner ───────────────────────────────────────────────────────────
-    renderHero(item, currentlyWatching) {
-        const container = document.getElementById('hero-section');
-        const backdrop = item.backdropUrl || item.posterUrl || '';
+    // ── Hero Banner — Phase 2B Cinematic Upgrade ──────────────────────────────
+    _heroItems: [],
+    _heroCurrentIndex: 0,
 
+    renderHero(item, currentlyWatching, heroItems, currentIndex) {
+        const container = document.getElementById('hero-section');
+        if (!container) return;
+
+        // Store for pagination dot clicks
+        if (heroItems) this._heroItems = heroItems;
+        if (currentIndex !== undefined) this._heroCurrentIndex = currentIndex;
+
+        const backdrop = item.backdropUrl || item.posterUrl || '';
+        const year = (item.releaseDate || item.firstAirDate || '').slice(0, 4);
+        const type = (item.mediaType || item.media_type || '').toUpperCase();
+        const rating = item.voteAverage && item.voteAverage > 0
+            ? `<i class="fa-solid fa-star text-loopAmber text-[10px]"></i> <span class="font-semibold text-textPrimary">${Number(item.voteAverage).toFixed(1)}</span>`
+            : '';
+
+        const metaParts = [];
+        if (year) metaParts.push(`<span>${year}</span>`);
+        if (type) metaParts.push(`<span>${this._escapeHTML(type)}</span>`);
+
+        const metaHtml = metaParts.length
+            ? metaParts.join('<span class="w-1 h-1 rounded-full bg-textMuted/60 inline-block mx-1"></span>')
+            : '';
+
+        // Continue-watching badge
         let trackingHtml = '';
         if (currentlyWatching) {
             trackingHtml = `
-                <div class="inline-flex items-center gap-2.5 mb-5 bg-loopSurface/80 backdrop-blur border border-white/10 rounded-full px-4 py-2 cursor-pointer hover:border-loopAmber/30 transition-colors group" id="hero-resume-btn">
+                <div class="inline-flex items-center gap-2.5 mb-4 bg-loopSurface/80 backdrop-blur border border-white/10 rounded-full px-4 py-2 cursor-pointer hover:border-loopAmber/30 transition-colors group" id="hero-resume-btn">
                     <div class="w-4 h-4 rounded-full bg-loopAmber flex items-center justify-center flex-shrink-0">
                         <i class="fa-solid fa-play text-loopBase" style="font-size:6px; margin-left:1px;"></i>
                     </div>
@@ -276,53 +327,139 @@ const UI = {
             `;
         }
 
+        // Pagination dots
+        const totalItems = (heroItems || this._heroItems).length;
+        const activeIdx = currentIndex !== undefined ? currentIndex : this._heroCurrentIndex;
+        const dotsHtml = totalItems > 1 ? `
+            <div class="flex items-center gap-2 mt-4" id="hero-dots">
+                ${Array.from({ length: totalItems }, (_, i) => `
+                    <button
+                        class="hero-dot h-[6px] rounded-full transition-all duration-300 ${i === activeIdx ? 'w-[22px] bg-loopAmber' : 'w-[6px] bg-white/25 hover:bg-white/50'}"
+                        data-hero-dot="${i}"
+                        aria-label="Go to slide ${i + 1}"
+                    ></button>
+                `).join('')}
+            </div>
+        ` : '';
+
+        // ── Fast update path: hero already rendered, just swap content ─────────
         const bgImg = document.getElementById('hero-bg-img');
         if (bgImg) {
             const content = document.getElementById('hero-content-wrapper');
             if (content) content.classList.add('opacity-0');
             bgImg.classList.add('opacity-0');
 
-            setTimeout(() => {
+            // Preload backdrop image in memory so text & artwork swap at the exact same instant
+            const preloader = new Image();
+            preloader.src = backdrop;
+
+            const revealNewHero = () => {
                 bgImg.src = backdrop;
+
                 const titleEl = document.getElementById('hero-title');
                 if (titleEl) titleEl.textContent = item.title;
+
+                const metaEl = document.getElementById('hero-meta-row');
+                if (metaEl) metaEl.innerHTML = metaHtml + (rating ? `<span class="w-1 h-1 rounded-full bg-textMuted/60 inline-block mx-1"></span>${rating}` : '');
+
                 const trackingContainer = document.getElementById('hero-tracking-container');
                 if (trackingContainer) trackingContainer.innerHTML = trackingHtml;
-                document.getElementById('hero-init-btn').onclick = () => App.openDrawer(item);
+
+                const dotsContainer = document.getElementById('hero-dots-wrapper');
+                if (dotsContainer) dotsContainer.innerHTML = dotsHtml;
+
+                const trackBtn = document.getElementById('hero-track-btn');
+                if (trackBtn) trackBtn.onclick = () => App.openDrawer(item);
+                const infoBtn = document.getElementById('hero-info-btn');
+                if (infoBtn) infoBtn.onclick = () => App.openDrawer(item);
+
                 if (currentlyWatching && document.getElementById('hero-resume-btn')) {
                     document.getElementById('hero-resume-btn').onclick = () => App.openDrawerFromDB(currentlyWatching);
                 }
-                setTimeout(() => {
+
+                this._bindHeroDots(heroItems || this._heroItems);
+
+                requestAnimationFrame(() => {
                     bgImg.classList.remove('opacity-0');
                     if (content) content.classList.remove('opacity-0');
-                }, 50);
-            }, 300);
+                });
+            };
+
+            let revealed = false;
+            preloader.onload = () => {
+                if (!revealed) {
+                    revealed = true;
+                    setTimeout(revealNewHero, 150);
+                }
+            };
+            setTimeout(() => {
+                if (!revealed) {
+                    revealed = true;
+                    revealNewHero();
+                }
+            }, 400);
             return;
         }
 
+        // ── Initial render ────────────────────────────────────────────────────
         container.innerHTML = `
             <img id="hero-bg-img" src="${this._escapeHTML(backdrop)}"
-                 class="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500">
+                 class="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500"
+                 alt="${this._escapeHTML(item.title)}">
+
+            <!-- Phase 2B: 4-zone gradient system -->
             <div class="absolute inset-0 hero-gradient-top"></div>
             <div class="absolute inset-0 hero-gradient-base"></div>
             <div class="absolute inset-0 hero-gradient-side hidden md:block"></div>
 
-            <div id="hero-content-wrapper" class="absolute bottom-0 left-0 right-0 max-w-[1600px] mx-auto px-5 lg:px-8 pb-8 md:pb-10 flex flex-col transition-opacity duration-300">
+            <!-- Content overlay — bottom-left aligned -->
+            <div id="hero-content-wrapper" class="absolute bottom-0 left-0 right-0 max-w-[1600px] mx-auto px-5 md:px-8 lg:px-14 pb-8 md:pb-10 flex flex-col transition-opacity duration-300">
+
+                <!-- Continue badge -->
                 <div id="hero-tracking-container">${trackingHtml}</div>
-                <h1 id="hero-title" class="font-bold text-3xl md:text-5xl lg:text-6xl leading-tight mb-4 text-white max-w-3xl">${this._escapeHTML(item.title)}</h1>
-                <div class="flex gap-3">
-                    <button id="hero-init-btn" class="btn-primary text-sm flex items-center gap-2">
-                        <i class="fa-solid fa-circle-play"></i> View Details
+
+                <!-- Metadata row: Year · Type · ★ Rating -->
+                <div id="hero-meta-row" class="hero-meta-text flex items-center gap-1 mb-2">
+                    ${metaHtml}${rating ? `<span class="w-1 h-1 rounded-full bg-textMuted/60 inline-block mx-1"></span>${rating}` : ''}
+                </div>
+
+                <!-- Title -->
+                <h1 id="hero-title" class="hero-title text-textPrimary max-w-2xl mb-4 line-clamp-2">${this._escapeHTML(item.title)}</h1>
+
+                <!-- Phase 2B: Dual CTA — primary Track + ghost More Info -->
+                <div class="flex gap-3 flex-wrap">
+                    <button id="hero-track-btn" class="btn-primary text-sm flex items-center gap-2 px-6 py-3">
+                        <i class="fa-solid fa-plus text-xs"></i> Track This
+                    </button>
+                    <button id="hero-info-btn" class="btn-secondary text-sm flex items-center gap-2 px-6 py-3">
+                        <i class="fa-solid fa-circle-info text-xs"></i> More Info
                     </button>
                 </div>
+
+                <!-- Pagination dots -->
+                <div id="hero-dots-wrapper">${dotsHtml}</div>
             </div>
         `;
 
-        document.getElementById('hero-init-btn').onclick = () => App.openDrawer(item);
+        document.getElementById('hero-track-btn').onclick = () => App.openDrawer(item);
+        document.getElementById('hero-info-btn').onclick = () => App.openDrawer(item);
         if (currentlyWatching && document.getElementById('hero-resume-btn')) {
             document.getElementById('hero-resume-btn').onclick = () => App.openDrawerFromDB(currentlyWatching);
         }
+
+        this._bindHeroDots(heroItems || this._heroItems);
     },
+
+    _bindHeroDots(heroItems) {
+        document.querySelectorAll('[data-hero-dot]').forEach(btn => {
+            btn.onclick = () => {
+                const idx = parseInt(btn.dataset.heroDot, 10);
+                if (App && App._jumpHero) App._jumpHero(idx);
+            };
+        });
+    },
+
+
 
     // ── Row / Grid Renderers ──────────────────────────────────────────────────
     renderScrollRow(containerId, items) {
@@ -330,6 +467,92 @@ const UI = {
         if (!c) return;
         c.innerHTML = '';
         items.forEach(item => c.appendChild(this.posterCardRow(item, i => App.openDrawer(i))));
+    },
+
+    // Phase 4B: Top 10 Row with giant overlapping rank numbers
+    renderTop10Row(items) {
+        const c = document.getElementById('row-top10');
+        if (!c) return;
+        c.innerHTML = '';
+        items.slice(0, 10).forEach((item, idx) => {
+            const rank = idx + 1;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'top10-card-wrapper';
+            wrapper.innerHTML = `
+                <span class="top10-rank ${rank <= 3 ? 'top3' : ''}">${rank}</span>
+            `;
+            const card = this.posterCardRow(item, i => App.openDrawer(i));
+            wrapper.appendChild(card);
+            c.appendChild(wrapper);
+        });
+    },
+
+    // Phase 4A: Header Search Autocomplete Dropdown
+    renderAutocomplete(query, matches) {
+        const box = document.getElementById('searchAutocomplete');
+        if (!box) return;
+        if (!query || query.trim().length < 2) {
+            box.classList.add('hidden');
+            return;
+        }
+
+        const q = query.trim();
+        let html = '';
+
+        // Instant Item Matches
+        if (matches && matches.length > 0) {
+            html += `<div class="px-2.5 py-1 text-[10px] font-bold text-textMuted uppercase tracking-wider">Quick Matches</div>`;
+            matches.slice(0, 5).forEach(item => {
+                const img = item.posterUrl || item.backdropUrl || '';
+                const type = (item.mediaType || item.media_type || '').toUpperCase();
+                const year = item.year || '';
+                html += `
+                    <div class="autocomplete-row flex items-center justify-between" data-action="open-item" data-id="${item.id}" data-type="${item.mediaType || item.media_type}">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            ${img ? `<img src="${this._escapeHTML(img)}" class="w-6 h-8 object-cover rounded shadow shrink-0">` : '<div class="w-6 h-8 bg-loopSurface rounded shrink-0"></div>'}
+                            <div class="flex flex-col min-w-0">
+                                <span class="font-semibold text-textPrimary text-xs truncate">${this._escapeHTML(item.title)}</span>
+                                <span class="text-[10px] text-textMuted">${year ? year + ' · ' : ''}${type}</span>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-[10px] text-textMuted"></i>
+                    </div>
+                `;
+            });
+        } else {
+            box.classList.add('hidden');
+            return;
+        }
+
+        box.innerHTML = html;
+        box.classList.remove('hidden');
+
+        // Wire events
+        box.querySelectorAll('[data-action="search-query"]').forEach(el => {
+            el.onclick = (e) => {
+                e.stopPropagation();
+                box.classList.add('hidden');
+                const val = el.dataset.val.split(' in ')[0];
+                const input = document.getElementById('searchInput');
+                if (input) {
+                    input.value = val;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            };
+        });
+
+        box.querySelectorAll('[data-action="open-item"]').forEach(el => {
+            el.onclick = (e) => {
+                e.stopPropagation();
+                box.classList.add('hidden');
+                const id = el.dataset.id;
+                const type = el.dataset.type;
+                const match = matches.find(m => String(m.id) === String(id) && (m.mediaType || m.media_type) === type);
+                if (match && typeof App !== 'undefined') {
+                    App.openDrawer(match);
+                }
+            };
+        });
     },
 
     renderSearchGrid(items) {
@@ -411,18 +634,54 @@ const UI = {
     renderDrawer(item, dbEntry, watchedEpisodes = []) {
         const type = item.mediaType || item.media_type;
         const inList = !!dbEntry;
-        const backdrop = item.posterUrl || item.backdropUrl || '';
 
-        document.getElementById('modalImageContainer').innerHTML = `
-            <img src="${this._escapeHTML(backdrop)}" class="w-full h-full object-cover opacity-90">
-        `;
+        // Phase 3C: Cinematic backdrop
+        const backdropSrc = item.backdropUrl || item.posterUrl || '';
+        const backdropImg = document.getElementById('modalBackdropImg');
+        if (backdropImg) {
+            backdropImg.src = this._escapeHTML(backdropSrc);
+            backdropImg.alt = this._escapeHTML(item.title);
+        }
 
+        // Title overlay
         document.getElementById('modalTitle').textContent = item.title;
-        document.getElementById('modalRating').textContent = item.score ? `⭐ ${item.score}` : 'NR';
-        document.getElementById('modalYear').textContent = item.year || '—';
-        document.getElementById('modalType').textContent = (type || 'Unknown').charAt(0).toUpperCase() + (type || 'unknown').slice(1);
 
-        // Episodes & Runtime in Tags row next to release year
+        // Tags row (rating · year · type · tracking badge)
+        const typeLabel = (type || 'Unknown').charAt(0).toUpperCase() + (type || 'unknown').slice(1);
+        const trackingBadge = inList
+            ? `<span class="text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md bg-loopAmberSubtle text-loopAmber border border-loopAmber/20">● Tracking</span>`
+            : '';
+        const tagsRow = document.getElementById('modalTagsRow');
+        if (tagsRow) {
+            let metadataBadges = [];
+            if (item.score) metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10">⭐ ${item.score}</span>`);
+            if (item.year) metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10">${this._escapeHTML(String(item.year))}</span>`);
+            if (typeLabel) metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10">${this._escapeHTML(typeLabel)}</span>`);
+            
+            // Runtime or Episode Counts
+            if (type === 'movie' && item.runtime) {
+                const rtVal = String(item.runtime).replace(/\s*min\s*/gi, '').trim();
+                metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10"><i class="fa-regular fa-clock mr-1 text-loopAmber/70"></i>${rtVal} min</span>`);
+            } else if ((type === 'tv' || type === 'anime') && item.totalEpisodes > 0) {
+                const seasonsText = item.totalSeasons ? `${item.totalSeasons} Season${item.totalSeasons > 1 ? 's' : ''} · ` : '';
+                metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10"><i class="fa-solid fa-list-ol mr-1 text-loopAmber/70"></i>${seasonsText}${item.totalEpisodes} Episodes</span>`);
+            }
+
+            if (trackingBadge) metadataBadges.push(trackingBadge);
+
+            tagsRow.innerHTML = metadataBadges.join('');
+        }
+
+        // Genre pills (Phase 3C)
+        const genrePills = document.getElementById('modalGenrePills');
+        if (genrePills) {
+            genrePills.innerHTML = (item.genres || []).map(g =>
+                `<span class="genre-pill">${this._escapeHTML(g)}</span>`
+            ).join('');
+            genrePills.classList.toggle('hidden', !item.genres?.length);
+        }
+
+        // Episodes & Runtime (still track for potential future use)
         const epEl = document.getElementById('modalEpisodes');
         if (epEl) {
             if (item.totalEpisodes > 0) {
@@ -443,11 +702,6 @@ const UI = {
                 rtEl.classList.add('hidden');
             }
         }
-
-        // Genres
-        document.getElementById('modalGenres').innerHTML = (item.genres || []).map(g =>
-            `<span class="px-2.5 py-1 bg-loopSurface border border-white/[0.08] rounded-md text-[11px] font-medium text-textSecondary">${this._escapeHTML(g)}</span>`
-        ).join('');
 
         document.getElementById('modalSummary').textContent = item.synopsis || 'No synopsis available.';
 
@@ -498,7 +752,7 @@ const UI = {
             delBtn.classList.add('hidden');
             wlBtn.className = 'btn-primary w-full mb-4 text-sm font-semibold flex items-center justify-center gap-2';
             wlBtn.innerHTML = '<i class="fa-solid fa-plus"></i> <span>Add to List</span>';
-            wlBtn.onclick = () => App.addToWatchlist(item, 'To Watch');
+            wlBtn.onclick = () => App.addToWatchlist(item, 'Watching');
             document.getElementById('statusSelector').classList.add('hidden');
             document.getElementById('progressSection').classList.add('hidden');
         }
@@ -531,16 +785,25 @@ const UI = {
                 const watchedInSeason = watchedEpisodes.filter(we => we.season_number == currentSeason).length;
                 const epPercent = epCount > 0 ? Math.min(100, Math.round((watchedInSeason / epCount) * 100)) : 0;
 
+                // Cumulative calculations for the header
+                const totalEpsOverall = item.totalEpisodes || dbEntry?.total_episodes || 0;
+                const totalWatchedOverall = watchedEpisodes.length;
+                
+                // Ring calculations for expanded view (per season)
                 const seasonFraction = totalSeasons > 0 ? (currentSeason / totalSeasons) : 0;
                 const seasonOffset = (56.55 * (1 - seasonFraction)).toFixed(2);
-
+                
                 const epFraction = epCount > 0 ? Math.min(1, watchedInSeason / epCount) : 0;
                 const epOffset = (56.55 * (1 - epFraction)).toFixed(2);
+                
+                // Ring calculations for collapsed view (cumulative)
+                const cumEpFraction = totalEpsOverall > 0 ? Math.min(1, totalWatchedOverall / totalEpsOverall) : 0;
+                const cumEpOffset = (56.55 * (1 - cumEpFraction)).toFixed(2);
 
-                // 1. Header Micro Badges with SVG Progress Rings
+                // 1. Header Micro Badges with SVG Progress Rings (Cumulative)
                 if (badge) {
                     badge.innerHTML = `
-                        <!-- Season Ring Pill -->
+                        <!-- Season Ring Pill (Shows Total Seasons) -->
                         <div class="px-2.5 py-1 rounded-lg bg-loopBase border border-white/10 flex items-center gap-2 text-[10px] font-semibold">
                             <div class="relative w-4 h-4 flex items-center justify-center shrink-0">
                                 <svg class="w-4 h-4 -rotate-90 transform" viewBox="0 0 24 24">
@@ -548,30 +811,32 @@ const UI = {
                                     <circle cx="12" cy="12" r="9" stroke="#A09990" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="56.55" stroke-dashoffset="${seasonOffset}" class="transition-all duration-300"/>
                                 </svg>
                             </div>
-                            <span class="text-textPrimary font-bold">S <span class="text-textPrimary">${currentSeason}</span><span class="text-textMuted font-normal">/${totalSeasons}</span></span>
+                            <span class="text-textPrimary font-bold">S <span class="text-textPrimary">${totalSeasons}</span></span>
                         </div>
 
-                        <!-- Episode Ring Pill -->
+                        <!-- Episode Ring Pill (Shows Cumulative Watched) -->
                         <div class="px-2.5 py-1 rounded-lg bg-loopBase border border-loopAmber/30 flex items-center gap-2 text-[10px] font-semibold shadow-[0_0_10px_rgba(232,168,124,0.15)]">
                             <div class="relative w-4 h-4 flex items-center justify-center shrink-0">
                                 <svg class="w-4 h-4 -rotate-90 transform" viewBox="0 0 24 24">
                                     <circle cx="12" cy="12" r="9" stroke="rgba(232,168,124,0.15)" stroke-width="3" fill="none"/>
-                                    <circle cx="12" cy="12" r="9" stroke="#E8A87C" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="56.55" stroke-dashoffset="${epOffset}" class="transition-all duration-300 drop-shadow-[0_0_4px_rgba(232,168,124,0.6)]"/>
+                                    <circle cx="12" cy="12" r="9" stroke="#E8A87C" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="56.55" stroke-dashoffset="${cumEpOffset}" class="transition-all duration-300 drop-shadow-[0_0_4px_rgba(232,168,124,0.6)]"/>
                                 </svg>
                             </div>
-                            <span class="text-textPrimary font-bold">EP <span class="text-textPrimary">${watchedInSeason}</span><span class="text-textMuted font-normal">/${epCount || '?'}</span></span>
+                            <span class="text-textPrimary font-bold">EP <span class="text-textPrimary">${totalWatchedOverall}</span><span class="text-textMuted font-normal">/${totalEpsOverall || '?'}</span></span>
                         </div>
                     `;
                 }
 
-                // 2. Expanded Dashboard Visuals
+                // 2. Expanded Dashboard Visuals (Per Season)
                 const visualSeasonText = document.getElementById('visualSeasonText');
                 const visualSeasonSegments = document.getElementById('visualSeasonSegments');
                 const visualEpisodeText = document.getElementById('visualEpisodeText');
                 const visualEpisodeBar = document.getElementById('visualEpisodeBar');
 
+                const isItemCompleted = dbEntry?.list_name === 'Watched';
+
                 if (visualSeasonText) {
-                    visualSeasonText.textContent = `S${currentSeason} of ${totalSeasons}`;
+                    visualSeasonText.textContent = isItemCompleted ? `S${totalSeasons} of ${totalSeasons}` : `S${currentSeason} of ${totalSeasons}`;
                 }
 
                 if (visualSeasonSegments) {
@@ -580,10 +845,10 @@ const UI = {
                         const isCurrent = s === currentSeason;
                         const watchedInS = watchedEpisodes.filter(we => we.season_number == s).length;
                         let bgClass = 'bg-loopSurface/80 border-white/5';
-                        if (isCurrent) {
+                        if (isItemCompleted || watchedInS > 0) {
                             bgClass = 'bg-gradient-to-r from-loopAmber to-loopAmberStrong border-loopAmber/40 shadow-[0_0_8px_rgba(232,168,124,0.4)]';
-                        } else if (watchedInS > 0) {
-                            bgClass = 'bg-loopAmber/40 border-loopAmber/20';
+                        } else if (isCurrent) {
+                            bgClass = 'bg-gradient-to-r from-loopAmber to-loopAmberStrong border-loopAmber/40 shadow-[0_0_8px_rgba(232,168,124,0.4)]';
                         }
                         return `<div class="flex-1 h-full rounded-full border transition-all duration-200 ${bgClass}" title="Season ${s}"></div>`;
                     }).join('');
@@ -615,6 +880,15 @@ const UI = {
 
             if (dropdownLabel) dropdownLabel.textContent = `Season 1`;
 
+            const btnMarkSeasonWatched = document.getElementById('btnMarkSeasonWatched');
+            if (btnMarkSeasonWatched) {
+                btnMarkSeasonWatched.onclick = () => {
+                    if (typeof App !== 'undefined') {
+                        App.markSeasonWatched(item, dbEntry, currentSeason, curSeasonEpCount);
+                    }
+                };
+            }
+
             const renderEpisodes = async (seasonNum) => {
                 const epContainer = document.getElementById('episodeList');
                 epContainer.innerHTML = '<div class="text-textMuted text-xs p-3 text-center">Loading episodes...</div>';
@@ -622,7 +896,30 @@ const UI = {
                     let episodes = [];
                     const isAnime = (type || '').toLowerCase() === 'anime';
                     if (isAnime) {
-                        const totalEps = item.totalEpisodes || dbEntry?.total_episodes || 25;
+                        let totalEps = item.totalEpisodes || dbEntry?.total_episodes || 0;
+                        if (!totalEps) {
+                            try {
+                                const details = await API.fetchAnimeDetails(item.id);
+                                if (details && details.totalEpisodes > 0) {
+                                    totalEps = details.totalEpisodes;
+                                    item.totalEpisodes = totalEps;
+                                }
+                            } catch {}
+                        }
+                        if (!totalEps && item.title) {
+                            try {
+                                const tmdbSearch = await API._tmdb('/search/tv', { query: item.title });
+                                if (tmdbSearch.results && tmdbSearch.results[0]) {
+                                    const tvDetails = await API.fetchTVDetails(tmdbSearch.results[0].id);
+                                    if (tvDetails && tvDetails.totalEpisodes > 0) {
+                                        totalEps = tvDetails.totalEpisodes;
+                                        item.totalEpisodes = totalEps;
+                                    }
+                                }
+                            } catch {}
+                        }
+                        if (!totalEps) totalEps = 24; // Standard seasonal fallback if completely unpopulated
+
                         episodes = Array.from({ length: totalEps }, (_, i) => ({
                             episode_number: i + 1,
                             name: `Episode ${i + 1}`
@@ -631,66 +928,116 @@ const UI = {
                         const seasonData = await API.fetchTVSeasonDetails(item.id, seasonNum);
                         episodes = seasonData?.episodes || [];
                     }
+
                     if (episodes.length === 0) {
                         epContainer.innerHTML = '<div class="text-textMuted text-xs p-3 text-center">No episode data found for this season.</div>';
                         updateProgressVisuals(0);
                         return;
                     }
-                    updateProgressVisuals(episodes.length);
-                    epContainer.innerHTML = episodes.map(ep => {
-                        const isWatched = watchedEpisodes.some(we => we.season_number == seasonNum && we.episode_number == ep.episode_number);
-                        return `
-                            <label class="flex items-center justify-between p-3 rounded-xl bg-loopBase/60 border border-white/[0.06] hover:bg-loopRaised/70 hover:border-loopAmber/30 cursor-pointer transition-all duration-150 group" data-season="${seasonNum}" data-ep="${ep.episode_number}">
-                                <div class="flex items-center gap-3">
-                                    <div class="ep-checkbox w-5 h-5 rounded-md border ${isWatched ? 'bg-loopAmber border-loopAmber text-loopBase shadow-[0_0_8px_rgba(232,168,124,0.4)]' : 'border-white/20 bg-loopSurface group-hover:border-loopAmber/50'} flex items-center justify-center transition-all shrink-0">
-                                        <i class="fa-solid fa-check text-[10px] ${isWatched ? 'opacity-100' : 'opacity-0'}"></i>
-                                    </div>
-                                    <span class="ep-title text-xs font-semibold ${isWatched ? 'text-textMuted line-through opacity-70' : 'text-textPrimary group-hover:text-loopAmber'} transition-colors">
-                                        ${ep.episode_number}. ${this._escapeHTML(ep.name || 'Episode ' + ep.episode_number)}
-                                    </span>
-                                </div>
-                            </label>
+
+                    const totalCount = episodes.length;
+                    updateProgressVisuals(totalCount);
+
+                    // Paginate episode checklist if total episodes > 50 (e.g. 1122 for One Piece)
+                    let displayedEpisodes = episodes;
+                    let rangeHeaderHtml = '';
+
+                    if (totalCount > 50) {
+                        const chunkSize = 50;
+                        const numChunks = Math.ceil(totalCount / chunkSize);
+
+                        rangeHeaderHtml = `
+                            <div class="flex items-center justify-between mb-3 px-1">
+                                <span class="text-xs text-textMuted font-semibold uppercase tracking-wider">Episode Range</span>
+                                <select id="epRangeSelect" class="bg-loopSurface text-textPrimary text-xs rounded-lg px-2.5 py-1.5 border border-white/10 outline-none focus:border-loopAmber cursor-pointer">
+                                    ${Array.from({ length: numChunks }, (_, idx) => {
+                                        const start = idx * chunkSize + 1;
+                                        const end = Math.min((idx + 1) * chunkSize, totalCount);
+                                        return `<option value="${idx}">Episodes ${start}–${end}</option>`;
+                                    }).join('')}
+                                </select>
+                            </div>
                         `;
-                    }).join('');
-                    
-                    epContainer.querySelectorAll('label[data-season]').forEach(label => {
-                        label.addEventListener('click', async (e) => {
-                            // Prevent browser from scroll-into-view on native checkbox focus
-                            e.preventDefault();
-                            e.stopPropagation();
 
-                            const s = parseInt(label.dataset.season);
-                            const ep = parseInt(label.dataset.ep);
-                            const icon = label.querySelector('.fa-check');
-                            const box = label.querySelector('.ep-checkbox');
-                            const titleSpan = label.querySelector('.ep-title');
+                        displayedEpisodes = episodes.slice(0, chunkSize);
+                    }
 
-                            const alreadyWatched = watchedEpisodes.some(we => we.season_number == s && we.episode_number == ep);
-                            const willBeWatched = !alreadyWatched;
+                    const renderListHtml = (listToRender) => {
+                        return listToRender.map(ep => {
+                            const isWatched = watchedEpisodes.some(we => we.season_number == seasonNum && we.episode_number == ep.episode_number);
+                            return `
+                                <label class="flex items-center justify-between p-3 rounded-xl bg-loopBase/60 border border-white/[0.06] hover:bg-loopRaised/70 hover:border-loopAmber/30 cursor-pointer transition-all duration-150 group mb-2" data-season="${seasonNum}" data-ep="${ep.episode_number}">
+                                    <div class="flex items-center gap-3">
+                                        <div class="ep-checkbox w-5 h-5 rounded-md border ${isWatched ? 'bg-loopAmber border-loopAmber text-loopBase shadow-[0_0_8px_rgba(232,168,124,0.4)]' : 'border-white/20 bg-loopSurface group-hover:border-loopAmber/50'} flex items-center justify-center transition-all shrink-0">
+                                            <i class="fa-solid fa-check text-[10px] ${isWatched ? 'opacity-100' : 'opacity-0'}"></i>
+                                        </div>
+                                        <span class="ep-title text-xs font-semibold ${isWatched ? 'text-textMuted line-through opacity-70' : 'text-textPrimary group-hover:text-loopAmber'} transition-colors">
+                                            ${ep.episode_number}. ${this._escapeHTML(ep.name || 'Episode ' + ep.episode_number)}
+                                        </span>
+                                    </div>
+                                </label>
+                            `;
+                        }).join('');
+                    };
 
-                            if (willBeWatched) {
-                                titleSpan.classList.add('text-textMuted', 'line-through', 'opacity-70');
-                                titleSpan.classList.remove('text-textPrimary', 'group-hover:text-loopAmber');
-                                box.classList.add('bg-loopAmber', 'border-loopAmber', 'text-loopBase', 'shadow-[0_0_8px_rgba(232,168,124,0.4)]');
-                                box.classList.remove('border-white/20', 'bg-loopSurface');
-                                icon.classList.remove('opacity-0');
-                                watchedEpisodes.push({ season_number: s, episode_number: ep });
-                                updateProgressVisuals(episodes.length);
-                            } else {
-                                titleSpan.classList.remove('text-textMuted', 'line-through', 'opacity-70');
-                                titleSpan.classList.add('text-textPrimary', 'group-hover:text-loopAmber');
-                                box.classList.remove('bg-loopAmber', 'border-loopAmber', 'text-loopBase', 'shadow-[0_0_8px_rgba(232,168,124,0.4)]');
-                                box.classList.add('border-white/20', 'bg-loopSurface');
-                                icon.classList.add('opacity-0');
-                                const idx = watchedEpisodes.findIndex(we => we.season_number == s && we.episode_number == ep);
-                                if (idx > -1) watchedEpisodes.splice(idx, 1);
-                                updateProgressVisuals(episodes.length);
-                            }
-                            if (typeof App !== 'undefined' && App.toggleEpisodeWatched) {
-                                await App.toggleEpisodeWatched(s, ep, willBeWatched);
-                            }
+                    epContainer.innerHTML = rangeHeaderHtml + `<div id="epItemsWrapper">${renderListHtml(displayedEpisodes)}</div>`;
+
+                    const bindEvents = () => {
+                        epContainer.querySelectorAll('label[data-season]').forEach(label => {
+                            label.onclick = async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                const s = parseInt(label.dataset.season);
+                                const ep = parseInt(label.dataset.ep);
+                                const icon = label.querySelector('.fa-check');
+                                const box = label.querySelector('.ep-checkbox');
+                                const titleSpan = label.querySelector('.ep-title');
+
+                                const alreadyWatched = watchedEpisodes.some(we => we.season_number == s && we.episode_number == ep);
+                                const willBeWatched = !alreadyWatched;
+
+                                if (willBeWatched) {
+                                    titleSpan.classList.add('text-textMuted', 'line-through', 'opacity-70');
+                                    titleSpan.classList.remove('text-textPrimary', 'group-hover:text-loopAmber');
+                                    box.classList.add('bg-loopAmber', 'border-loopAmber', 'text-loopBase', 'shadow-[0_0_8px_rgba(232,168,124,0.4)]');
+                                    box.classList.remove('border-white/20', 'bg-loopSurface');
+                                    icon.classList.remove('opacity-0');
+                                    watchedEpisodes.push({ season_number: s, episode_number: ep });
+                                    updateProgressVisuals(totalCount);
+                                } else {
+                                    titleSpan.classList.remove('text-textMuted', 'line-through', 'opacity-70');
+                                    titleSpan.classList.add('text-textPrimary', 'group-hover:text-loopAmber');
+                                    box.classList.remove('bg-loopAmber', 'border-loopAmber', 'text-loopBase', 'shadow-[0_0_8px_rgba(232,168,124,0.4)]');
+                                    box.classList.add('border-white/20', 'bg-loopSurface');
+                                    icon.classList.add('opacity-0');
+                                    const idx = watchedEpisodes.findIndex(we => we.season_number == s && we.episode_number == ep);
+                                    if (idx > -1) watchedEpisodes.splice(idx, 1);
+                                    updateProgressVisuals(totalCount);
+                                }
+                                if (typeof App !== 'undefined' && App.toggleEpisodeWatched) {
+                                    await App.toggleEpisodeWatched(s, ep, willBeWatched);
+                                }
+                            };
                         });
-                    });
+                    };
+
+                    bindEvents();
+
+                    const select = document.getElementById('epRangeSelect');
+                    if (select) {
+                        select.onchange = () => {
+                            const chunkIdx = parseInt(select.value);
+                            const chunkSize = 50;
+                            const slice = episodes.slice(chunkIdx * chunkSize, (chunkIdx + 1) * chunkSize);
+                            const wrapper = document.getElementById('epItemsWrapper');
+                            if (wrapper) {
+                                wrapper.innerHTML = renderListHtml(slice);
+                                bindEvents();
+                            }
+                        };
+                    }
+
                 } catch (e) {
                     epContainer.innerHTML = '<div class="text-loopError text-xs p-3 text-center">Failed to load episodes.</div>';
                 }
@@ -785,6 +1132,39 @@ const UI = {
             }
         };
         addLine();
+    },
+
+    // ── Phase 3C: More Like This row ─────────────────────────────────────────
+    async _fetchAndRenderSimilar(id, mediaType) {
+        const section = document.getElementById('moreLikeThisSection');
+        const row = document.getElementById('moreLikeThisRow');
+        if (!section || !row) return;
+
+        // Show section with skeleton placeholders
+        section.classList.remove('hidden');
+        row.innerHTML = Array.from({ length: 5 }, () =>
+            `<div class="w-[110px] flex-shrink-0 aspect-[2/3] rounded-lg skeleton"></div>`
+        ).join('');
+
+        try {
+            const similar = await API.fetchSimilar(id, mediaType);
+            if (!similar.length) {
+                section.classList.add('hidden');
+                return;
+            }
+            row.innerHTML = '';
+            similar.forEach(item => {
+                const card = this.posterCardRow(item, (i) => {
+                    if (typeof App !== 'undefined') App.openDrawer(i);
+                });
+                // Compact width for More Like This row
+                card.className = 'flex-shrink-0 cursor-pointer snap-start group relative';
+                card.style.width = '110px';
+                row.appendChild(card);
+            });
+        } catch {
+            section.classList.add('hidden');
+        }
     },
 
 };
