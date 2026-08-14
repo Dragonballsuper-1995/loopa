@@ -218,15 +218,12 @@ const App = {
                 }
 
                 const grid = document.getElementById('searchResults');
-                const state = document.getElementById('searchState');
                 const browseContent = document.getElementById('radar-browse-content');
                 const resultsContainer = document.getElementById('search-results-container');
-                const autoBox = document.getElementById('searchAutocomplete');
                 
                 if (q.length === 0) {
                     if (browseContent) browseContent.classList.remove('hidden');
                     if (resultsContainer) resultsContainer.classList.add('hidden');
-                    if (autoBox) autoBox.classList.add('hidden');
                     this.s.searchResults = [];
                     return;
                 } else {
@@ -236,42 +233,17 @@ const App = {
 
                 if (q.length < 2) {
                     if (grid) grid.innerHTML = '';
-                    if (state) state.classList.remove('hidden');
-                    if (autoBox) autoBox.classList.add('hidden');
                     this.s.searchResults = [];
                     return;
                 }
 
-                if (state) state.classList.add('hidden');
                 if (grid) grid.innerHTML = UI.skeletonGrid(8);
-                
-                // Show instant autocomplete from local indexed media
-                const matches = (typeof LoopaSearchEngine !== 'undefined') ? LoopaSearchEngine.search(q) : [];
-                UI.renderAutocomplete(q, matches);
 
                 this.s.searchDebounce = setTimeout(() => {
                     this._doSearch(q);
                 }, 90);
             });
         }
-
-        // Hide autocomplete on click outside
-        document.addEventListener('click', (e) => {
-            if (!document.getElementById('headerSearchContainer')?.contains(e.target)) {
-                document.getElementById('searchAutocomplete')?.classList.add('hidden');
-            }
-        });
-
-        // Genre tile clicks (Phase 4A)
-        document.querySelectorAll('#genreTiles .genre-tile').forEach(tile => {
-            tile.addEventListener('click', () => {
-                const genre = tile.dataset.genre;
-                if (searchInput) {
-                    searchInput.value = genre;
-                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-            });
-        });
 
         // See All links (Phase 4C + W3 Fix)
         document.querySelectorAll('[data-see-all]').forEach(link => {
@@ -282,11 +254,9 @@ const App = {
 
                 const browseContent = document.getElementById('radar-browse-content');
                 const resultsContainer = document.getElementById('search-results-container');
-                const state = document.getElementById('searchState');
 
                 if (browseContent) browseContent.classList.add('hidden');
                 if (resultsContainer) resultsContainer.classList.remove('hidden');
-                if (state) state.classList.add('hidden');
 
                 const sfType = cat === 'trending' ? 'all' : cat === 'anime' ? 'anime' : cat === 'movies' ? 'movie' : cat === 'tv' ? 'tv' : 'all';
                 this.s.searchFilter = sfType;
@@ -814,12 +784,11 @@ const App = {
                 })();
             }
         } catch (err) {
-            document.getElementById('searchResults').innerHTML = '';
-            const state = document.getElementById('searchState');
-            if (state) {
-                state.classList.remove('hidden');
-                state.innerHTML = `<p class="font-headers text-xl text-red-500">ERROR: ${err.message}</p>`;
-            }
+            document.getElementById('searchResults').innerHTML = `
+                <div class="col-span-full py-16 text-center">
+                    <p class="font-headers text-base text-red-400">ERROR: ${err.message}</p>
+                </div>
+            `;
         }
     },
 
@@ -838,7 +807,7 @@ const App = {
     },
 
     _updateWLUI() {
-        document.getElementById('watchlistCount').textContent = `${this.s.watchlist.length} TARGETS ACQUIRED`;
+        document.getElementById('watchlistCount').textContent = `${this.s.watchlist.length} Titles`;
         const filter = this.s.wlFilter || 'all';
         const list = filter === 'all' 
             ? this.s.watchlist 

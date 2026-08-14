@@ -2,6 +2,7 @@ package com.loopa.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,10 +16,7 @@ import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,10 +31,6 @@ import coil.compose.AsyncImage
 import com.loopa.model.AiRecommendationResult
 import com.loopa.viewmodel.MediaViewModel
 import androidx.compose.animation.core.*
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -47,7 +41,8 @@ import kotlinx.coroutines.delay
 fun AiRecommendationsScreen(viewModel: MediaViewModel) {
     val chatHistory by viewModel.chatHistory.collectAsState()
     val isLoading by viewModel.isLoadingAiRecs.collectAsState()
-    var inputText by remember { androidx.compose.runtime.mutableStateOf("") }
+    var inputText by remember { mutableStateOf("") }
+    var selectedDetailMovie by remember { mutableStateOf<com.loopa.model.TmdbMovie?>(null) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
@@ -60,12 +55,13 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Loopa.Base)
-            .windowInsetsPadding(WindowInsets.statusBars)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Loopa.Base)
+                .windowInsetsPadding(WindowInsets.statusBars)
+        ) {
         Spacer(Modifier.height(16.dp))
 
         // ── Page Header ────────────────────────────────────────────────────
@@ -171,9 +167,24 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
                             contentPadding = PaddingValues(end = 16.dp)
                         ) {
                             items(msg.recommendations) { rec ->
+                                val tmdbMovie = com.loopa.model.TmdbMovie(
+                                    id = rec.title.hashCode(),
+                                    title = rec.title,
+                                    name = rec.title,
+                                    overview = rec.reasoning ?: "",
+                                    posterPath = rec.imageUrl,
+                                    backdropPath = rec.imageUrl,
+                                    voteAverage = null,
+                                    releaseDate = rec.releaseYear,
+                                    firstAirDate = rec.releaseYear,
+                                    mediaType = rec.mediaType.lowercase(),
+                                    popularity = null,
+                                    genreIds = null
+                                )
                                 Box(modifier = Modifier.width(300.dp)) {
                                     RecommendationCard(
                                         rec = rec,
+                                        onClick = { selectedDetailMovie = tmdbMovie },
                                         onAddToList = {
                                             viewModel.addMediaItem(rec.title.hashCode(), rec.title, rec.imageUrl, rec.releaseYear, null, "Watching", rec.mediaType.lowercase())
                                             viewModel.showToast("${rec.title} added to Watching")
@@ -215,7 +226,7 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
                 value = inputText,
                 onValueChange = { inputText = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Ask for recommendations...", color = Loopa.TextSecondary, fontSize = 14.sp) },
+                placeholder = { Text("e.g. 'I want a scary sci-fi movie like Alien'", color = Loopa.TextSecondary, fontSize = 14.sp) },
                 shape = CircleShape,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Loopa.Surface,
@@ -248,17 +259,32 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
             )
         }
     }
+
+    selectedDetailMovie?.let { movie ->
+        MediaDetailSheet(
+            initialMovie = movie,
+            viewModel = viewModel,
+            onDismiss = { selectedDetailMovie = null }
+        )
+    }
+}
 }
 
 @Composable
 fun RecommendationCard(
     rec: AiRecommendationResult,
+    onClick: (() -> Unit)? = null,
     onAddToList: () -> Unit,
     onAlreadyWatched: () -> Unit,
     onDismiss: () -> Unit,
     onLike: () -> Unit
 ) {
-    LoopCard(modifier = Modifier.fillMaxWidth().height(360.dp)) {
+    LoopCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(360.dp)
+            .clickable { onClick?.invoke() }
+    ) {
         Column(modifier = Modifier.padding(16.dp).fillMaxHeight()) {
             // Poster + Info row
             Row(verticalAlignment = Alignment.Top) {

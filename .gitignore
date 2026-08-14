@@ -29,4 +29,8 @@ node_modules/
 build_output.txt
 
 Screenshots/
+screenshots/
+scripts/
+RULES.md
 tester.js
+*.har

@@ -89,7 +89,7 @@ fun HomeScreen(
             // ── 2. Trending Row ────────────────────────────────────────────
             item {
                 LoopSectionHeader(
-                    title = "Trending Today",
+                    title = "Trending",
                     showDivider = false,
                     onSeeAll = { navController.navigate("discover") }
                 )
@@ -122,11 +122,10 @@ fun HomeScreen(
                 Spacer(Modifier.height(28.dp))
             }
 
-            // ── Phase 4B: Top 10 Today Row ─────────────────────────────────
+            // ── Top 10 Today Row ─────────────────────────────────
             item {
                 LoopSectionHeader(
-                    title = "TOP 10 Today",
-                    subtitle = "In your region",
+                    title = "Top 10 Today",
                     showDivider = false,
                     onSeeAll = { navController.navigate("discover") }
                 )
@@ -160,67 +159,13 @@ fun HomeScreen(
                 Spacer(Modifier.height(28.dp))
             }
 
-            // ── 3. Popular Movies Row ──────────────────────────────────────
+            // ── 3. Anime Row (matches Website order) ─────────────────────────
             item {
-                LoopSectionHeader(title = "Popular Movies", showDivider = false)
-                Spacer(Modifier.height(12.dp))
-                if (popularMovies.isEmpty()) {
-                    LoadingRow()
-                } else {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(popularMovies.take(10)) { movie ->
-                            val imageUrl = movie.posterPath?.let {
-                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                            }
-                            HomePosterCard(
-                                title = movie.title ?: "Unknown",
-                                imageUrl = imageUrl,
-                                mediaType = "movie",
-                                onClick = { activeTrackMovie = movie },
-                                onLongPress = { hoverMovie = movie },
-                                onRelease = { hoverMovie = null }
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(28.dp))
-            }
-
-            // ── 4. Popular TV Row ──────────────────────────────────────────
-            item {
-                LoopSectionHeader(title = "Popular TV", showDivider = false)
-                Spacer(Modifier.height(12.dp))
-                if (popularTv.isEmpty()) {
-                    LoadingRow()
-                } else {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(popularTv.take(10)) { tv ->
-                            val imageUrl = tv.posterPath?.let {
-                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                            }
-                            HomePosterCard(
-                                title = tv.name ?: tv.title ?: "Unknown",
-                                imageUrl = imageUrl,
-                                mediaType = "tv",
-                                onClick = { activeTrackMovie = tv },
-                                onLongPress = { hoverMovie = tv },
-                                onRelease = { hoverMovie = null }
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(28.dp))
-            }
-
-            // ── 5. Top Anime Row ───────────────────────────────────────────
-            item {
-                LoopSectionHeader(title = "Top Anime", showDivider = false)
+                LoopSectionHeader(
+                    title = "Anime",
+                    showDivider = false,
+                    onSeeAll = { navController.navigate("discover") }
+                )
                 Spacer(Modifier.height(12.dp))
                 if (topAnime.isEmpty()) {
                     LoadingRow()
@@ -251,6 +196,72 @@ fun HomeScreen(
                                 mediaType = "anime",
                                 onClick = { activeTrackMovie = tmdbEquivalent },
                                 onLongPress = { hoverMovie = tmdbEquivalent },
+                                onRelease = { hoverMovie = null }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(28.dp))
+            }
+
+            // ── 4. Popular Movies Row ──────────────────────────────────────
+            item {
+                LoopSectionHeader(
+                    title = "Popular Movies",
+                    showDivider = false,
+                    onSeeAll = { navController.navigate("discover") }
+                )
+                Spacer(Modifier.height(12.dp))
+                if (popularMovies.isEmpty()) {
+                    LoadingRow()
+                } else {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(popularMovies.take(10)) { movie ->
+                            val imageUrl = movie.posterPath?.let {
+                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
+                            }
+                            HomePosterCard(
+                                title = movie.title ?: "Unknown",
+                                imageUrl = imageUrl,
+                                mediaType = "movie",
+                                onClick = { activeTrackMovie = movie },
+                                onLongPress = { hoverMovie = movie },
+                                onRelease = { hoverMovie = null }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(28.dp))
+            }
+
+            // ── 5. Popular TV Row ──────────────────────────────────────────
+            item {
+                LoopSectionHeader(
+                    title = "Popular TV",
+                    showDivider = false,
+                    onSeeAll = { navController.navigate("discover") }
+                )
+                Spacer(Modifier.height(12.dp))
+                if (popularTv.isEmpty()) {
+                    LoadingRow()
+                } else {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(popularTv.take(10)) { tv ->
+                            val imageUrl = tv.posterPath?.let {
+                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
+                            }
+                            HomePosterCard(
+                                title = tv.name ?: tv.title ?: "Unknown",
+                                imageUrl = imageUrl,
+                                mediaType = "tv",
+                                onClick = { activeTrackMovie = tv },
+                                onLongPress = { hoverMovie = tv },
                                 onRelease = { hoverMovie = null }
                             )
                         }
@@ -423,190 +434,16 @@ fun HomeScreen(
             viewModel.setDetailOpen(activeTrackMovie != null)
         }
 
-        // ── Unified Media Detail & Quick Preview Sheet (A3 & A4 Fixes) ───────
-        val selectedMovie = activeTrackMovie ?: hoverMovie
-        selectedMovie?.let { movie ->
-            val title = movie.title ?: movie.name ?: "Unknown Title"
-            val imageUrl = if (movie.mediaType == "anime") movie.posterPath else {
-                movie.backdropPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it" }
-                    ?: movie.posterPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it" }
-            }
-            val backdropUrl = (movie.backdropPath)?.let {
-                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w780$it"
-            } ?: movie.posterPath?.let {
-                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-            }
-            val date = movie.releaseDate ?: movie.firstAirDate ?: "Unknown Date"
-            val mediaTypeVal = if (movie.mediaType == "anime") "anime" else movie.mediaType ?: "movie"
-            val year = date.take(4)
-
-            LaunchedEffect(movie.id) {
-                viewModel.fetchSimilarItems(movie.id ?: 0, movie.mediaType)
-            }
-
-            val similarItems by viewModel.similarItems.collectAsState()
-
-            @OptIn(ExperimentalMaterial3Api::class)
-            ModalBottomSheet(
-                onDismissRequest = {
+        // ── Unified Media Detail Sheet ──────────────────────────────────────
+        activeTrackMovie?.let { movie ->
+            MediaDetailSheet(
+                initialMovie = movie,
+                viewModel = viewModel,
+                onDismiss = {
                     activeTrackMovie = null
                     hoverMovie = null
-                },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-                containerColor = Loopa.Surface,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                dragHandle = {
-                    Box(
-                        Modifier
-                            .padding(top = 12.dp, bottom = 6.dp)
-                            .width(36.dp)
-                            .height(4.dp)
-                            .clip(Loopa.PillShape)
-                            .background(Loopa.BorderMd)
-                    )
                 }
-            ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 32.dp)
-                ) {
-                    // 1. Backdrop Hero Image
-                    item {
-                        if (backdropUrl != null) {
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(210.dp)
-                            ) {
-                                AsyncImage(
-                                    model = backdropUrl,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                                Box(
-                                    Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.verticalGradient(
-                                                0.30f to Color.Transparent,
-                                                1.00f to Loopa.Surface
-                                            )
-                                        )
-                                )
-                            }
-                        }
-                    }
-
-                    // 2. Title & Metadata
-                    item {
-                        Column(
-                            Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = title,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 24.sp,
-                                color = Loopa.TextPrimary,
-                                lineHeight = 28.sp
-                            )
-
-                            // Metadata tag row: Year · Type · ★ Rating
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                if (year.isNotBlank() && year != "Unkn") {
-                                    Text(year, color = Loopa.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                    Box(Modifier.size(3.dp).clip(CircleShape).background(Loopa.TextMuted))
-                                }
-                                Text(mediaTypeVal.uppercase(), color = Loopa.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                if (movie.voteAverage != null && movie.voteAverage > 0.0) {
-                                    Box(Modifier.size(3.dp).clip(CircleShape).background(Loopa.TextMuted))
-                                    Icon(Icons.Filled.Star, null, tint = Loopa.Amber, modifier = Modifier.size(12.dp))
-                                    Text(String.format("%.1f", movie.voteAverage), color = Loopa.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            // Overview
-                            if (!movie.overview.isNullOrBlank()) {
-                                Text(
-                                    text = movie.overview,
-                                    fontSize = 13.sp,
-                                    color = Loopa.TextSecondary,
-                                    lineHeight = 19.sp,
-                                    maxLines = 4,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-                            }
-
-                            Spacer(Modifier.height(8.dp))
-
-                            // Action buttons
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                LoopButton(
-                                    text = "✓ Watched",
-                                    onClick = {
-                                        viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "Watched", mediaTypeVal)
-                                        activeTrackMovie = null
-                                        hoverMovie = null
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                )
-                                LoopButton(
-                                    text = "+ Watching",
-                                    isSecondary = true,
-                                    onClick = {
-                                        viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "Watching", mediaTypeVal)
-                                        activeTrackMovie = null
-                                        hoverMovie = null
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-
-                    // 3. More Like This Section (A4 Fix)
-                    item {
-                        if (similarItems.isNotEmpty()) {
-                            Column(Modifier.padding(top = 16.dp)) {
-                                Text(
-                                    text = "More Like This",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = Loopa.TextPrimary,
-                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                                )
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 20.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    items(similarItems.take(8)) { simMovie ->
-                                        val simImg = simMovie.posterPath?.let {
-                                            "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                                        }
-                                        HomePosterCard(
-                                            title = simMovie.title ?: simMovie.name ?: "Unknown",
-                                            imageUrl = simImg,
-                                            mediaType = simMovie.mediaType ?: "movie",
-                                            onClick = {
-                                                activeTrackMovie = simMovie
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            )
         }
     }
 }

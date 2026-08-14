@@ -97,8 +97,8 @@ const UI = {
     },
 
     _statusBadgeClass(status) {
-        if (status === 'Watched')  return 'status-badge-watched';
-        return 'status-badge-watching';
+        if (status === 'Watched')  return 'bg-loopSurface/90 border-white/10 text-textSecondary';
+        return 'bg-loopAmberSubtle/90 border-loopAmber/30 text-loopAmber';
     },
 
     // ── Card (Horizontal Row) ─────────────────────────────────────────────────
@@ -106,28 +106,13 @@ const UI = {
         const src  = item.posterUrl || item.image_url || this._fallbackPoster(item.title);
         const type = item.mediaType || item.media_type || '';
 
-        // ── Step 2.4: In-list status badge ────────────────────────────────────
         const wlEntry = (typeof App !== 'undefined' && App.s && App.s.watchlist)
             ? App.s.watchlist.find(w =>
                 w.id === item.id &&
                 w.media_type === (item.mediaType || item.media_type))
             : null;
 
-        let statusBadge = '';
-        if (wlEntry && wlEntry.list_name) {
-            const badgeClass = this._statusBadgeClass(wlEntry.list_name);
-            const icon = wlEntry.list_name === 'Watching' ? 'fa-play' :
-                         wlEntry.list_name === 'Watched'  ? 'fa-check' : 'fa-clock';
-            statusBadge = `
-                <div class="absolute top-2 left-2 z-20 bg-loopBase/90 backdrop-blur-sm px-2 py-0.5
-                            rounded-full border ${badgeClass} flex items-center gap-1
-                            text-[8px] font-semibold tracking-wide">
-                    <i class="fa-solid ${icon}" style="font-size:6px;"></i>
-                    ${this._escapeHTML(wlEntry.list_name)}
-                </div>`;
-        }
-
-        // ── Step 2.5: Episode progress bar ────────────────────────────────────
+        // ── Episode progress bar ────────────────────────────────────
         let progressBar = '';
         if (wlEntry && wlEntry.total_episodes > 0) {
             const current = wlEntry.current_episode || 0;
@@ -203,11 +188,11 @@ const UI = {
         let statusBadge = '';
         if (inList && item.list_name) {
             const badgeClass = this._statusBadgeClass(item.list_name);
-            const icon = item.list_name === 'Watching' ? 'fa-play' :
-                         item.list_name === 'Watched'  ? 'fa-check' : 'fa-clock';
+            const isWatching = item.list_name === 'Watching';
+            const icon = isWatching ? 'fa-play' : 'fa-check';
             statusBadge = `
-                <div class="absolute top-2 right-2 z-10 bg-loopBase/90 backdrop-blur-sm px-2.5 py-1 rounded-full border ${badgeClass} flex items-center gap-1.5 text-[9px] font-semibold tracking-wide">
-                    <i class="fa-solid ${icon}" style="font-size:7px;"></i> ${this._escapeHTML(item.list_name)}
+                <div class="absolute top-2 right-2 z-20 backdrop-blur-sm px-2.5 py-1 rounded-full border ${badgeClass} flex items-center gap-1.5 text-[9px] font-semibold tracking-wide shadow-md">
+                    <i class="fa-solid ${icon}" style="font-size:7px;"></i> ${isWatching ? 'Watching' : 'Watched'}
                 </div>
             `;
         }
@@ -487,88 +472,19 @@ const UI = {
         });
     },
 
-    // Phase 4A: Header Search Autocomplete Dropdown
-    renderAutocomplete(query, matches) {
-        const box = document.getElementById('searchAutocomplete');
-        if (!box) return;
-        if (!query || query.trim().length < 2) {
-            box.classList.add('hidden');
-            return;
-        }
-
-        const q = query.trim();
-        let html = '';
-
-        // Instant Item Matches
-        if (matches && matches.length > 0) {
-            html += `<div class="px-2.5 py-1 text-[10px] font-bold text-textMuted uppercase tracking-wider">Quick Matches</div>`;
-            matches.slice(0, 5).forEach(item => {
-                const img = item.posterUrl || item.backdropUrl || '';
-                const type = (item.mediaType || item.media_type || '').toUpperCase();
-                const year = item.year || '';
-                html += `
-                    <div class="autocomplete-row flex items-center justify-between" data-action="open-item" data-id="${item.id}" data-type="${item.mediaType || item.media_type}">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            ${img ? `<img src="${this._escapeHTML(img)}" class="w-6 h-8 object-cover rounded shadow shrink-0">` : '<div class="w-6 h-8 bg-loopSurface rounded shrink-0"></div>'}
-                            <div class="flex flex-col min-w-0">
-                                <span class="font-semibold text-textPrimary text-xs truncate">${this._escapeHTML(item.title)}</span>
-                                <span class="text-[10px] text-textMuted">${year ? year + ' · ' : ''}${type}</span>
-                            </div>
-                        </div>
-                        <i class="fa-solid fa-chevron-right text-[10px] text-textMuted"></i>
-                    </div>
-                `;
-            });
-        } else {
-            box.classList.add('hidden');
-            return;
-        }
-
-        box.innerHTML = html;
-        box.classList.remove('hidden');
-
-        // Wire events
-        box.querySelectorAll('[data-action="search-query"]').forEach(el => {
-            el.onclick = (e) => {
-                e.stopPropagation();
-                box.classList.add('hidden');
-                const val = el.dataset.val.split(' in ')[0];
-                const input = document.getElementById('searchInput');
-                if (input) {
-                    input.value = val;
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-            };
-        });
-
-        box.querySelectorAll('[data-action="open-item"]').forEach(el => {
-            el.onclick = (e) => {
-                e.stopPropagation();
-                box.classList.add('hidden');
-                const id = el.dataset.id;
-                const type = el.dataset.type;
-                const match = matches.find(m => String(m.id) === String(id) && (m.mediaType || m.media_type) === type);
-                if (match && typeof App !== 'undefined') {
-                    App.openDrawer(match);
-                }
-            };
-        });
-    },
-
     renderSearchGrid(items) {
         const grid = document.getElementById('searchResults');
-        const state = document.getElementById('searchState');
+        if (!grid) return;
 
         if (items.length === 0) {
-            grid.innerHTML = '';
-            state.innerHTML = `
-                <i class="fa-regular fa-face-sad-tear text-4xl text-textMuted mb-3 block"></i>
-                <p class="text-textMuted text-base">No results found</p>
+            grid.innerHTML = `
+                <div class="col-span-full py-16 text-center">
+                    <i class="fa-regular fa-face-sad-tear text-4xl text-textMuted mb-3 block"></i>
+                    <p class="text-textMuted text-base font-medium">No results found</p>
+                </div>
             `;
-            state.classList.remove('hidden');
             return;
         }
-        state.classList.add('hidden');
         grid.innerHTML = '';
         items.forEach(item => grid.appendChild(this.posterCardGrid(item, false, i => App.openDrawer(i))));
     },

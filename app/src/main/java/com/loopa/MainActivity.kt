@@ -630,21 +630,10 @@ fun RecommendationCard(
         LaunchedEffect(showDetails) {
             viewModel.setDetailOpen(true)
         }
-        LoopTrackDialog(
-            title = title,
-            mediaTypeStr = mediaTypeStr,
-            overview = movie.overview,
+        com.loopa.ui.MediaDetailSheet(
+            initialMovie = movie,
+            viewModel = viewModel,
             onDismiss = {
-                showDetails = false
-                viewModel.setDetailOpen(false)
-            },
-            onWatched = {
-                viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "Watched", movie.mediaType ?: "movie")
-                showDetails = false
-                viewModel.setDetailOpen(false)
-            },
-            onToWatch = {
-                viewModel.addMediaItem(movie.id ?: 0, title, imageUrl, date, movie.voteAverage, "Watching", movie.mediaType ?: "movie")
                 showDetails = false
                 viewModel.setDetailOpen(false)
             }
@@ -818,17 +807,7 @@ fun MediaItemCard(item: com.loopa.db.MediaItemEntity, viewModel: MediaViewModel)
     var showDetails by remember { mutableStateOf(false) }
     var showQuickAdd by remember { mutableStateOf(false) }
 
-    // Determine status color based on watch status
-    val statusColor = when (item.listName) {
-        "Watching", "Active" -> Color(0xFF00E5FF)   // Cyan = currently watching
-        "Watched" -> Color(0xFF33CC33)               // Green = watched
-        else -> Color(0xFF00E5FF)                    
-    }
-    val statusLabel = when (item.listName) {
-        "Watching", "Active" -> "WATCHING"
-        "Watched" -> "WATCHED"
-        else -> item.listName.uppercase()
-    }
+    val statusLabel = if (item.listName.equals("Watched", ignoreCase = true)) "Watched" else "Watching"
 
     val progressText = if (item.listName == "Watching" && (item.mediaType == "tv" || item.mediaType == "anime")) {
         "S${item.currentSeason} E${item.currentEpisode}"
@@ -851,17 +830,24 @@ fun MediaItemCard(item: com.loopa.db.MediaItemEntity, viewModel: MediaViewModel)
     )
 
     if (showDetails) {
-        com.loopa.ui.EditMediaDialog(
-            item = item,
-            onDismiss = { showDetails = false },
-            onSave = { updatedItem ->
-                viewModel.updateMediaItem(updatedItem)
-                showDetails = false
-            },
-            onDelete = {
-                viewModel.removeMediaItem(item.id, item.mediaType)
-                showDetails = false
-            }
+        val tmdbMovie = com.loopa.model.TmdbMovie(
+            id = item.id,
+            title = item.title,
+            name = item.title,
+            overview = item.personalNotes ?: "",
+            posterPath = item.imageUrl,
+            backdropPath = item.imageUrl,
+            voteAverage = item.score,
+            releaseDate = item.date,
+            firstAirDate = item.date,
+            mediaType = item.mediaType,
+            popularity = null,
+            genreIds = null
+        )
+        com.loopa.ui.MediaDetailSheet(
+            initialMovie = tmdbMovie,
+            viewModel = viewModel,
+            onDismiss = { showDetails = false }
         )
     }
 
@@ -885,108 +871,13 @@ fun MediaItemCard(item: com.loopa.db.MediaItemEntity, viewModel: MediaViewModel)
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TimelineRangeSlider(
-    valueRange: ClosedFloatingPointRange<Float>,
-    currentRange: ClosedFloatingPointRange<Float>,
-    onValueChange: (ClosedFloatingPointRange<Float>) -> Unit,
-    haptics: androidx.compose.ui.hapticfeedback.HapticFeedback
-) {
-    RangeSlider(
-        value = currentRange,
-        onValueChange = {
-            if (it.start.toInt() != currentRange.start.toInt() || it.endInclusive.toInt() != currentRange.endInclusive.toInt()) {
-                haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-            }
-            onValueChange(it)
-        },
-        valueRange = valueRange,
-        startThumb = {
-            Box(modifier = Modifier.size(16.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-        },
-        endThumb = {
-            Box(modifier = Modifier.size(16.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-        },
-        track = { sliderState ->
-            val fractionStart = (sliderState.activeRangeStart - valueRange.start) / (valueRange.endInclusive - valueRange.start)
-            val fractionEnd = (sliderState.activeRangeEnd - valueRange.start) / (valueRange.endInclusive - valueRange.start)
-            val activeTrackColor = MaterialTheme.colorScheme.primary
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
-            ) {
-                // Draw timeline ticks
-                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    val tickCount = 20
-                    val width = size.width
-                    val height = size.height
-                    
-                    // Draw base line
-                    drawLine(
-                        color = androidx.compose.ui.graphics.Color.Gray.copy(alpha = 0.3f),
-                        start = androidx.compose.ui.geometry.Offset(0f, height / 2),
-                        end = androidx.compose.ui.geometry.Offset(width, height / 2),
-                        strokeWidth = 4.dp.toPx()
-                    )
-                    
-                    // Draw ticks
-                    for (i in 0..tickCount) {
-                        val x = (i.toFloat() / tickCount) * width
-                        val isMajor = i % 5 == 0
-                        val tickHeight = if (isMajor) 16.dp.toPx() else 8.dp.toPx()
-                        drawLine(
-                            color = androidx.compose.ui.graphics.Color.Gray.copy(alpha = 0.5f),
-                            start = androidx.compose.ui.geometry.Offset(x, height / 2 - tickHeight / 2),
-                            end = androidx.compose.ui.geometry.Offset(x, height / 2 + tickHeight / 2),
-                            strokeWidth = 2.dp.toPx()
-                        )
-                    }
-                    
-                    // Draw active track line
-                    drawLine(
-                        color = activeTrackColor,
-                        start = androidx.compose.ui.geometry.Offset(fractionStart * width, height / 2),
-                        end = androidx.compose.ui.geometry.Offset(fractionEnd * width, height / 2),
-                        strokeWidth = 4.dp.toPx()
-                    )
-                }
-            }
-        }
-    )
-}
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: MediaViewModel = viewModel(), hazeState: dev.chrisbanes.haze.HazeState? = null) {
     var query by remember { mutableStateOf("") }
     var hoverMovie by remember { mutableStateOf<TmdbMovie?>(null) }
     val searchState by viewModel.searchState.collectAsState()
-    val searchSuggestions by viewModel.searchSuggestionsState.collectAsState()
-    var isSearchFocused by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
-    
-    var showFilterSheet by remember { mutableStateOf(false) }
     var selectedMediaType by remember { mutableStateOf("All") }
-    var selectedSortBy by remember { mutableStateOf("Relevance") }
-    
-    var releaseYearRange by remember { mutableStateOf(1980f..2026f) }
-    var selectedStudio by remember { mutableStateOf("All") }
-    var selectedGenres by remember { mutableStateOf(setOf<Int>()) }
-    var studioDropdownExpanded by remember { mutableStateOf(false) }
-    
-    val genreMap = remember { mapOf(
-        28 to "Action", 12 to "Adventure", 16 to "Animation", 35 to "Comedy",
-        80 to "Crime", 99 to "Documentary", 18 to "Drama", 10751 to "Family",
-        14 to "Fantasy", 36 to "History", 27 to "Horror", 10402 to "Music",
-        9648 to "Mystery", 10749 to "Romance", 878 to "Sci-Fi",
-        10770 to "TV Movie", 53 to "Thriller", 10752 to "War", 37 to "Western"
-    ) }
-    val studios = listOf("All", "Netflix", "HBO", "Disney+", "Crunchyroll", "Bones", "MAPPA")
-
-    var genresExpanded by remember { mutableStateOf(false) }
-    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     LaunchedEffect(Unit) {
         if (query.isBlank()) {
@@ -1007,7 +898,7 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
                         androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                             columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 16.dp, top = 160.dp, end = 16.dp, bottom = 160.dp),
+                            contentPadding = PaddingValues(start = 16.dp, top = 170.dp, end = 16.dp, bottom = 120.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
@@ -1017,48 +908,51 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
                         }
                     }
                     is MediaUiState.Error -> {
-                        Box(modifier = Modifier.fillMaxSize().padding(top = 160.dp), contentAlignment = Alignment.TopCenter) {
+                        Box(modifier = Modifier.fillMaxSize().padding(top = 180.dp), contentAlignment = Alignment.TopCenter) {
                             Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
                         }
                     }
                     is MediaUiState.InsufficientData -> {}
                     is MediaUiState.Success -> {
                         val filteredList = state.trending.filter { movie ->
-                            val typeMatch = when (selectedMediaType) {
+                            when (selectedMediaType) {
                                 "Movies" -> movie.mediaType == "movie"
                                 "TV Shows" -> movie.mediaType == "tv"
-                                "Anime" -> movie.genreIds?.contains(16) == true
+                                "Anime" -> movie.genreIds?.contains(16) == true || movie.mediaType == "anime"
                                 else -> true
-                            }
-                            val date = movie.releaseDate ?: movie.firstAirDate ?: ""
-                            val year = if (date.length >= 4) date.substring(0, 4).toIntOrNull() ?: 0 else 0
-                            val yearMatch = year == 0 || year in releaseYearRange.start.toInt()..releaseYearRange.endInclusive.toInt()
-                            val studioMatch = if (selectedStudio == "All") true else movie.overview?.contains(selectedStudio, ignoreCase = true) == true
-                            val genreMatch = if (selectedGenres.isEmpty()) true else movie.genreIds?.any { it in selectedGenres } == true
-                            
-                            typeMatch && yearMatch && studioMatch && genreMatch
-                        }.let { list ->
-                            when (selectedSortBy) {
-                                "Rating (High to Low)" -> list.sortedByDescending { it.voteAverage ?: 0.0 }
-                                "Newest First" -> list.sortedByDescending { it.releaseDate ?: it.firstAirDate ?: "" }
-                                else -> list
                             }
                         }
 
-                        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 16.dp, top = 160.dp, end = 16.dp, bottom = 160.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            items(filteredList.size) { index ->
-                                val movie = filteredList[index]
-                                RecommendationCard(
-                                    movie = movie,
-                                    onLongPress = { hoverMovie = it },
-                                    onRelease = { hoverMovie = null }
+                        if (filteredList.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(top = 180.dp),
+                                contentAlignment = Alignment.TopCenter
+                            ) {
+                                Text(
+                                    text = "No results found",
+                                    color = com.loopa.ui.Loopa.TextMuted,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
+                            }
+                        } else {
+                            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(start = 16.dp, top = 170.dp, end = 16.dp, bottom = 120.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(filteredList.size) { index ->
+                                    val movie = filteredList[index]
+                                    RecommendationCard(
+                                        movie = movie,
+                                        onLongPress = { hoverMovie = it },
+                                        onRelease = { hoverMovie = null }
+                                    )
+                                }
                             }
                         }
                     }
@@ -1066,77 +960,24 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
             }
         }
 
-        // Search Overlays (Empty State / Autocomplete)
-        val currentSuggestions = if (query.isBlank()) {
-            emptyList()
-        } else if (searchSuggestions.isNotEmpty()) {
-            searchSuggestions
-        } else {
-            (searchState as? MediaUiState.Success)?.trending?.take(5) ?: emptyList()
-        }
-
-        val showDimmer = isSearchFocused && (query.isBlank() || currentSuggestions.isNotEmpty())
-
-        if (showDimmer) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.6f))
-                .clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null,
-                    onClick = { focusManager.clearFocus() }
-                )
-            )
-        }
-        
-        if (isSearchFocused) {
-            if (query.isBlank()) {
-                SearchEmptyState(
-                    onGenreClick = { genre ->
-                        query = genre
-                        viewModel.search(genre)
-                        focusManager.clearFocus()
-                    }
-                )
-            } else if (currentSuggestions.isNotEmpty()) {
-                AutocompleteOverlay(
-                    query = query,
-                    suggestions = currentSuggestions,
-                    onSuggestionClick = { movie ->
-                        val title = movie.title ?: movie.name ?: ""
-                        query = title
-                        viewModel.search(title)
-                        focusManager.clearFocus()
-                    },
-                    onDismiss = { focusManager.clearFocus() }
-                )
-            }
-        }
-
         // 2. Search bar with progressive blur overlaid on top
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 180.dp)
                 .align(Alignment.TopCenter)
-                .then(
-                    if (true) {
-                        Modifier.hazeEffect(state = localHazeState) {
-                            blurRadius = 24.dp
-                            progressive = dev.chrisbanes.haze.HazeProgressive.verticalGradient(
-                                startIntensity = 1f,
-                                endIntensity = 0f
-                            )
-                        }
-                    } else Modifier
-                )
+                .hazeEffect(state = localHazeState) {
+                    blurRadius = 24.dp
+                    progressive = dev.chrisbanes.haze.HazeProgressive.verticalGradient(
+                        startIntensity = 1f,
+                        endIntensity = 0f
+                    )
+                }
                 .background(
                     brush = Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.0f to Color(0xF50F0E0C),
-                            0.38f to Color(0xCC0F0E0C),
-                            0.55f to Color(0x730F0E0C),
-                            0.75f to Color(0x0D0F0E0C),
+                            0.45f to Color(0xCC0F0E0C),
+                            0.75f to Color(0x660F0E0C),
                             1.0f to Color.Transparent
                         )
                     )
@@ -1145,7 +986,7 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
         ) {
             Spacer(modifier = Modifier.height(10.dp))
             
-            // Custom premium search bar (static, pinned at top on a dark background)
+            // Custom search bar (pinned at top)
             RadarSearchBar(
                 query = query,
                 onQueryChange = {
@@ -1153,109 +994,48 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
                     viewModel.search(it)
                 },
                 placeholder = "Search targets...",
-                onFilterClick = { showFilterSheet = !showFilterSheet },
-                isFilterActive = showFilterSheet,
-                onFocusChange = { isSearchFocused = it },
                 modifier = Modifier
-                    .padding(horizontal = 24.dp)
+                    .padding(horizontal = 20.dp)
                     .fillMaxWidth()
             )
 
-            AnimatedVisibility(visible = showFilterSheet) {
-                Column(
+            if (query.isNotBlank()) {
+                // Quick filter pills matching Website
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clip(com.loopa.ui.Loopa.CardShape)
-                        .background(com.loopa.ui.Loopa.Surface)
-                        .padding(16.dp)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Media Type", fontWeight = FontWeight.SemiBold, color = com.loopa.ui.Loopa.TextPrimary)
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("All", "Movies", "TV Shows", "Anime").forEach { type ->
-                            val isSelected = selectedMediaType == type
-                            Box(
-                                modifier = Modifier
-                                    .clip(com.loopa.ui.Loopa.PillShape)
-                                    .clickable { selectedMediaType = type }
-                                    .background(if (isSelected) com.loopa.ui.Loopa.Amber else com.loopa.ui.Loopa.Base)
-                                    .border(1.dp, if (isSelected) Color.Transparent else com.loopa.ui.Loopa.Border, com.loopa.ui.Loopa.PillShape)
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = type,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                    color = if (isSelected) com.loopa.ui.Loopa.Base else com.loopa.ui.Loopa.TextSecondary,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Release Year: ${releaseYearRange.start.toInt()} - ${if (releaseYearRange.endInclusive >= 2026f) "Present" else releaseYearRange.endInclusive.toInt()}", fontWeight = FontWeight.SemiBold, color = com.loopa.ui.Loopa.TextPrimary)
-                    TimelineRangeSlider(
-                        valueRange = 1980f..2026f,
-                        currentRange = releaseYearRange,
-                        onValueChange = { releaseYearRange = it },
-                        haptics = haptics
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Genres", fontWeight = FontWeight.SemiBold, color = com.loopa.ui.Loopa.TextPrimary)
-                        Text(if (selectedGenres.isEmpty()) "Any" else "${selectedGenres.size} selected", style = MaterialTheme.typography.labelMedium, color = com.loopa.ui.Loopa.Amber)
-                    }
-                    
-                    ResponsiveGrid(
-                        items = genreMap.toList(),
-                        modifier = Modifier.heightIn(max = 120.dp).padding(vertical = 8.dp),
-                        contentPadding = PaddingValues(0.dp)
-                    ) { (id, name) ->
-                        val isSelected = selectedGenres.contains(id)
+                    listOf("All", "Movies", "TV Shows", "Anime").forEach { type ->
+                        val isSelected = selectedMediaType == type
                         Box(
                             modifier = Modifier
                                 .clip(com.loopa.ui.Loopa.PillShape)
-                                .clickable {
-                                    selectedGenres = if (isSelected) selectedGenres - id else selectedGenres + id
-                                }
-                                .background(if (isSelected) com.loopa.ui.Loopa.Amber else com.loopa.ui.Loopa.Base)
-                                .border(1.dp, if (isSelected) Color.Transparent else com.loopa.ui.Loopa.Border, com.loopa.ui.Loopa.PillShape)
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .background(if (isSelected) com.loopa.ui.Loopa.Amber else com.loopa.ui.Loopa.Surface)
+                                .border(
+                                    1.dp,
+                                    if (isSelected) Color.Transparent else com.loopa.ui.Loopa.Border,
+                                    com.loopa.ui.Loopa.PillShape
+                                )
+                                .clickable { selectedMediaType = type }
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = name,
+                                text = type,
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                                 color = if (isSelected) com.loopa.ui.Loopa.Base else com.loopa.ui.Loopa.TextSecondary,
-                                fontSize = 13.sp
+                                fontSize = 12.sp
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    com.loopa.ui.LoopButton(
-                        text = "Apply Filters",
-                        onClick = { showFilterSheet = false },
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
 
-            if (query.isNotBlank()) {
-                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Sort:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    listOf("Relevance", "Rating (High to Low)", "Newest First").forEach { sort ->
-                        FilterChip(
-                            selected = selectedSortBy == sort,
-                            onClick = { selectedSortBy = sort },
-                            label = { Text(sort) },
-                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
     // ── Hover Preview Overlay ──
@@ -1374,8 +1154,6 @@ fun RadarSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     placeholder: String,
-    onFilterClick: () -> Unit,
-    isFilterActive: Boolean,
     onFocusChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -1451,19 +1229,6 @@ fun RadarSearchBar(
                         modifier = Modifier.size(16.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
-            }
-            
-            IconButton(
-                onClick = onFilterClick,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "Filter",
-                    tint = if (isFilterActive) com.loopa.ui.Loopa.Amber else com.loopa.ui.Loopa.TextSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
             }
         }
     }
@@ -1679,129 +1444,3 @@ fun <T> ResponsiveGrid(
     }
 }
 
-@Composable
-fun SearchEmptyState(onGenreClick: (String) -> Unit) {
-    val genres = listOf(
-        "Action" to com.loopa.ui.Loopa.Amber,
-        "Comedy" to Color(0xFF4ADE80),
-        "Drama" to Color(0xFF60A5FA),
-        "Horror" to Color(0xFFF87171),
-        "Sci-Fi" to Color(0xFFA78BFA),
-        "Anime" to Color(0xFFF472B6)
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 150.dp) // Below search bar
-            .padding(horizontal = 16.dp)
-    ) {
-        Text(
-            "Explore Genres",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = com.loopa.ui.Loopa.TextPrimary,
-            modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
-        )
-        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(genres.size) { index ->
-                val (name, color) = genres[index]
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp)
-                        .clip(com.loopa.ui.Loopa.CardShape)
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(color.copy(alpha = 0.2f), Color(0x00000000))
-                            )
-                        )
-                        .border(1.dp, color.copy(alpha = 0.3f), com.loopa.ui.Loopa.CardShape)
-                        .clickable { onGenreClick(name) }
-                        .padding(16.dp),
-                    contentAlignment = Alignment.BottomStart
-                ) {
-                    Text(
-                        text = name,
-                        color = com.loopa.ui.Loopa.TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AutocompleteOverlay(
-    query: String,
-    suggestions: List<com.loopa.model.TmdbMovie>,
-    onSuggestionClick: (com.loopa.model.TmdbMovie) -> Unit,
-    onDismiss: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = null,
-                onClick = onDismiss
-            ) // dismiss on background tap
-    ) {
-        if (suggestions.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .padding(top = 110.dp) // Just below search bar
-                    .padding(horizontal = 24.dp)
-                    .fillMaxWidth()
-                    .clip(com.loopa.ui.Loopa.CardShape)
-                    .background(com.loopa.ui.Loopa.Surface.copy(alpha = 0.95f))
-                    .border(1.dp, com.loopa.ui.Loopa.Border, com.loopa.ui.Loopa.CardShape)
-                    .clickable(
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                        indication = null,
-                        enabled = false
-                    ) {} // block clicks from dismissing
-            ) {
-                suggestions.take(5).forEach { movie ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSuggestionClick(movie) }
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.Search,
-                            contentDescription = null,
-                            tint = com.loopa.ui.Loopa.TextMuted,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = movie.title ?: movie.name ?: "",
-                            color = com.loopa.ui.Loopa.TextPrimary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = movie.mediaType?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() } ?: "Movie",
-                            color = com.loopa.ui.Loopa.TextMuted,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                    if (movie != suggestions.take(5).last()) {
-                        androidx.compose.material3.HorizontalDivider(color = com.loopa.ui.Loopa.Border, thickness = 1.dp)
-                    }
-                }
-            }
-        }
-    }
-}

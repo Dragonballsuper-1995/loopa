@@ -363,18 +363,24 @@ fun LoopPosterCard(
             }
 
             if (!statusLabel.isNullOrBlank()) {
+                val isWatching = statusLabel.contains("Watching", ignoreCase = true)
+                val bg = if (isWatching) Loopa.AmberSubtle.copy(alpha = 0.9f) else Loopa.Surface.copy(alpha = 0.9f)
+                val border = if (isWatching) Loopa.Amber.copy(alpha = 0.35f) else Loopa.BorderMd
+                val textColor = if (isWatching) Loopa.Amber else Loopa.TextSecondary
+                val icon = if (isWatching) "● " else "✓ "
+
                 Box(
                     modifier = Modifier
-                        .clip(Loopa.BadgeShape)
-                        .background(Color.Black.copy(alpha = 0.75f))
-                        .border(1.dp, Loopa.Amber.copy(alpha = 0.5f), Loopa.BadgeShape)
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                        .clip(Loopa.PillShape)
+                        .background(bg)
+                        .border(1.dp, border, Loopa.PillShape)
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = statusLabel,
-                        fontSize = 8.sp,
+                        text = "$icon${if (isWatching) "Watching" else "Watched"}",
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Loopa.Amber
+                        color = textColor
                     )
                 }
             }
