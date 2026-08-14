@@ -1,4 +1,4 @@
-const CACHE_NAME = 'loopa-cache-v6';
+const CACHE_NAME = 'loopa-cache-v7';
 
 // Static assets to cache immediately on install
 const PRECACHE_URLS = [
@@ -40,11 +40,24 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // Skip cross-origin requests, except for fonts or TMDB if we want to cache them
-    // For now, we use Network-First for API calls and Stale-While-Revalidate for static assets.
-    
+    // 1. NEVER intercept dynamic backend API requests, AI recommendations, or realtime DB calls.
+    // Allow the browser to execute them natively with direct HTTP/2 socket streaming & abort handling.
+    if (
+        event.request.method !== 'GET' ||
+        url.pathname.startsWith('/api/') ||
+        url.hostname.includes('workers.dev') ||
+        url.hostname.includes('supabase.co') ||
+        url.hostname.includes('themoviedb.org') ||
+        url.hostname.includes('anilist.co') ||
+        url.hostname.includes('kitsu.io') ||
+        url.hostname.includes('jikan.moe') ||
+        url.protocol === 'chrome-extension:'
+    ) {
+        return;
+    }
+
+    // 2. Local Static Asset Caching (Stale-While-Revalidate)
     if (url.origin === location.origin) {
-        // Stale-While-Revalidate for local assets
         event.respondWith(
             caches.match(event.request).then(cachedResponse => {
                 const fetchPromise = fetch(event.request).then(networkResponse => {
@@ -60,25 +73,6 @@ self.addEventListener('fetch', event => {
                 });
                 return cachedResponse || fetchPromise;
             })
-        );
-    } else {
-        // Network-First for API and external resources
-        event.respondWith(
-            fetch(event.request)
-                .then(response => {
-                    // Only cache successful GET requests over HTTP/HTTPS (ignore chrome-extension://)
-                    if (event.request.method === 'GET' && response.ok && url.protocol.startsWith('http')) {
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => {
-                            cache.put(event.request, responseClone);
-                        });
-                    }
-                    return response;
-                })
-                .catch(() => {
-                    // If offline, try to return cached response
-                    return caches.match(event.request);
-                })
         );
     }
 });

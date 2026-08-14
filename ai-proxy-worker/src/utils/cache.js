@@ -17,7 +17,7 @@ export async function getCachedResponse(request) {
   try {
     if (typeof caches !== 'undefined' && caches.default) {
       const cache = caches.default;
-      const cached = await cache.match(request);
+      const cached = await cache.match(new Request(cacheKey, { method: 'GET' }));
       if (cached) {
         return cached;
       }
@@ -50,7 +50,6 @@ export async function setCachedResponse(request, response, ctx, ttlSeconds = 864
   try {
     if (typeof caches !== 'undefined' && caches.default) {
       const cache = caches.default;
-      // Set Cache-Control headers for Cloudflare Cache API
       const headers = new Headers(clonedForCfCache.headers);
       headers.set('Cache-Control', `public, max-age=${ttlSeconds}, s-maxage=${ttlSeconds}`);
       
@@ -60,10 +59,15 @@ export async function setCachedResponse(request, response, ctx, ttlSeconds = 864
         headers
       });
 
+      const cacheReq = new Request(cacheKey, { method: 'GET' });
+      const putPromise = cache.put(cacheReq, responseToCache).catch(err => {
+        console.warn('[Cache] Background cache.put non-fatal error:', err.message);
+      });
+
       if (ctx && typeof ctx.waitUntil === 'function') {
-        ctx.waitUntil(cache.put(request, responseToCache));
+        ctx.waitUntil(putPromise);
       } else {
-        await cache.put(request, responseToCache);
+        await putPromise;
       }
     }
   } catch (err) {
