@@ -67,7 +67,7 @@ Provide exactly 4 recommendations. Respond STRICTLY with a valid JSON array of o
       }
     }
 
-    // ── Attempt 2: Groq ──────────────────────────────────────────────────────
+    // ── Attempt 2: Groq (GPT OSS 120B) ───────────────────────────────────────
     if (env.GROQ_API_KEY) {
       try {
         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -77,9 +77,9 @@ Provide exactly 4 recommendations. Respond STRICTLY with a valid JSON array of o
             'Authorization': `Bearer ${env.GROQ_API_KEY}`
           },
           body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
+            model: 'openai/gpt-oss-120b',
             messages: [{ role: 'user', content: prompt }],
-            response_format: { type: 'json_object' }
+            temperature: 0.7
           })
         });
 

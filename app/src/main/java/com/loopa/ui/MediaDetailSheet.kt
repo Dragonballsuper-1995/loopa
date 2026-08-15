@@ -37,6 +37,7 @@ import coil.compose.AsyncImage
 import com.loopa.db.MediaItemEntity
 import com.loopa.model.TmdbMovie
 import com.loopa.ui.components.EpisodeProgressSection
+import com.loopa.util.TmdbUrlHelper
 import com.loopa.viewmodel.MediaViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,12 +106,10 @@ fun MediaDetailSheet(
             val date = movie.releaseDate ?: movie.firstAirDate ?: ""
             val year = date.take(4)
             val backdropUrl = (movie.backdropPath ?: movie.posterPath)?.let {
-                if (it.startsWith("http")) it
-                else "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w1280$it"
+                TmdbUrlHelper.backdropUrl(it, "w1280")
             }
             val posterUrl = movie.posterPath?.let {
-                if (it.startsWith("http")) it
-                else "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it"
+                TmdbUrlHelper.posterUrl(it, "w500")
             }
 
             LazyColumn(
@@ -707,8 +706,7 @@ fun MediaDetailSheet(
                             ) {
                                 items(similarItems.take(8)) { simMovie ->
                                     val simImg = simMovie.posterPath?.let {
-                                        if (it.startsWith("http")) it
-                                        else "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
+                                        TmdbUrlHelper.posterUrl(it, "w342")
                                     }
                                     HomePosterCard(
                                         title = simMovie.title ?: simMovie.name ?: "Unknown",

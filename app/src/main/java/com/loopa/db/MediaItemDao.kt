@@ -17,6 +17,9 @@ interface MediaItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMediaItem(item: MediaItemEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMediaItems(items: List<MediaItemEntity>)
+
     @Query("DELETE FROM media_items WHERE id = :id AND mediaType = :mediaType")
     suspend fun deleteMediaItem(id: Int, mediaType: String)
 }

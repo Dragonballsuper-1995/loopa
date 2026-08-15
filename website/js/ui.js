@@ -125,6 +125,18 @@ const UI = {
                 </div>`;
         }
 
+        let statusBadge = '';
+        if (wlEntry && wlEntry.list_name) {
+            const badgeClass = this._statusBadgeClass(wlEntry.list_name);
+            const isWatching = wlEntry.list_name === 'Watching';
+            const icon = isWatching ? 'fa-play' : 'fa-check';
+            statusBadge = `
+                <div class="absolute top-2 right-2 z-20 backdrop-blur-sm px-2 py-0.5 rounded-full border ${badgeClass} flex items-center gap-1 text-[9px] font-semibold tracking-wide shadow-md">
+                    <i class="fa-solid ${icon}" style="font-size:7px;"></i> ${isWatching ? 'Watching' : 'Watched'}
+                </div>
+            `;
+        }
+
         const year = (item.releaseDate || item.firstAirDate || item.year || '').toString().slice(0, 4);
         const rating = item.score || item.voteAverage;
         const ratingHtml = rating && Number(rating) > 0
@@ -195,9 +207,15 @@ const UI = {
                     <i class="fa-solid ${icon}" style="font-size:7px;"></i> ${isWatching ? 'Watching' : 'Watched'}
                 </div>
             `;
+        } else if (item.isAiMatch) {
+            statusBadge = `
+                <div class="absolute top-2 left-2 z-20 bg-loopAmber text-loopBase px-2 py-0.5 rounded-full font-bold text-[8px] tracking-wider uppercase flex items-center gap-1 shadow-md">
+                    <i class="fa-solid fa-sparkles text-[7px]"></i> AI Match
+                </div>
+            `;
         }
 
-        const overlayActionIcon = isAI ? 'fa-solid fa-sparkles' :
+        const overlayActionIcon = (isAI || item.isAiMatch) ? 'fa-solid fa-sparkles' :
                                   inList ? 'fa-solid fa-pen-to-square' :
                                   'fa-solid fa-plus';
 

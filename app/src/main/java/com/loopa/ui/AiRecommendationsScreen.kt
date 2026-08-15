@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -215,11 +216,51 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
             }
         }
 
+        // ── Vibe & Mood Starter Chips ──────────────────────────────────────
+        val moodChips = remember {
+            listOf(
+                "🎲 Surprise Me" to "Give me an exciting, unexpected movie or anime recommendation to surprise me tonight",
+                "🍿 Weekend Movie Night" to "Suggest top-rated, crowd-pleasing blockbuster movies for a weekend movie night",
+                "🌌 Mind-Bending Sci-Fi" to "Recommend mind-bending sci-fi movies or shows with high concepts and plot twists",
+                "⚔️ Top Shonen Anime" to "Suggest thrilling, acclaimed action/shonen anime series with great animation",
+                "🔍 Gripping Whodunit" to "Recommend clever murder mystery or psychological detective thrillers",
+                "🌿 Feel-Good Comfort" to "Recommend cozy, feel-good comfort movies or slice-of-life anime"
+            )
+        }
+
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(moodChips) { (label, prompt) ->
+                Box(
+                    modifier = Modifier
+                        .clip(Loopa.PillShape)
+                        .background(Loopa.Surface)
+                        .border(1.dp, Loopa.Border, Loopa.PillShape)
+                        .clickable(enabled = !isLoading) {
+                            viewModel.sendAiChatMessage(prompt)
+                        }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = Loopa.TextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
         // ── Chat Input ─────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 140.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 90.dp)
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
             OutlinedTextField(

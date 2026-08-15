@@ -26,6 +26,9 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import retrofit2.HttpException
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import com.loopa.util.TmdbUrlHelper
+import java.util.Locale
 
 object ApiCache {
     private val cache = mutableMapOf<String, CacheEntry>()
@@ -76,7 +79,7 @@ class MediaRepository(
         while (currentAttempt < times) {
             try {
                 val result = block()
-                if (currentAttempt > 0) _isRateLimited.value = false
+                _isRateLimited.value = false
                 return result
             } catch (e: HttpException) {
                 if (e.code() == 429) {
@@ -89,12 +92,15 @@ class MediaRepository(
                     kotlinx.coroutines.delay(currentDelay)
                     currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)
                 } else {
+                    _isRateLimited.value = false
                     throw e
                 }
             } catch (e: Exception) {
+                _isRateLimited.value = false
                 throw e
             }
         }
+        _isRateLimited.value = false
         throw Exception("Max retries reached")
     }
 
@@ -103,7 +109,7 @@ class MediaRepository(
         val jsonBody = org.json.JSONObject().apply {
             put("prompt", prompt)
         }
-        val reqBody = okhttp3.RequestBody.create("application/json".toMediaType(), jsonBody.toString())
+        val reqBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
         val req = okhttp3.Request.Builder()
             .url(proxyUrl)
             .post(reqBody)
@@ -166,6 +172,26 @@ class MediaRepository(
             pendingOpDao.enqueue(
                 PendingOpEntity(opType = "UPSERT_MEDIA", payload = lenientJson.encodeToString(remote))
             )
+        }
+    }
+
+    suspend fun insertMediaItems(items: List<MediaItemEntity>) {
+        if (items.isEmpty()) return
+        // 1. Batch insert into Room immediately
+        mediaItemDao.insertMediaItems(items)
+
+        // 2. Batch upsert to Supabase
+        val user = NetworkModule.supabase.auth.currentUserOrNull() ?: return
+        val remotes = items.map { it.toRemote(user.id) }
+        try {
+            NetworkModule.supabase.postgrest["media_items"].upsert(remotes)
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "insertMediaItems offline — queuing batch: ${e.message}")
+            remotes.forEach { remote ->
+                pendingOpDao.enqueue(
+                    PendingOpEntity(opType = "UPSERT_MEDIA", payload = lenientJson.encodeToString(remote))
+                )
+            }
         }
     }
 
@@ -640,35 +666,79 @@ class MediaRepository(
      * Parallel unified search via Cloudflare Edge API with direct client fallback.
      */
     fun searchAllMedia(apiKey: String, query: String): Flow<List<TmdbMovie>> = flow {
-        val cacheKey = "search_fast_$query"
+        val cleanQuery = query.trim()
+        val cacheKey = "search_fast_$cleanQuery"
         val cached = ApiCache.get<List<TmdbMovie>>(cacheKey)
         if (cached != null) {
             emit(cached)
             return@flow
         }
 
-        // 1. Try instant fast micro-search via Edge API (< 100ms)
-        try {
-            val fastResults = NetworkModule.loopaApi.searchFast(query)
-            if (fastResults.isNotEmpty()) {
-                val tmdbList = fastResults.map { it.toTmdbMovie() }
-                ApiCache.put(cacheKey, tmdbList)
-                emit(tmdbList)
-                return@flow
+        val isNaturalLanguage = cleanQuery.split(Regex("\\s+")).size >= 3 ||
+            Regex("(?i)(like|about|vibe|dystopian|cyberpunk|anime|movie|show|recommend|similar|dark|funny|cooking|robot|sports)").containsMatchIn(cleanQuery)
+
+        // 1. If query is natural language or descriptive, fetch AI Semantic matches
+        var semanticMovies = emptyList<TmdbMovie>()
+        if (isNaturalLanguage || cleanQuery.length >= 4) {
+            try {
+                val semanticResults = NetworkModule.loopaApi.searchSemantic(cleanQuery)
+                if (semanticResults.isNotEmpty()) {
+                    semanticMovies = semanticResults.map { it.toTmdbMovie() }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("MediaRepository", "Edge searchSemantic endpoint unavailable, using AI proxy fallback: ${e.message}")
             }
-        } catch (e: Exception) {
-            android.util.Log.w("MediaRepository", "Loopa searchFast failed, falling back to direct provider: ${e.message}")
+
+            // If edge semantic route is not yet deployed, fallback directly to the live AI proxy
+            if (semanticMovies.isEmpty()) {
+                try {
+                    semanticMovies = fetchSemanticAiFallback(apiKey, cleanQuery)
+                } catch (e: Exception) {
+                    android.util.Log.e("MediaRepository", "fetchSemanticAiFallback failed: ${e.message}")
+                }
+            }
         }
 
-        // 2. Direct client fallback if Edge API is unavailable
+        // 2. Extract core keywords for fallback provider search (e.g. "anime about sports" -> "sports")
+        val cleanKeyword = cleanQuery
+            .replace(Regex("(?i)^(anime|movies?|shows?|series|films?)\\s+(about|with|like|similar\\s+to)\\s+"), "")
+            .replace(Regex("(?i)\\s+(anime|movies?|shows?|series|films?)$"), "")
+            .trim()
+            .ifEmpty { cleanQuery }
+
+        // 3. Fast keyword search via Edge API
+        var fastMovies = emptyList<TmdbMovie>()
+        try {
+            val fastResults = NetworkModule.loopaApi.searchFast(cleanKeyword)
+            if (fastResults.isNotEmpty()) {
+                fastMovies = fastResults.map { it.toTmdbMovie() }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "Loopa searchFast failed: ${e.message}")
+        }
+
+        // 4. Merge semantic matches (at top) with fast matches
+        if (semanticMovies.isNotEmpty() || fastMovies.isNotEmpty()) {
+            val seen = mutableSetOf<String>()
+            val merged = mutableListOf<TmdbMovie>()
+            (semanticMovies + fastMovies).forEach { item ->
+                val key = "${item.id}_${item.mediaType ?: "movie"}"
+                if (seen.add(key)) merged.add(item)
+            }
+            ApiCache.put(cacheKey, merged)
+            emit(merged)
+            return@flow
+        }
+
+        // 5. Direct client fallback if Edge API is unavailable
         kotlinx.coroutines.coroutineScope {
             val tmdbDeferred = async {
                 runCatching {
-                    retryWithBackoff { tmdbApi.searchMulti(apiKey, query) }.results
+                    retryWithBackoff { tmdbApi.searchMulti(apiKey, cleanKeyword) }.results
                 }.getOrDefault(emptyList())
             }
             val kitsuDeferred = async {
-                runCatching { kitsuApi.searchAnime(query) }.getOrNull()
+                runCatching { kitsuApi.searchAnime(cleanKeyword) }.getOrNull()
                     ?.data?.map { anime ->
                         TmdbMovie(
                             id           = anime.id.toIntOrNull() ?: 0,
@@ -690,15 +760,137 @@ class MediaRepository(
             val tmdbResults  = tmdbDeferred.await()
             val kitsuResults = kitsuDeferred.await()
 
-            // Merge: TMDB first, then Kitsu; deduplicate by id+mediaType
             val seen   = mutableSetOf<String>()
             val merged = mutableListOf<TmdbMovie>()
-            (tmdbResults + kitsuResults).forEach { item ->
+            (semanticMovies + tmdbResults + kitsuResults).forEach { item ->
                 val key = "${item.id}_${item.mediaType ?: "movie"}"
                 if (seen.add(key)) merged.add(item)
             }
             ApiCache.put(cacheKey, merged)
             emit(merged)
+        }
+    }
+
+    private suspend fun fetchSemanticAiFallback(apiKey: String, query: String): List<TmdbMovie> {
+        val prompt = """
+            You are Loopa's AI Semantic Search Engine — an expert film, television, and anime curator with comprehensive encyclopedic knowledge.
+            The user is searching for media using a natural language query, theme, or concept:
+            Query: "${query}"
+
+            CRITICAL CURATION GUIDELINES:
+            1. Multi-facet Synthesis: If the query specifies multiple concepts (e.g. "robots and cars", "time travel romance", "space western"), prioritize acclaimed titles that embody BOTH/ALL concepts simultaneously (e.g. "Transformers", "Bumblebee", "Real Steel", "Knight Rider", "Speed Racer", "Megas XLR", "Redline") rather than splitting results across single keywords in isolation.
+            2. Acclaim & Popularity: Prioritize universally recognized, highly rated, culturally significant movies/shows/anime over obscure niche titles.
+            3. Media Type Alignment: If the user explicitly asks for "movies", "anime", or "tv shows", strictly provide that specific medium.
+            4. Exact Official Titles: Use the exact canonical English release title as indexed on TMDB/MyAnimeList.
+
+            Return 6 specific, top-tier recommendations.
+            Respond STRICTLY with a valid JSON array of objects:
+            [
+              {"title": "Exact Title", "mediaType": "movie/tv/anime", "genre": "Genre", "releaseYear": "YYYY", "imageUrl": "", "reason": "1 concise sentence explaining exactly how it satisfies the user's query"}
+            ]
+        """.trimIndent()
+
+        var jsonText = "[]"
+        try {
+            val proxyUrl = com.loopa.app.BuildConfig.AI_PROXY_URL
+            val jsonBody = org.json.JSONObject().apply {
+                put("prompt", prompt)
+            }
+            val reqBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
+            val req = okhttp3.Request.Builder()
+                .url(proxyUrl)
+                .post(reqBody)
+                .build()
+
+            val response = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                NetworkModule.okHttpClient.newCall(req).execute()
+            }
+            if (response.isSuccessful) {
+                jsonText = response.body?.string() ?: "[]"
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MediaRepository", "Semantic AI fallback error: ${e.message}")
+            return emptyList()
+        }
+
+        jsonText = jsonText.trim()
+        if (jsonText.startsWith("```")) {
+            jsonText = jsonText.substringBeforeLast("```").trim()
+            if (jsonText.startsWith("```json", ignoreCase = true)) {
+                jsonText = jsonText.removePrefix("```json").trim()
+            } else {
+                jsonText = jsonText.removePrefix("```").trim()
+            }
+        }
+        if (jsonText.startsWith("{")) {
+            try {
+                val obj = org.json.JSONObject(jsonText)
+                val keys = obj.keys()
+                if (keys.hasNext()) {
+                    val firstKey = keys.next()
+                    val arr = obj.optJSONArray(firstKey)
+                    if (arr != null) jsonText = arr.toString()
+                }
+            } catch (_: Exception) {}
+        }
+
+        val candidates = mutableListOf<Triple<String, String, String>>()
+        try {
+            val arr = org.json.JSONArray(jsonText)
+            for (i in 0 until arr.length()) {
+                val item = arr.optJSONObject(i) ?: continue
+                val title = item.optString("title").takeIf { it.isNotBlank() } ?: continue
+                val mediaType = item.optString("mediaType", "movie").lowercase(Locale.US)
+                val reason = item.optString("reason").ifEmpty { item.optString("reasoning", "AI Recommended Match") }
+                candidates.add(Triple(title, mediaType, reason))
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MediaRepository", "Failed parsing semantic suggestions: ${e.message}")
+            return emptyList()
+        }
+
+        if (candidates.isEmpty()) return emptyList()
+
+        return kotlinx.coroutines.coroutineScope {
+            val deferreds = candidates.map { (title, type, reason) ->
+                async {
+                    try {
+                        if (type.contains("anime") || query.contains("anime", ignoreCase = true)) {
+                            val kitsu = runCatching { kitsuApi.searchAnime(title) }.getOrNull()?.data?.firstOrNull()
+                            if (kitsu != null) {
+                                val poster = kitsu.attributes?.posterImage?.original ?: kitsu.attributes?.posterImage?.large
+                                return@async TmdbMovie(
+                                    id = kitsu.id.toIntOrNull() ?: (100000 + title.hashCode()),
+                                    title = kitsu.attributes?.canonicalTitle ?: title,
+                                    name = kitsu.attributes?.canonicalTitle ?: title,
+                                    overview = "[AI Match] $reason",
+                                    posterPath = poster,
+                                    backdropPath = null,
+                                    voteAverage = kitsu.attributes?.averageRating?.toDoubleOrNull() ?: 8.0,
+                                    releaseDate = kitsu.attributes?.startDate,
+                                    firstAirDate = kitsu.attributes?.startDate,
+                                    mediaType = "anime",
+                                    popularity = 0.0,
+                                    genreIds = null
+                                )
+                            }
+                        }
+
+                        val tmdbRes = runCatching { tmdbApi.searchMulti(apiKey, title).results }.getOrNull()
+                        val match = tmdbRes?.firstOrNull { it.posterPath != null } ?: tmdbRes?.firstOrNull()
+                        if (match != null) {
+                            return@async match.copy(
+                                overview = "[AI Match] $reason",
+                                mediaType = if (type.contains("anime")) "anime" else (match.mediaType ?: type)
+                            )
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("MediaRepository", "Failed enriching semantic match $title: ${e.message}")
+                    }
+                    null
+                }
+            }
+            deferreds.awaitAll().filterNotNull()
         }
     }
 
@@ -773,7 +965,7 @@ class MediaRepository(
             val jsonBody = org.json.JSONObject().apply {
                 put("prompt", prompt)
             }
-            val reqBody = okhttp3.RequestBody.create("application/json".toMediaType(), jsonBody.toString())
+            val reqBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
             val req = okhttp3.Request.Builder()
                 .url(proxyUrl)
                 .post(reqBody)
@@ -840,7 +1032,7 @@ class MediaRepository(
                             }
 
                             if (posterPath != null && posterPath.isNotEmpty()) {
-                                rec.copy(imageUrl = "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$posterPath")
+                                rec.copy(imageUrl = TmdbUrlHelper.posterUrl(posterPath, "w500") ?: "")
                             } else {
                                 rec
                             }

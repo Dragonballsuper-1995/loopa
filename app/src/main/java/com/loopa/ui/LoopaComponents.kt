@@ -30,7 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -267,7 +267,8 @@ fun LoopPosterCard(
     statusLabel: String? = null,
     progressText: String? = null,
     totalEpisodes: Int = 0,
-    currentEpisode: Int = 0
+    currentEpisode: Int = 0,
+    isAiMatch: Boolean = false
 ) {
     // Phase 1B: type badge is always neutral — amber is reserved for CTAs
     val typeColor = Loopa.TextSecondary
@@ -344,7 +345,21 @@ fun LoopPosterCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            if (score != null && score > 0.0) {
+            if (isAiMatch) {
+                Box(
+                    modifier = Modifier
+                        .clip(Loopa.BadgeShape)
+                        .background(Loopa.Amber)
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "AI Match",
+                        color = Loopa.Base,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else if (score != null && score > 0.0) {
                 Box(
                     modifier = Modifier
                         .clip(Loopa.BadgeShape)
@@ -507,7 +522,7 @@ fun LoopStatsBanner(statsState: com.loopa.viewmodel.StatsState) {
             modifier = Modifier.weight(1f),
             title = "Total Titles",
             value = statsState.totalTitles.toString(),
-            icon = androidx.compose.material.icons.Icons.Default.List
+            icon = androidx.compose.material.icons.Icons.AutoMirrored.Filled.List
         )
         LoopStatsCard(
             modifier = Modifier.weight(1f),

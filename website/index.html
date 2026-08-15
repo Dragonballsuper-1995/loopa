@@ -14,6 +14,12 @@
         content="AI-powered media tracker. Sync across web and Android. Beautiful, fast, and entirely yours.">
 
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0c0b09">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Loopa">
 
     <!-- Fonts -->
     <meta property="og:title" content="loopa — Your Personal Media Universe">
@@ -165,7 +171,25 @@
                                 </div>
                             </div>
 
-                            <!-- Preferences -->
+                            <!-- Data Portability -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-1 h-3.5 bg-loopAmber rounded-full"></div>
+                                    <p class="text-[11px] text-textSecondary font-bold tracking-wider uppercase">Data Portability</p>
+                                </div>
+                                <div class="bg-black/35 rounded-lg p-1.5 space-y-1 border border-white/[0.03]">
+                                    <button id="btnExportJSON" class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
+                                        <i class="fa-solid fa-file-export w-4 text-center text-loopAmber"></i> Export Watchlist (JSON)
+                                    </button>
+                                    <button id="btnExportCSV" class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
+                                        <i class="fa-solid fa-file-csv w-4 text-center text-loopAmber"></i> Export Watchlist (CSV)
+                                    </button>
+                                    <button id="btnImportWatchlist" class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
+                                        <i class="fa-solid fa-file-import w-4 text-center text-loopAmber"></i> Import Watchlist
+                                    </button>
+                                    <input type="file" id="importFileInput" accept=".json,.csv,.xml" class="hidden" />
+                                </div>
+                            </div>
                             <div>
                                 <div class="flex items-center gap-2 mb-3">
                                     <div class="w-1 h-3.5 bg-loopAmber rounded-full"></div>
@@ -495,8 +519,30 @@
                     </div>
                 </div>
 
+                <!-- Mood / Vibe Starter Chips -->
+                <div id="aiMoodChips" class="w-full max-w-4xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar py-2 shrink-0">
+                    <button class="ai-chip px-3.5 py-1.5 rounded-full bg-loopSurface border border-white/10 hover:border-loopAmber/50 hover:bg-loopRaised text-xs font-medium text-textPrimary whitespace-nowrap transition-all flex items-center gap-1.5 shadow-sm" data-prompt="Give me an exciting, unexpected movie or anime recommendation to surprise me tonight">
+                        <span>🎲</span> <span>Surprise Me</span>
+                    </button>
+                    <button class="ai-chip px-3.5 py-1.5 rounded-full bg-loopSurface border border-white/10 hover:border-loopAmber/50 hover:bg-loopRaised text-xs font-medium text-textPrimary whitespace-nowrap transition-all flex items-center gap-1.5 shadow-sm" data-prompt="Suggest top-rated, crowd-pleasing blockbuster movies for a weekend movie night">
+                        <span>🍿</span> <span>Weekend Movie Night</span>
+                    </button>
+                    <button class="ai-chip px-3.5 py-1.5 rounded-full bg-loopSurface border border-white/10 hover:border-loopAmber/50 hover:bg-loopRaised text-xs font-medium text-textPrimary whitespace-nowrap transition-all flex items-center gap-1.5 shadow-sm" data-prompt="Recommend mind-bending sci-fi movies or shows with high concepts and plot twists">
+                        <span>🌌</span> <span>Mind-Bending Sci-Fi</span>
+                    </button>
+                    <button class="ai-chip px-3.5 py-1.5 rounded-full bg-loopSurface border border-white/10 hover:border-loopAmber/50 hover:bg-loopRaised text-xs font-medium text-textPrimary whitespace-nowrap transition-all flex items-center gap-1.5 shadow-sm" data-prompt="Suggest thrilling, acclaimed action/shonen anime series with great animation">
+                        <span>⚔️</span> <span>Top Shonen Anime</span>
+                    </button>
+                    <button class="ai-chip px-3.5 py-1.5 rounded-full bg-loopSurface border border-white/10 hover:border-loopAmber/50 hover:bg-loopRaised text-xs font-medium text-textPrimary whitespace-nowrap transition-all flex items-center gap-1.5 shadow-sm" data-prompt="Recommend clever murder mystery or psychological detective thrillers">
+                        <span>🔍</span> <span>Gripping Whodunit</span>
+                    </button>
+                    <button class="ai-chip px-3.5 py-1.5 rounded-full bg-loopSurface border border-white/10 hover:border-loopAmber/50 hover:bg-loopRaised text-xs font-medium text-textPrimary whitespace-nowrap transition-all flex items-center gap-1.5 shadow-sm" data-prompt="Recommend cozy, feel-good comfort movies or slice-of-life anime">
+                        <span>🌿</span> <span>Feel-Good Comfort</span>
+                    </button>
+                </div>
+
                 <!-- Chat Input Area -->
-                <div class="w-full shrink-0 relative mt-2 mb-10 max-w-4xl mx-auto">
+                <div class="w-full shrink-0 relative mt-1 mb-10 max-w-4xl mx-auto">
                     <input type="text" id="aiChatInput" placeholder="e.g. 'I want a scary sci-fi movie like Alien'"
                         class="loop-input w-full bg-loopSurface border border-white/10 rounded-full text-textPrimary py-4 pl-6 pr-16 text-sm font-medium transition-all placeholder-textMuted focus:border-loopAmber/50 focus:ring-1 focus:ring-loopAmber/50 shadow-lg">
                     <button id="btnAiSend"
@@ -698,17 +744,28 @@
         <span id="toastMsg"></span>
     </div>
 
-    <!-- Custom Context Menu -->
-    <div id="contextMenu" class="hidden fixed z-[9999] bg-loopSurface/95 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl py-1.5 w-48 text-sm opacity-0 transition-opacity duration-200 pointer-events-none text-textPrimary">
-        <!-- Injected by JS -->
+    <!-- ── Import Progress Modal ─────────────────────────────────────────────── -->
+    <div id="importModal" class="fixed inset-0 z-[110] opacity-0 pointer-events-none flex justify-center items-center px-4 bg-loopBase/90 backdrop-blur-md transition-opacity duration-200">
+        <div class="relative w-full max-w-sm frosted-glass rounded-2xl overflow-hidden p-6 border border-white/10 text-center">
+            <h3 class="text-base font-bold text-textPrimary mb-2 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-cloud-arrow-down text-loopAmber"></i> Importing Watchlist
+            </h3>
+            <p id="importStatusText" class="text-xs text-textSecondary mb-4 truncate px-2">Parsing file...</p>
+            <div class="w-full bg-loopRaised rounded-full h-2 mb-3 overflow-hidden">
+                <div id="importProgressBar" class="bg-loopAmber h-full w-0 transition-all duration-150"></div>
+            </div>
+            <p id="importProgressStats" class="text-xs text-textMuted font-mono">0 / 0</p>
+        </div>
     </div>
 
-    <script src="js/config.js?v=19"></script>
-    <script src="js/api.js?v=19"></script>
-    <script src="js/supabase.js?v=19"></script>
-    <script src="js/search-engine.js?v=19"></script>
-    <script src="js/ui.js?v=19"></script>
-    <script src="js/app.js?v=19"></script>
+    <script src="js/config.js?v=20"></script>
+    <script src="js/storage.js?v=20"></script>
+    <script src="js/api.js?v=20"></script>
+    <script src="js/supabase.js?v=20"></script>
+    <script src="js/portability.js?v=20"></script>
+    <script src="js/search-engine.js?v=20"></script>
+    <script src="js/ui.js?v=20"></script>
+    <script src="js/app.js?v=20"></script>
 
 
     <!-- Service Worker Registration -->

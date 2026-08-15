@@ -418,22 +418,130 @@ const API = {
         }
     },
 
-    async searchFast(query) {
+    async searchFast(query, signal = null) {
         try {
             const url = new URL(CONFIG.SEARCH_FAST_URL || `${CONFIG.AI_PROXY_URL}/api/search/fast`);
             url.searchParams.set('q', query);
             if (CONFIG.CLIENT_KEY) {
                 url.searchParams.set('k', CONFIG.CLIENT_KEY);
             }
-            const res = await fetch(url.toString());
+            const res = await fetch(url.toString(), { signal });
             if (res.ok) {
                 const data = await res.json();
                 if (Array.isArray(data)) return data;
             }
         } catch (e) {
+            if (e.name === 'AbortError') throw e;
             console.warn('[searchFast] Edge search failed, falling back to searchAll:', e.message);
         }
         return this.searchAll(query);
+    },
+
+    async searchSemantic(query, signal = null) {
+        if (!query || !query.trim()) return [];
+        const cleanQ = query.trim();
+
+        // 1. Try dedicated /api/search/semantic endpoint with signal
+        try {
+            const url = new URL(`${CONFIG.AI_PROXY_URL || 'https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev'}/api/search/semantic`);
+            url.searchParams.set('q', cleanQ);
+            if (CONFIG.CLIENT_KEY) {
+                url.searchParams.set('k', CONFIG.CLIENT_KEY);
+            }
+            const res = await fetch(url.toString(), { signal });
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) return data;
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') throw e;
+            console.warn('[searchSemantic] Direct semantic endpoint failed:', e.message);
+        }
+
+        // 2. Fallback to /api/recommendations proxy prompt
+        try {
+            const prompt = `You are Loopa's AI Semantic Search Engine — an expert film, television, and anime curator. The user is searching with query: "${cleanQ}". CRITICAL GUIDELINES: (1) If query specifies multiple concepts (e.g. "robots and cars", "space western"), prioritize acclaimed titles embodying BOTH/ALL concepts (e.g. "Transformers", "Bumblebee", "Speed Racer", "Real Steel"). (2) Prioritize acclaimed, famous, highly rated works. (3) Media type alignment (movies/tv/anime). (4) Canonical English release titles. Return 6 specific recommendations. Respond STRICTLY with JSON array: [{"title": "Exact Title", "mediaType": "movie/tv/anime", "genre": "Genre", "releaseYear": "YYYY", "imageUrl": "", "reason": "1 concise sentence explaining match"}]`;
+            const recUrl = CONFIG.RECOMMENDATIONS_URL || `${CONFIG.AI_PROXY_URL}/api/recommendations`;
+            const res = await fetch(recUrl, {
+                method: 'POST',
+                signal,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
+                },
+                body: JSON.stringify({ prompt })
+            });
+            if (res.ok) {
+                let text = await res.text();
+                text = text.replace(/```json?/g, '').replace(/```/g, '').trim();
+                let parsed = [];
+                try {
+                    const obj = JSON.parse(text);
+                    parsed = Array.isArray(obj) ? obj : (obj.recommendations || []);
+                } catch {}
+
+                if (parsed.length > 0) {
+                    const enriched = await Promise.all(
+                        parsed.map(async (item) => {
+                            try {
+                                const title = item.title;
+                                const isAnime = (item.mediaType || '').toLowerCase().includes('anime') || cleanQ.toLowerCase().includes('anime');
+                                if (isAnime) {
+                                    // 1. Check AniList GraphQL
+                                    const animeData = await this._anilist(`
+                                    query ($search: String) {
+                                      Page(page: 1, perPage: 1) {
+                                        media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
+                                          id
+                                          title { romaji english native userPreferred }
+                                          coverImage { extraLarge large medium }
+                                          bannerImage
+                                          format
+                                          episodes
+                                          averageScore
+                                          genres
+                                          seasonYear
+                                          startDate { year }
+                                          description(asHtml: false)
+                                          status
+                                        }
+                                      }
+                                    }`, { search: title }).catch(() => null);
+
+                                    const media = animeData?.Page?.media?.[0];
+                                    if (media) {
+                                        const norm = this._normAniList(media);
+                                        return { ...norm, isAiMatch: true, aiReason: item.reason || `Matches "${cleanQ}"` };
+                                    }
+
+                                    // 2. Check Kitsu
+                                    const kitsuData = await this._kitsu('/anime', { 'filter[text]': title, 'page[limit]': 1 }).catch(() => null);
+                                    if (kitsuData?.data?.[0]) {
+                                        const norm = this._normKitsu(kitsuData.data[0]);
+                                        return { ...norm, isAiMatch: true, aiReason: item.reason || `Matches "${cleanQ}"` };
+                                    }
+                                }
+
+                                // TMDB Multi-search for Movies / TV / General
+                                const tmdbRes = await this._tmdb('/search/multi', { query: title }).catch(() => null);
+                                if (tmdbRes?.results?.[0]) {
+                                    const norm = this._normTMDB(tmdbRes.results[0], tmdbRes.results[0].media_type || 'movie');
+                                    return { ...norm, isAiMatch: true, aiReason: item.reason || `Matches "${cleanQ}"` };
+                                }
+                            } catch {}
+                            return null;
+                        })
+                    );
+                    const valid = enriched.filter(Boolean);
+                    if (valid.length > 0) return valid;
+                }
+            }
+        } catch (err) {
+            if (err.name === 'AbortError') throw err;
+            console.warn('[searchSemantic] AI fallback failed:', err.message);
+        }
+
+        return [];
     },
 
     async searchAll(query) {

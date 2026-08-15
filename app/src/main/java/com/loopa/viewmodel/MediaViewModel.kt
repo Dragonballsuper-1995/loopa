@@ -138,25 +138,61 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     private val _chatHistory = MutableStateFlow<List<com.loopa.model.ChatMessage>>(emptyList())
     val chatHistory: StateFlow<List<com.loopa.model.ChatMessage>> = _chatHistory.asStateFlow()
 
-    fun fetchAiRecommendations() {
-        if (_chatHistory.value.isEmpty()) {
-            _chatHistory.value = listOf(
-                com.loopa.model.ChatMessage(
-                    role = "model",
-                    text = "Hello! I have access to your watchlist. What kind of movie, show, or anime are you in the mood for today?",
-                    recommendations = emptyList()
+    fun fetchAiRecommendations(force: Boolean = false) {
+        if (_chatHistory.value.isNotEmpty() && !force) return
+        
+        viewModelScope.launch {
+            val proxyUrl = BuildConfig.AI_PROXY_URL
+            if (proxyUrl.isEmpty() || proxyUrl == "YOUR_CLOUDFLARE_WORKER_URL") {
+                _chatHistory.value = listOf(
+                    com.loopa.model.ChatMessage(
+                        role = "model",
+                        text = "Hello! I have access to your watchlist. What kind of movie, show, or anime are you in the mood for today?"
+                    )
                 )
-            )
+                return@launch
+            }
+
+            _isLoadingAiRecs.value = true
+            _aiRecsError.value = null
+            try {
+                val history = savedMediaItems.value
+                val likedTitles = prefs.getStringSet("liked_titles", emptySet()) ?: emptySet()
+                val dislikedTitles = prefs.getStringSet("disliked_titles", emptySet()) ?: emptySet()
+
+                val recs = repository.getDiscoverRecommendations(
+                    proxyUrl, history, likedTitles, dislikedTitles, emptyList()
+                )
+
+                val greeting = if (history.isNotEmpty()) {
+                    "Welcome back! Based on your watchlist history, here is your curated daily mix:"
+                } else {
+                    "Hello! Here are top curated picks across Movies, TV Shows, and Anime to kickstart your journey:"
+                }
+
+                _chatHistory.value = listOf(
+                    com.loopa.model.ChatMessage(
+                        role = "model",
+                        text = greeting,
+                        recommendations = recs
+                    )
+                )
+            } catch (e: Exception) {
+                _chatHistory.value = listOf(
+                    com.loopa.model.ChatMessage(
+                        role = "model",
+                        text = "Hello! What kind of movie, show, or anime are you in the mood for today?"
+                    )
+                )
+            } finally {
+                _isLoadingAiRecs.value = false
+            }
         }
     }
 
     fun clearAiChat() {
-        _chatHistory.value = listOf(
-            com.loopa.model.ChatMessage(
-                role = "model",
-                text = "Hello! I have access to your watchlist. What kind of movie, show, or anime are you in the mood for today?"
-            )
-        )
+        _chatHistory.value = emptyList()
+        fetchAiRecommendations(force = true)
     }
 
     fun sendAiChatMessage(userMessage: String) {
@@ -987,6 +1023,41 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     fallback.forEach { watchedEpisodeDao.insertWatchedEpisode(it) }
                 }
+            }
+        }
+    }
+
+    // ── Data Portability Suite (Import & Export) ──────────────────────────
+
+    suspend fun getWatchlistExportJSON(): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val items = mediaItemDao.getAllMediaItemsSync()
+        com.loopa.data.DataPortabilityManager.exportToJSON(items)
+    }
+
+    suspend fun getWatchlistExportCSV(): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val items = mediaItemDao.getAllMediaItemsSync()
+        com.loopa.data.DataPortabilityManager.exportToCSV(items)
+    }
+
+    fun importWatchlistData(
+        content: String,
+        fileName: String? = null,
+        onProgress: (Int, Int, String) -> Unit,
+        onComplete: (com.loopa.data.ImportSummary) -> Unit
+    ) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val candidates = com.loopa.data.DataPortabilityManager.parseContent(content, fileName)
+            val summary = com.loopa.data.DataPortabilityManager.enrichAndImport(
+                candidates = candidates,
+                repository = repository,
+                onProgress = { cur, tot, title ->
+                    viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                        onProgress(cur, tot, title)
+                    }
+                }
+            )
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                onComplete(summary)
             }
         }
     }

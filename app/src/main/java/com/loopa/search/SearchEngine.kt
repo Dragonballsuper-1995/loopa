@@ -87,7 +87,7 @@ object SearchEngine {
             title = entity.title,
             name = null,
             overview = entity.personalNotes,
-            posterPath = entity.imageUrl?.replace("https://image.tmdb.org/t/p/w500", "")?.replace("https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500", ""),
+            posterPath = com.loopa.util.TmdbUrlHelper.cleanPath(entity.imageUrl),
             backdropPath = null,
             voteAverage = entity.score,
             releaseDate = entity.date,

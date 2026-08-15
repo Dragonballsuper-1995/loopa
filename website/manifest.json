@@ -1,0 +1,26 @@
+{
+  "name": "Loopa - Personal Media Universe",
+  "short_name": "Loopa",
+  "description": "Log everything you watch — movies, series, anime — and let AI curate your next obsession.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c0b09",
+  "theme_color": "#0c0b09",
+  "orientation": "portrait-primary",
+  "categories": ["entertainment", "movies", "lifestyle"],
+  "icons": [
+    {
+      "src": "assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
