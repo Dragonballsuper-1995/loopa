@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [MediaItemEntity::class, WatchedEpisodeEntity::class, PendingOpEntity::class],
-    version = 8,          // bumped from 7
+    version = 9,          // bumped from 8
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -96,6 +96,18 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE media_items ADD COLUMN progressBackup TEXT DEFAULT NULL")
+            }
+        }
+
+        /**
+         * Migration 8 → 9
+         * Adds database indices on listName, mediaType, and updatedAt for sub-millisecond query performance.
+         */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_media_items_listName ON media_items(listName)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_media_items_mediaType ON media_items(mediaType)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_media_items_updatedAt ON media_items(updatedAt)")
             }
         }
     }

@@ -28,13 +28,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.loopa.util.TmdbUrlHelper
 import com.loopa.viewmodel.AuthUiState
 import com.loopa.viewmodel.AuthViewModel
 
 private val AMBIENT_POSTERS = listOf(
-    "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342/8cdWjvZ2qY92D9CjLv2s9j6q5.jpg",
-    "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
-    "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
+    TmdbUrlHelper.posterUrl("/8cdWjvZ2qY92D9CjLv2s9j6q5.jpg", "w342") ?: "",
+    TmdbUrlHelper.posterUrl("/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg", "w342") ?: "",
+    TmdbUrlHelper.posterUrl("/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg", "w342") ?: ""
 )
 
 @Composable

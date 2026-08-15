@@ -1,8 +1,17 @@
 package com.loopa.db
 
 import androidx.room.Entity
+import androidx.room.Index
 
-@Entity(tableName = "media_items", primaryKeys = ["id", "mediaType"])
+@Entity(
+    tableName = "media_items",
+    primaryKeys = ["id", "mediaType"],
+    indices = [
+        Index(value = ["listName"]),
+        Index(value = ["mediaType"]),
+        Index(value = ["updatedAt"])
+    ]
+)
 data class MediaItemEntity(
     val id: Int,           // The TMDB/Jikan ID
     val title: String,

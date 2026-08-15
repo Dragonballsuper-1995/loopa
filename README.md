@@ -51,7 +51,7 @@ The experience is designed to feel like the opening credits of an action thrille
 
 Under the hood, Loopa is architected for resilience. A battle-tested **Offline-First, Last-Write-Wins (LWW) synchronization protocol** ensures your data is always captured locally first and reconciled with the cloud gracefully — whether you're on a subway, a plane, or a remote cabin.
 
-> **Current Version: `v1.2.0`** — The deep-optimization release. Performance issues, sync bugs, and rendering stutters across both platforms have been fully resolved.
+> **Current Version: `v2.0.0`** — The Data Portability, AI Semantic Search & Clean Architecture release. Complete cross-platform sync, 1-click multi-format import/export, and natural language semantic discovery.
 
 ---
 
@@ -59,14 +59,15 @@ Under the hood, Loopa is architected for resilience. A battle-tested **Offline-F
 
 | Feature | Description |
 | :--- | :--- |
-| <img src="assets/icons/bot.svg" width="16" align="center" alt=""> &nbsp; **AI-Powered Discovery** | A conversational Google Gemini engine analyzes your entire watch history and personal tastes to deliver hyper-personalized recommendations. Zero generic suggestions. |
+| <img src="assets/icons/bot.svg" width="16" align="center" alt=""> &nbsp; **AI Semantic Smart Search** | Discover media using natural language, vibe, plot description, or aesthetic (e.g., *"dystopian movie with synthwave soundtrack"*). Powered by Gemini 2.5 Flash Lite + Groq edge reasoning. |
+| <img src="assets/icons/git-merge.svg" width="16" align="center" alt=""> &nbsp; **1-Click Data Portability** | Universal JSON & RFC 4180 CSV export + full import support for **Letterboxd**, **IMDb**, **MyAnimeList XML**, and **Trakt.tv** with automatic TMDB/Jikan metadata enrichment. |
 | <img src="assets/icons/cloud-sync.svg" width="16" align="center" alt=""> &nbsp; **Realtime Cross-Device Sync** | Instant bi-directional synchronization via Supabase Realtime subscriptions. Log something on the web and watch it appear on your Android device in real time. |
-| <img src="assets/icons/wifi-off.svg" width="16" align="center" alt=""> &nbsp; **Offline-First Resilience** | A robust LWW conflict resolution engine. Every action is persisted locally first (`Room DB` / `LocalStorage`), queued if offline, and flushed to the cloud on reconnection. |
-| <img src="assets/icons/tv.svg" width="16" align="center" alt=""> &nbsp; **Unified Media Universe** | Track movies, multi-season TV shows with per-episode logging, and anime — all from a single, unified interface powered by **TMDB** and **Jikan**. |
-| <img src="assets/icons/palette.svg" width="16" align="center" alt=""> &nbsp; **Cinematic Dark Mode UI** | A strictly dark-mode-only interface — because some design decisions aren't negotiable. Features custom design tokens, DM Sans typography, and hard directional shadows. |
-| <img src="assets/icons/rocket.svg" width="16" align="center" alt=""> &nbsp; **High-Performance Web PWA** | Static Tailwind CSS build, Service Worker caching (`js/sw.js`), and `IntersectionObserver`-powered virtual rendering deliver a butter-smooth web experience. |
-| <img src="assets/icons/smartphone.svg" width="16" align="center" alt=""> &nbsp; **Native Android App** | A bespoke Jetpack Compose UI built from scratch using custom design tokens — intentionally bypassing generic Material 3 artifacts for a pixel-perfect, branded experience. |
-| <img src="assets/icons/lock.svg" width="16" align="center" alt=""> &nbsp; **Secure AI Proxy** | API keys never touch the client. All Gemini AI requests route through a hardened Cloudflare Worker edge proxy, keeping credentials server-side at all times. |
+| <img src="assets/icons/wifi-off.svg" width="16" align="center" alt=""> &nbsp; **Offline-First Resilience** | A robust LWW conflict resolution engine. Data is persisted locally first (`Room DB v9` with indices / IndexedDB `IDBStore`), queued if offline, and flushed on reconnection. |
+| <img src="assets/icons/tv.svg" width="16" align="center" alt=""> &nbsp; **Unified Media Universe** | Track movies, multi-season TV shows with per-episode logging, and anime — all from a single, unified interface powered by **TMDB**, **AniList**, **Kitsu**, and **Jikan**. |
+| <img src="assets/icons/palette.svg" width="16" align="center" alt=""> &nbsp; **Cinematic Dark Mode UI** | A strictly dark-mode-only interface featuring custom design tokens, DM Sans typography, amber accents, and hard directional shadows. |
+| <img src="assets/icons/rocket.svg" width="16" align="center" alt=""> &nbsp; **Installable Web PWA** | Fully compliant Progressive Web App with Web App Manifest, Service Worker (`sw.js` cache-v8), offline fallback, and `IntersectionObserver` rendering. |
+| <img src="assets/icons/smartphone.svg" width="16" align="center" alt=""> &nbsp; **Modular Jetpack Compose UI** | Decoupled, production-grade Android UI architecture with dedicated modules (`PosterCards`, `SearchScreen`, `MyListsScreen`, `SettingsScreen`, `DataPortabilityManager`). |
+| <img src="assets/icons/lock.svg" width="16" align="center" alt=""> &nbsp; **Secure Multi-LLM Edge Proxy** | Hardened Cloudflare Worker routing requests to Gemini 2.5 Flash Lite, Groq (GPT OSS 120B), and OpenRouter with 24h edge caching. |
 
 ---
 
@@ -83,8 +84,9 @@ Loopa is a unified system bridging a Native Android application and a high-perfo
 │   │                  │         │                          │     │
 │   │  Kotlin +        │         │  HTML5 + Vanilla JS +    │     │
 │   │  Jetpack Compose │         │  Tailwind CSS (Static)   │     │
-│   │  Room DB (v7)    │         │  Service Worker (sw.js)  │     │
-│   │  PendingOpEntity │         │  loopa_sync_queue        │     │
+│   │  Room DB (v9)    │         │  IndexedDB (IDBStore)    │     │
+│   │  DataPortability │         │  Portability Engine      │     │
+│   │  PendingOpEntity │         │  Service Worker (sw.js)  │     │
 │   └────────┬─────────┘         └───────────┬──────────────┘     │
 │            │                               │                    │
 │            └──────────────┬────────────────┘                    │
@@ -100,10 +102,11 @@ Loopa is a unified system bridging a Native Android application and a high-perfo
 │              ┌────────────▼──────────────┐                      │
 │              │    Cloudflare Worker      │                      │
 │              │    (loopa-ai-proxy)       │                      │
+│              │    Fast & Semantic API    │                      │
 │              └────────────┬──────────────┘                      │
 │                           │                                     │
 │                ┌──────────▼───────────┐                         │
-│                │  Google Gemini API   │                         │
+│                │  Gemini 2.5 / Groq   │                         │
 │                └──────────────────────┘                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -114,12 +117,12 @@ Built entirely natively using modern Android architecture — no cross-platform 
 
 | Layer | Technology |
 | :--- | :--- |
-| **UI Framework** | Kotlin + Jetpack Compose (Declarative, `LazyColumn` for high-performance scrolling) |
+| **UI Framework** | Kotlin + Jetpack Compose (Modular `PosterCards`, `SearchScreen`, `MyListsScreen`, `SettingsScreen`) |
 | **Architecture Pattern** | MVVM with `StateFlow` and Coroutines/Flow |
-| **Local Persistence** | Room Database (v7) with `PendingOpEntity` offline operations queue |
-| **Networking** | Supabase Android SDK (PostgREST, Auth, Realtime) + Retrofit/Moshi |
-| **Media APIs** | TMDB (Movies & TV Shows) + Jikan (Anime) via parallel async hydration |
-| **Background Work** | Kotlin Coroutines with `Dispatchers.Default` and `async/awaitAll` for concurrent batch requests |
+| **Local Persistence** | Room Database (v9) with indices (`listName`, `mediaType`, `updatedAt`) + `PendingOpEntity` |
+| **Data Portability** | `DataPortabilityManager` (JSON, CSV, Letterboxd, IMDb, MAL XML, Trakt) |
+| **Networking** | Supabase Android SDK (PostgREST, Auth, Realtime) + Retrofit/Moshi Edge API |
+| **Media APIs** | TMDB, Jikan, AniList, Kitsu via parallel async hydration |
 
 ### <img src="assets/icons/globe.svg" width="18" align="center" alt=""> 2. High-Performance Web App (PWA)
 
@@ -127,12 +130,13 @@ A lightweight, zero-bundler web experience engineered for speed, offline resilie
 
 | Layer | Technology |
 | :--- | :--- |
-| **Core** | HTML5 + Vanilla JavaScript (No bundler, no framework overhead) |
-| **Styling** | Tailwind CSS — **compiled statically at build time** to `output.css` for aggressive TTFB reduction |
-| **Offline Caching** | Service Worker (`sw.js`) implementing stale-while-revalidate strategy |
+| **Core** | HTML5 + Vanilla JavaScript (No bundler, no framework overhead, < 200 KB total footprint) |
+| **Styling** | Tailwind CSS — **compiled statically at build time** to `output.css` |
+| **Storage Engine** | Asynchronous IndexedDB (`IDBStore`) with auto-migration from legacy `localStorage` |
+| **Data Portability** | `LoopaPortability` client engine (JSON, CSV, Letterboxd, IMDb, MAL XML, Trakt) |
+| **Offline Caching** | Service Worker (`sw.js` cache-v8) with offline navigation fallback |
 | **Virtual Rendering** | `IntersectionObserver` API for progressive Watchlist DOM rendering |
-| **Offline Queue** | `loopa_sync_queue` in `LocalStorage` buffers mutations during network loss |
-| **Sync Client** | Supabase JS SDK + direct REST calls for TMDB and Jikan |
+| **Sync Client** | Supabase JS SDK + Realtime single-row sync + Edge Fast/Semantic API |
 
 ### <img src="assets/icons/cloud.svg" width="18" align="center" alt=""> 3. Backend & Cloud Infrastructure
 
@@ -141,9 +145,9 @@ A lightweight, zero-bundler web experience engineered for speed, offline resilie
 | **Supabase (PostgreSQL 15+)** | Primary database, user authentication (GoTrue), and Realtime WebSocket subscriptions |
 | **Supabase Realtime** | Broadcasts `INSERT/UPDATE/DELETE` events to all connected clients for live cross-device sync |
 | **Supabase Auth (GoTrue)** | Email-based authentication with Row-Level Security (RLS) policies |
-| **Cloudflare Worker** (`loopa-ai-proxy`) | Secure edge proxy — bridges clients to Google Gemini API without exposing API keys |
-| **TMDB API** | Movie and TV show metadata, poster images, episode data |
-| **Jikan API** | MyAnimeList-sourced anime metadata and poster hydration |
+| **Cloudflare Worker** (`loopa-ai-proxy`) | Edge proxy — `/api/search/fast`, `/api/search/semantic`, `/api/media/details`, `/api/recommendations` |
+| **Multi-LLM Pipeline** | Gemini 2.5 Flash Lite + Groq (GPT OSS 120B) + OpenRouter fallback |
+| **Media APIs** | TMDB, AniList, Kitsu, and Jikan |
 
 ---
 

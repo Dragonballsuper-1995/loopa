@@ -1,6 +1,6 @@
 /**
  * Loopa Web — Supabase Layer
- * Wraps auth and the shared `media_items` table used by the Android app.
+ * Wraps auth, real-time channels, offline sync, and the shared `media_items` table.
  *
  * Table schema (media_items):
  *   id INTEGER, user_id UUID, title TEXT, image_url TEXT, date TEXT,
@@ -8,14 +8,14 @@
  *   current_season INT, current_episode INT,
  *   total_episodes INT, total_seasons INT,
  *   progress_string TEXT, user_rating INT, personal_notes TEXT,
- *   updated_at TIMESTAMPTZ DEFAULT now()   ← added in SQL migration
+ *   updated_at TIMESTAMPTZ DEFAULT now()
  *   PRIMARY KEY (id, user_id, media_type)
  *
  * watched_episodes table schema:
  *   id BIGSERIAL, media_id INTEGER, user_id UUID, media_type TEXT,
  *   season_number INT, episode_number INT,
  *   watched_at TIMESTAMPTZ DEFAULT now(),
- *   updated_at TIMESTAMPTZ DEFAULT now()   ← added in SQL migration
+ *   updated_at TIMESTAMPTZ DEFAULT now()
  *   UNIQUE (user_id, media_id, media_type, season_number, episode_number)
  */
 
@@ -75,10 +75,16 @@ const OfflineSync = {
     },
     saveQueue(q) {
         localStorage.setItem('loopa_sync_queue', JSON.stringify(q));
+        if (window.IDBStore) {
+            window.IDBStore.clear('sync_queue').then(() => {
+                window.IDBStore.putBulk('sync_queue', q);
+            }).catch(() => {});
+        }
     },
     enqueue(operation) {
         const q = this.getQueue();
-        q.push({ ...operation, timestamp: Date.now() });
+        const opWithTs = { ...operation, timestamp: Date.now() };
+        q.push(opWithTs);
         this.saveQueue(q);
         this.attemptSync();
     },
@@ -89,8 +95,8 @@ const OfflineSync = {
         try {
             let q = this.getQueue();
             if (q.length === 0) return;
-            
-            // ── Auto-collapse legacy sequential EPISODE_ADD into BULK to prevent network spam ──
+
+            // Auto-collapse sequential EPISODE_ADD into BULK to minimize network requests
             const bulkData = [];
             const optimizedQ = [];
             for (const op of q) {
@@ -111,7 +117,6 @@ const OfflineSync = {
             for (const op of q) {
                 try {
                     if (op.type === 'ADD') {
-                        // Only apply ADD if server row doesn't already exist.
                         const { data: existing } = await getDB()
                             .from(CONFIG.DB_TABLE)
                             .select('updated_at')
@@ -126,7 +131,7 @@ const OfflineSync = {
                             console.log(`[OfflineSync] Skipping ADD for ${op.data.id}/${op.data.media_type} — row already exists`);
                         }
                     } else if (op.type === 'UPDATE') {
-                        // ── Last-Write-Wins: only apply if our local write is newer than remote ──
+                        // Last-Write-Wins conflict resolution
                         const { data: remoteRow } = await getDB()
                             .from(CONFIG.DB_TABLE)
                             .select('updated_at')
@@ -163,9 +168,8 @@ const OfflineSync = {
                     }
                     processedTimestamps.add(op.timestamp);
                 } catch (e) {
-                    console.error("Sync failed for operation", op, e);
+                    console.error("[OfflineSync] Failed for operation", op, e);
 
-                    // If ADD failed because it already exists on server, treat as success
                     if (op.type === 'ADD') {
                         try {
                             const { data: checkRow } = await getDB()
@@ -205,7 +209,7 @@ window.addEventListener('online', () => OfflineSync.attemptSync());
 // ── Watchlist CRUD ────────────────────────────────────────────────────────────
 
 const SBList = {
-    /** Fetch all rows for a user, newest first. Offline-first read. */
+    /** Fetch all rows for a user. Offline-first read via IndexedDB with fallback. */
     async getAll(userId) {
         if (navigator.onLine) {
             try {
@@ -217,12 +221,26 @@ const SBList = {
                     .order('id', { ascending: false });
                 if (!error && data) {
                     localStorage.setItem(`loopa_wl_${userId}`, JSON.stringify(data));
+                    if (window.IDBStore) {
+                        await window.IDBStore.saveWatchlistForUser(userId, data);
+                    }
                     return data;
                 }
             } catch (e) {
-                console.warn('Network fetch failed, falling back to local storage', e);
+                console.warn('[SBList] Network fetch failed, falling back to local storage', e);
             }
         }
+
+        // Offline or Network Failure: read from IndexedDB first, then localStorage
+        if (window.IDBStore) {
+            try {
+                const idbData = await window.IDBStore.getWatchlistForUser(userId);
+                if (idbData && idbData.length > 0) return idbData;
+            } catch (e) {
+                console.warn('[SBList] IDB read failed:', e);
+            }
+        }
+
         return JSON.parse(localStorage.getItem(`loopa_wl_${userId}`) || '[]');
     },
 
@@ -250,7 +268,6 @@ const SBList = {
             runtime:          mediaItem.runtime ? parseInt(String(mediaItem.runtime).replace(/\D/g, '')) || null : null,
             genres:           mediaItem.genres ? mediaItem.genres.join(',') : (mediaItem.genre || null),
             director_studio:  mediaItem.directorStudio || mediaItem.studio || mediaItem.director || null,
-            // Timestamp for Last-Write-Wins conflict resolution (mirrors Android updatedAt)
             updated_at:       new Date().toISOString(),
         };
 
@@ -260,6 +277,11 @@ const SBList = {
         else localData.unshift(row);
         localStorage.setItem(`loopa_wl_${userId}`, JSON.stringify(localData));
 
+        if (window.IDBStore) {
+            const key = `${userId}_${row.id}_${row.media_type}`;
+            window.IDBStore.put('watchlist', { ...row, _key: key }).catch(() => {});
+        }
+
         OfflineSync.enqueue({ type: 'ADD', data: row });
         return [row];
     },
@@ -268,18 +290,21 @@ const SBList = {
     async update(userId, id, mediaType, updates) {
         const localData = JSON.parse(localStorage.getItem(`loopa_wl_${userId}`) || '[]');
         const idx = localData.findIndex(i => i.id === id && i.media_type === mediaType);
-        if (idx >= 0) {
-            localData[idx] = { ...localData[idx], ...updates };
+        const updatedRow = idx >= 0 ? { ...localData[idx], ...updates, updated_at: new Date().toISOString() } : null;
+        if (idx >= 0 && updatedRow) {
+            localData[idx] = updatedRow;
             localStorage.setItem(`loopa_wl_${userId}`, JSON.stringify(localData));
+            if (window.IDBStore) {
+                const key = `${userId}_${id}_${mediaType}`;
+                window.IDBStore.put('watchlist', { ...updatedRow, _key: key }).catch(() => {});
+            }
         }
         OfflineSync.enqueue({
             type: 'UPDATE',
-            // Stamp updated_at now so LWW comparison in attemptSync uses the mutation time,
-            // not the flush time. op.timestamp (set by enqueue) is the wall-clock fallback.
             data: { ...updates, updated_at: new Date().toISOString() },
             keys: { id, user_id: userId, media_type: mediaType }
         });
-        return localData[idx] || null;
+        return updatedRow;
     },
 
     /** Delete a row */
@@ -287,11 +312,24 @@ const SBList = {
         const localData = JSON.parse(localStorage.getItem(`loopa_wl_${userId}`) || '[]');
         const filtered = localData.filter(i => !(i.id === id && i.media_type === mediaType));
         localStorage.setItem(`loopa_wl_${userId}`, JSON.stringify(filtered));
+
+        if (window.IDBStore) {
+            const key = `${userId}_${id}_${mediaType}`;
+            window.IDBStore.delete('watchlist', key).catch(() => {});
+        }
+
         OfflineSync.enqueue({ type: 'REMOVE', keys: { id, user_id: userId, media_type: mediaType } });
     },
 
     /** Returns the row if present, null otherwise */
     async find(userId, id, mediaType) {
+        if (window.IDBStore) {
+            try {
+                const key = `${userId}_${id}_${mediaType}`;
+                const row = await window.IDBStore.get('watchlist', key);
+                if (row) return row;
+            } catch {}
+        }
         const localData = JSON.parse(localStorage.getItem(`loopa_wl_${userId}`) || '[]');
         return localData.find(i => i.id === id && i.media_type === mediaType) || null;
     },
@@ -301,26 +339,60 @@ const SBList = {
         if (this._subscription) {
             getDB().removeChannel(this._subscription);
         }
-        
+
         this._subscription = getDB()
             .channel('watchlist_changes')
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: CONFIG.DB_TABLE, filter: `user_id=eq.${userId}` },
-                (payload) => { if (onInsert) onInsert(payload.new); }
+                (payload) => {
+                    const row = payload.new;
+                    if (row) {
+                        const key = `${userId}_${row.id}_${row.media_type}`;
+                        if (window.IDBStore) window.IDBStore.put('watchlist', { ...row, _key: key });
+                        const localData = JSON.parse(localStorage.getItem(`loopa_wl_${userId}`) || '[]');
+                        const idx = localData.findIndex(i => i.id === row.id && i.media_type === row.media_type);
+                        if (idx >= 0) localData[idx] = row;
+                        else localData.unshift(row);
+                        localStorage.setItem(`loopa_wl_${userId}`, JSON.stringify(localData));
+                        if (onInsert) onInsert(row);
+                    }
+                }
             )
             .on(
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: CONFIG.DB_TABLE, filter: `user_id=eq.${userId}` },
-                (payload) => { if (onUpdate) onUpdate(payload.new); }
+                (payload) => {
+                    const row = payload.new;
+                    if (row) {
+                        const key = `${userId}_${row.id}_${row.media_type}`;
+                        if (window.IDBStore) window.IDBStore.put('watchlist', { ...row, _key: key });
+                        const localData = JSON.parse(localStorage.getItem(`loopa_wl_${userId}`) || '[]');
+                        const idx = localData.findIndex(i => i.id === row.id && i.media_type === row.media_type);
+                        if (idx >= 0) localData[idx] = row;
+                        else localData.unshift(row);
+                        localStorage.setItem(`loopa_wl_${userId}`, JSON.stringify(localData));
+                        if (onUpdate) onUpdate(row);
+                    }
+                }
             )
             .on(
                 'postgres_changes',
                 { event: 'DELETE', schema: 'public', table: CONFIG.DB_TABLE, filter: `user_id=eq.${userId}` },
-                (payload) => { if (onDelete) onDelete(payload.old); }
+                (payload) => {
+                    const old = payload.old;
+                    if (old) {
+                        const key = `${userId}_${old.id}_${old.media_type}`;
+                        if (window.IDBStore) window.IDBStore.delete('watchlist', key);
+                        const localData = JSON.parse(localStorage.getItem(`loopa_wl_${userId}`) || '[]');
+                        const filtered = localData.filter(i => !(i.id === old.id && i.media_type === old.media_type));
+                        localStorage.setItem(`loopa_wl_${userId}`, JSON.stringify(filtered));
+                        if (onDelete) onDelete(old);
+                    }
+                }
             )
             .subscribe();
-            
+
         return this._subscription;
     },
 };
@@ -329,7 +401,6 @@ const SBList = {
 
 const SBWatchedEpisodes = {
     async getForMedia(userId, mediaId, mediaType) {
-        const localData = JSON.parse(localStorage.getItem(`loopa_episodes_${userId}_${mediaId}`) || '[]');
         if (navigator.onLine) {
             try {
                 const { data, error } = await getDB()
@@ -339,18 +410,34 @@ const SBWatchedEpisodes = {
                     .eq('media_id', mediaId)
                     .eq('media_type', mediaType);
                 if (!error && data) {
+                    const localData = JSON.parse(localStorage.getItem(`loopa_episodes_${userId}_${mediaId}`) || '[]');
                     const map = new Map();
                     data.forEach(item => map.set(`${item.season_number}_${item.episode_number}`, item));
                     localData.forEach(item => map.set(`${item.season_number}_${item.episode_number}`, item));
                     const merged = Array.from(map.values());
                     localStorage.setItem(`loopa_episodes_${userId}_${mediaId}`, JSON.stringify(merged));
+                    if (window.IDBStore) {
+                        const prepared = merged.map(e => ({
+                            ...e,
+                            _key: `${userId}_${mediaId}_${mediaType}_${e.season_number}_${e.episode_number}`
+                        }));
+                        window.IDBStore.putBulk('watched_episodes', prepared);
+                    }
                     return merged;
                 }
             } catch (e) {
-                console.warn('Network fetch failed for episodes', e);
+                console.warn('[SBWatchedEpisodes] Network fetch failed for episodes', e);
             }
         }
-        return localData;
+
+        if (window.IDBStore) {
+            try {
+                const idbEpisodes = await window.IDBStore.getEpisodesForMedia(userId, mediaId, mediaType);
+                if (idbEpisodes && idbEpisodes.length > 0) return idbEpisodes;
+            } catch {}
+        }
+
+        return JSON.parse(localStorage.getItem(`loopa_episodes_${userId}_${mediaId}`) || '[]');
     },
 
     async add(userId, mediaId, mediaType, seasonNumber, episodeNumber) {
@@ -366,6 +453,10 @@ const SBWatchedEpisodes = {
         if (!localData.some(e => e.season_number === seasonNumber && e.episode_number === episodeNumber)) {
             localData.push(row);
             localStorage.setItem(`loopa_episodes_${userId}_${mediaId}`, JSON.stringify(localData));
+            if (window.IDBStore) {
+                const key = `${userId}_${mediaId}_${mediaType}_${seasonNumber}_${episodeNumber}`;
+                window.IDBStore.put('watched_episodes', { ...row, _key: key }).catch(() => {});
+            }
         }
         OfflineSync.enqueue({ type: 'EPISODE_ADD', data: row });
     },
@@ -381,10 +472,10 @@ const SBWatchedEpisodes = {
             episode_number: ep.episode_number,
             watched_at: now
         }));
-        
+
         const localData = JSON.parse(localStorage.getItem(`loopa_episodes_${userId}_${mediaId}`) || '[]');
         const existingSet = new Set(localData.map(e => `${e.season_number}_${e.episode_number}`));
-        
+
         const newRows = [];
         for (const row of rows) {
             if (!existingSet.has(`${row.season_number}_${row.episode_number}`)) {
@@ -392,9 +483,16 @@ const SBWatchedEpisodes = {
                 newRows.push(row);
             }
         }
-        
+
         if (newRows.length > 0) {
             localStorage.setItem(`loopa_episodes_${userId}_${mediaId}`, JSON.stringify(localData));
+            if (window.IDBStore) {
+                const prepared = newRows.map(r => ({
+                    ...r,
+                    _key: `${userId}_${mediaId}_${mediaType}_${r.season_number}_${r.episode_number}`
+                }));
+                window.IDBStore.putBulk('watched_episodes', prepared);
+            }
             OfflineSync.enqueue({ type: 'EPISODE_ADD_BULK', data: newRows });
         }
     },
@@ -403,14 +501,28 @@ const SBWatchedEpisodes = {
         const localData = JSON.parse(localStorage.getItem(`loopa_episodes_${userId}_${mediaId}`) || '[]');
         const filtered = localData.filter(e => !(e.season_number === seasonNumber && e.episode_number === episodeNumber));
         localStorage.setItem(`loopa_episodes_${userId}_${mediaId}`, JSON.stringify(filtered));
-        OfflineSync.enqueue({ 
-            type: 'EPISODE_REMOVE', 
-            keys: { media_id: mediaId, user_id: userId, season_number: seasonNumber, episode_number: episodeNumber } 
+
+        if (window.IDBStore) {
+            const key = `${userId}_${mediaId}_${mediaType}_${seasonNumber}_${episodeNumber}`;
+            window.IDBStore.delete('watched_episodes', key).catch(() => {});
+        }
+
+        OfflineSync.enqueue({
+            type: 'EPISODE_REMOVE',
+            keys: { media_id: mediaId, user_id: userId, season_number: seasonNumber, episode_number: episodeNumber }
         });
     },
 
     async removeAll(userId, mediaId, mediaType) {
         localStorage.setItem(`loopa_episodes_${userId}_${mediaId}`, '[]');
+        if (window.IDBStore) {
+            window.IDBStore.getEpisodesForMedia(userId, mediaId, mediaType).then(episodes => {
+                episodes.forEach(ep => {
+                    const key = `${userId}_${mediaId}_${mediaType}_${ep.season_number}_${ep.episode_number}`;
+                    window.IDBStore.delete('watched_episodes', key);
+                });
+            }).catch(() => {});
+        }
         OfflineSync.enqueue({
             type: 'EPISODE_REMOVE_ALL',
             keys: { media_id: mediaId, user_id: userId }

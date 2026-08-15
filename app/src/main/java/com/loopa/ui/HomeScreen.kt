@@ -33,9 +33,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.loopa.app.LoopTrackDialog
+import com.loopa.ui.components.LoopTrackDialog
 import com.loopa.db.MediaItemEntity
 import com.loopa.model.TmdbMovie
+import com.loopa.util.TmdbUrlHelper
 import com.loopa.viewmodel.MediaUiState
 import com.loopa.viewmodel.MediaViewModel
 
@@ -102,9 +103,7 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             items(state.trending.take(10)) { movie ->
-                                val imageUrl = movie.posterPath?.let {
-                                    "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                                }
+                                val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                                 HomePosterCard(
                                     title = movie.title ?: movie.name ?: "Unknown",
                                     imageUrl = imageUrl,
@@ -138,9 +137,7 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(0.dp)
                         ) {
                             itemsIndexed(state.trending.take(10)) { index, movie ->
-                                val imageUrl = movie.posterPath?.let {
-                                    "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                                }
+                                val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                                 Top10PosterCard(
                                     rank = index + 1,
                                     title = movie.title ?: movie.name ?: "Unknown",
@@ -220,9 +217,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(popularMovies.take(10)) { movie ->
-                            val imageUrl = movie.posterPath?.let {
-                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                            }
+                            val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                             HomePosterCard(
                                 title = movie.title ?: "Unknown",
                                 imageUrl = imageUrl,
@@ -253,9 +248,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(popularTv.take(10)) { tv ->
-                            val imageUrl = tv.posterPath?.let {
-                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                            }
+                            val imageUrl = TmdbUrlHelper.posterUrl(tv.posterPath, "w342")
                             HomePosterCard(
                                 title = tv.name ?: tv.title ?: "Unknown",
                                 imageUrl = imageUrl,
@@ -282,9 +275,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(topRatedMovies.take(10)) { movie ->
-                            val imageUrl = movie.posterPath?.let {
-                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                            }
+                            val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                             HomePosterCard(
                                 title = movie.title ?: "Unknown",
                                 imageUrl = imageUrl,
@@ -311,9 +302,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(upcomingMovies.take(10)) { movie ->
-                            val imageUrl = movie.posterPath?.let {
-                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                            }
+                            val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                             HomePosterCard(
                                 title = movie.title ?: "Unknown",
                                 imageUrl = imageUrl,
@@ -340,9 +329,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(topRatedTv.take(10)) { tv ->
-                            val imageUrl = tv.posterPath?.let {
-                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                            }
+                            val imageUrl = TmdbUrlHelper.posterUrl(tv.posterPath, "w342")
                             HomePosterCard(
                                 title = tv.name ?: tv.title ?: "Unknown",
                                 imageUrl = imageUrl,
@@ -369,9 +356,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(airingTodayTv.take(10)) { tv ->
-                            val imageUrl = tv.posterPath?.let {
-                                "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it"
-                            }
+                            val imageUrl = TmdbUrlHelper.posterUrl(tv.posterPath, "w342")
                             HomePosterCard(
                                 title = tv.name ?: tv.title ?: "Unknown",
                                 imageUrl = imageUrl,
@@ -505,7 +490,7 @@ fun HeroCarousel(
             if (item != null) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     val imageUrl = (item.backdropPath ?: item.posterPath)?.let {
-                        "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w1280$it"
+                        TmdbUrlHelper.backdropUrl(it, "w1280")
                     }
                     if (imageUrl != null) {
                         AsyncImage(

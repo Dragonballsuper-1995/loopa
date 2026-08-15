@@ -1,16 +1,20 @@
-const CACHE_NAME = 'loopa-cache-v7';
+const CACHE_NAME = 'loopa-cache-v8';
 
 // Static assets to cache immediately on install
 const PRECACHE_URLS = [
     './',
     './index.html',
+    './manifest.json',
     './css/styles.css',
     './css/output.css?v=21',
-    './js/config.js?v=4',
-    './js/api.js?v=9',
-    './js/search-engine.js?v=2',
-    './js/ui.js?v=11',
-    './js/app.js?v=19',
+    './js/config.js?v=20',
+    './js/storage.js?v=20',
+    './js/supabase.js?v=20',
+    './js/portability.js?v=20',
+    './js/api.js?v=20',
+    './js/search-engine.js?v=20',
+    './js/ui.js?v=20',
+    './js/app.js?v=20',
     './assets/logo.svg',
     './assets/favicon.svg'
 ];
@@ -56,7 +60,23 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // 2. Local Static Asset Caching (Stale-While-Revalidate)
+    // 2. Handle HTML navigation requests with Network-First and fallback to cached index.html
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).then(response => {
+                if (response.ok) {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                }
+                return response;
+            }).catch(() => {
+                return caches.match('./index.html') || caches.match('/');
+            })
+        );
+        return;
+    }
+
+    // 3. Local Static Asset Caching (Stale-While-Revalidate)
     if (url.origin === location.origin) {
         event.respondWith(
             caches.match(event.request).then(cachedResponse => {

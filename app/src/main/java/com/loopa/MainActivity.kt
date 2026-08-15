@@ -1,956 +1,293 @@
 package com.loopa.app
 
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Bundle
-import androidx.compose.runtime.remember
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Help
-import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.loopa.network.NetworkModule
+import com.loopa.ui.*
 import com.loopa.ui.theme.MyApplicationTheme
-import com.loopa.ui.AiRecommendationsScreen
-import com.loopa.ui.HomeScreen
-
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
+import com.loopa.viewmodel.AuthViewModel
 import com.loopa.viewmodel.MediaViewModel
-import com.loopa.viewmodel.MediaUiState
-import androidx.compose.ui.layout.ContentScale
-import com.loopa.model.TmdbMovie
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.HazeProgressive
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.PlayArrow
-import kotlinx.coroutines.launch
-
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.border
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import com.loopa.ui.shimmerEffect
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.material.icons.filled.Clear
+import io.github.jan.supabase.auth.status.SessionStatus
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    enableEdgeToEdge()
-    com.loopa.network.NetworkModule.prewarmConnections()
-    setContent {
-      val viewModel: MediaViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-      val themeMode by viewModel.themeMode.collectAsState()
-      val darkTheme = when (themeMode) {
-          "Light" -> false
-          "Dark" -> true
-          else -> androidx.compose.foundation.isSystemInDarkTheme()
-      }
-      MyApplicationTheme(darkTheme = darkTheme) {
-        MediaTrackerApp(viewModel)
-      }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        NetworkModule.prewarmConnections()
+        setContent {
+            val viewModel: MediaViewModel = viewModel()
+            val themeMode by viewModel.themeMode.collectAsState()
+            val darkTheme = when (themeMode) {
+                "Light" -> false
+                "Dark" -> true
+                else -> isSystemInDarkTheme()
+            }
+            MyApplicationTheme(darkTheme = darkTheme) {
+                MediaTrackerApp(viewModel)
+            }
+        }
     }
-  }
 }
 
 @Composable
 fun MediaTrackerApp(
     viewModel: MediaViewModel = viewModel(),
-    authViewModel: com.loopa.viewmodel.AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel()
 ) {
-  val navController = rememberNavController()
-  val hazeState = rememberHazeState()
-  val navBackStackEntry by navController.currentBackStackEntryAsState()
-  val currentRoute = navBackStackEntry?.destination?.route ?: "my_lists"
-  val isRateLimited by viewModel.isRateLimited.collectAsState()
-  val sessionStatus by authViewModel.sessionStatus.collectAsState()
-  var isGuestMode by remember { mutableStateOf(false) }
+    val navController = rememberNavController()
+    val hazeState = rememberHazeState()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route ?: "discover"
+    val isRateLimited by viewModel.isRateLimited.collectAsState()
+    val sessionStatus by authViewModel.sessionStatus.collectAsState()
+    var isGuestMode by remember { mutableStateOf(false) }
 
-  // ── Connectivity callback — flushes offline write queue when device goes online ──
-  // Mirrors: window.addEventListener('online', OfflineSync.attemptSync) on Web
-  val context = androidx.compose.ui.platform.LocalContext.current
-  DisposableEffect(Unit) {
-      val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
-      val request = android.net.NetworkRequest.Builder()
-          .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
-          .build()
-      val callback = object : android.net.ConnectivityManager.NetworkCallback() {
-          override fun onAvailable(network: android.net.Network) {
-              viewModel.flushPendingOps()
-          }
-      }
-      cm.registerNetworkCallback(request, callback)
-      onDispose { cm.unregisterNetworkCallback(callback) }
-  }
-
-  LaunchedEffect(isGuestMode, sessionStatus) {
-      if (!isGuestMode && sessionStatus is io.github.jan.supabase.auth.status.SessionStatus.Authenticated) {
-          viewModel.startRealtime()
-          viewModel.syncMissingMetadata()
-          while (true) {
-              try {
-                  viewModel.syncData()
-              } catch (e: Exception) {
-                  // Silent failure for auto-sync
-              }
-              kotlinx.coroutines.delay(10 * 60 * 1000L) // 10 minutes
-          }
-      }
-  }
-
-  if (sessionStatus is io.github.jan.supabase.auth.status.SessionStatus.Initializing || 
-      sessionStatus.javaClass.simpleName == "LoadingFromStorage") {
-      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-          CircularProgressIndicator()
-      }
-      return
-  }
-
-  if (!isGuestMode && sessionStatus !is io.github.jan.supabase.auth.status.SessionStatus.Authenticated) {
-      com.loopa.ui.AuthScreen(
-          viewModel = authViewModel,
-          onAuthSuccess = { },
-          onGuestClick = { isGuestMode = true }
-      )
-      return
-  }
-
-
-      Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground) {
-        Box(modifier = Modifier.fillMaxSize()) {
-          Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onBackground,
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            topBar = {
-                androidx.compose.animation.AnimatedVisibility(visible = isRateLimited) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        modifier = Modifier.fillMaxWidth().padding(WindowInsets.statusBars.asPaddingValues())
-                    ) {
-                        Text(
-                            "Service is currently rate-limited. Waiting to resume...",
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
+    // Connectivity callback — flushes offline write queue when device goes online
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                viewModel.flushPendingOps()
             }
-          ) { innerPadding ->
-            Box(modifier = Modifier.fillMaxSize().hazeSource(state = hazeState)) {
-              NavHost(
-                navController = navController,
-                startDestination = "discover",
-                modifier = Modifier.fillMaxSize()
-              ) {
-                composable("my_lists") {
-                  MyListsScreen(navController = navController, isGuestMode = isGuestMode)
-                }
-                composable("ai_recs") {
-                  AiRecommendationsScreen(viewModel = viewModel)
-                }
-                composable("discover") {
-                  DiscoverScreen(navController = navController, viewModel = viewModel, hazeState = hazeState)
-                }
-                composable("settings") {
-                  SettingsScreen(
-                    navController = navController, 
-                    viewModel = viewModel,
-                    isGuestMode = isGuestMode,
-                    onLogout = { isGuestMode = false }
-                  )
-                }
-
-              }
-            }
-          }
-
-          // Loopa bottom navigation bar — warm, blurred, pill-style tabs
-          Box(
-              modifier = Modifier
-                  .fillMaxWidth()
-                  .height(150.dp)
-                  .align(Alignment.BottomCenter)
-                  .hazeEffect(state = hazeState) {
-                      blurRadius = 24.dp
-                      progressive = HazeProgressive.verticalGradient(
-                          startIntensity = 0f,
-                          endIntensity = 1f
-                      )
-                  }
-                  .background(
-                      brush = Brush.verticalGradient(
-                          colorStops = arrayOf(
-                              0.0f to Color.Transparent,
-                              0.25f to Color(0x0D0F0E0C),
-                              0.45f to Color(0x730F0E0C),
-                              0.62f to Color(0xCC0F0E0C),
-                              1.0f to Color(0xF50F0E0C)
-                          )
-                      )
-                  )
-          ) {
-              Column(
-                  modifier = Modifier
-                      .fillMaxWidth()
-                      .align(Alignment.BottomCenter)
-              ) {
-                  Box(
-                      modifier = Modifier
-                          .fillMaxWidth()
-                          .windowInsetsPadding(WindowInsets.navigationBars)
-                  ) {
-                      Row(
-                          modifier = Modifier
-                              .fillMaxWidth()
-                              .padding(vertical = 12.dp, horizontal = 8.dp),
-                          horizontalArrangement = Arrangement.SpaceEvenly,
-                          verticalAlignment = Alignment.CenterVertically
-                      ) {
-                           val tabs = listOf(
-                               "discover" to "Radar",
-                               "my_lists" to "My List",
-                               "ai_recs"  to "For You"
-                           )
-
-                          tabs.forEach { (tabId, label) ->
-                              val isSelected = currentRoute == tabId
-                              val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                              val isPressed by interactionSource.collectIsPressedAsState()
-                              val scale by animateFloatAsState(
-                                  targetValue = if (isPressed) 0.93f else 1f,
-                                  label = "nav_scale_$tabId",
-                                  animationSpec = spring(
-                                      dampingRatio = Spring.DampingRatioMediumBouncy,
-                                      stiffness = Spring.StiffnessMedium
-                                  )
-                              )
-
-                              Box(
-                                  modifier = Modifier
-                                      .scale(scale)
-                                      .clip(androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
-                                      .background(
-                                          color = if (isSelected) com.loopa.ui.Loopa.Amber else Color.Transparent
-                                      )
-                                      .then(
-                                          if (!isSelected) Modifier.border(
-                                              width = 1.dp,
-                                              color = com.loopa.ui.Loopa.BorderMd,
-                                              shape = androidx.compose.foundation.shape.RoundedCornerShape(999.dp)
-                                          ) else Modifier
-                                      )
-                                      .clickable(
-                                          interactionSource = interactionSource,
-                                          indication = null,
-                                          onClick = {
-                                              navController.navigate(tabId) {
-                                                  popUpTo("home") { saveState = true }
-                                                  launchSingleTop = true
-                                                  restoreState = true
-                                              }
-                                          }
-                                      )
-                                      .padding(horizontal = 20.dp, vertical = 10.dp),
-                                  contentAlignment = Alignment.Center
-                              ) {
-                                  Text(
-                                      text = label,
-                                      color = if (isSelected) com.loopa.ui.Loopa.Base else com.loopa.ui.Loopa.TextMuted,
-                                      fontSize = 13.sp,
-                                      fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                  )
-                              }
-                          }
-                      }
-                  }
-              }
-          }
-          // ── Loop Toast overlay — single host for the whole app ────────────────
-          Box(
-              modifier = Modifier
-                  .fillMaxWidth()
-                  .align(Alignment.TopCenter)
-          ) {
-              com.loopa.ui.LoopToastHost(toastFlow = viewModel.toastEvent)
-          }
         }
-      }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MyListsScreen(
-    navController: androidx.navigation.NavController, 
-    viewModel: MediaViewModel = viewModel(),
-    statsViewModel: com.loopa.viewmodel.StatsViewModel = viewModel(),
-    isGuestMode: Boolean = false
-) {
-    var selectedTab by remember { mutableStateOf(0) }
-    var listQuery by remember { mutableStateOf("") }
-    val tabs = listOf("All", "Movies", "TV Shows", "Anime")
-    val savedItems by viewModel.savedMediaItems.collectAsState()
-    val statsState by statsViewModel.statsState.collectAsState()
-    
-    var filteredItems by remember { mutableStateOf<List<com.loopa.db.MediaItemEntity>>(emptyList()) }
-    LaunchedEffect(savedItems, selectedTab, listQuery) {
-        filteredItems = viewModel.getFilteredLocalItems(savedItems, selectedTab, listQuery)
+        cm.registerNetworkCallback(request, callback)
+        onDispose { cm.unregisterNetworkCallback(callback) }
     }
-    
-    var isSyncing by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-    
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .background(com.loopa.ui.Loopa.Base)
-        .windowInsetsPadding(WindowInsets.statusBars)
-    ) {
-        Spacer(modifier = Modifier.height(12.dp))
 
-        // Page header matching Loopa design
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            com.loopa.ui.LoopSectionHeader(
-                title = "My List",
-                subtitle = "${savedItems.size} Titles",
-                titleSize = 28,
-                showDivider = false
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Sync button
-                com.loopa.ui.LoopButton(
-                    text = if (isSyncing) "Syncing…" else "Sync",
-                    onClick = {
-                        if (!isGuestMode) {
-                            isSyncing = true
-                            coroutineScope.launch {
-                                try {
-                                    viewModel.syncData()
-                                    viewModel.showToast("Sync complete!")
-                                } catch (e: Exception) {
-                                    viewModel.showToast("Sync failed")
-                                } finally {
-                                    isSyncing = false
-                                }
-                            }
-                        } else {
-                            viewModel.showToast("Sign in to sync data")
-                        }
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Filled.Refresh,
-                            contentDescription = "Sync",
-                            tint = com.loopa.ui.Loopa.Base,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                )
-
-                // Settings button
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(com.loopa.ui.Loopa.Surface)
-                        .border(1.dp, com.loopa.ui.Loopa.Border, CircleShape)
-                        .clickable { navController.navigate("settings") }
-                        .padding(12.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.Settings,
-                        contentDescription = "Settings",
-                        tint = com.loopa.ui.Loopa.TextPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
+    LaunchedEffect(isGuestMode, sessionStatus) {
+        if (!isGuestMode && sessionStatus is SessionStatus.Authenticated) {
+            viewModel.startRealtime()
+            viewModel.syncMissingMetadata()
+            while (true) {
+                try {
+                    viewModel.syncData()
+                } catch (_: Exception) {
+                    // Silent failure for auto-sync
                 }
+                delay(10 * 60 * 1000L) // 10 minutes
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(color = com.loopa.ui.Loopa.Border, modifier = Modifier.padding(horizontal = 16.dp))
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Filter Tabs
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            tabs.forEachIndexed { index, title ->
-                val isSelected = selectedTab == index
-                Box(
-                    modifier = Modifier
-                        .clip(com.loopa.ui.Loopa.PillShape)
-                        .clickable { selectedTab = index }
-                        .background(if (isSelected) com.loopa.ui.Loopa.Amber else com.loopa.ui.Loopa.Surface)
-                        .border(1.dp, if (isSelected) Color.Transparent else com.loopa.ui.Loopa.Border, com.loopa.ui.Loopa.PillShape)
-                        .padding(horizontal = 18.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                        color = if (isSelected) com.loopa.ui.Loopa.Base else com.loopa.ui.Loopa.TextSecondary,
-                        fontSize = 14.sp
-                    )
-                }
-            }
+    if (sessionStatus is SessionStatus.Initializing || sessionStatus.javaClass.simpleName == "LoadingFromStorage") {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Loopa.Amber)
         }
+        return
+    }
 
-        // Search Bar
-        com.loopa.ui.LoopTextField(
-            value = listQuery,
-            onValueChange = { listQuery = it },
-            label = "Search My List…",
-            leadingIcon = { Icon(Icons.Filled.Search, "Search", tint = com.loopa.ui.Loopa.Amber) },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    if (!isGuestMode && sessionStatus !is SessionStatus.Authenticated) {
+        AuthScreen(
+            viewModel = authViewModel,
+            onAuthSuccess = { },
+            onGuestClick = { isGuestMode = true }
         )
-        
-        // Saved List Content
-        if (filteredItems.isEmpty()) {
+        return
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                topBar = {
+                    AnimatedVisibility(visible = isRateLimited) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            modifier = Modifier.fillMaxWidth().padding(WindowInsets.statusBars.asPaddingValues())
+                        ) {
+                            Text(
+                                "Service is currently rate-limited. Waiting to resume...",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            ) { _ ->
+                Box(modifier = Modifier.fillMaxSize().hazeSource(state = hazeState)) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = "discover",
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        composable("discover") {
+                            DiscoverScreen(navController = navController, viewModel = viewModel, hazeState = hazeState)
+                        }
+                        composable("my_lists") {
+                            MyListsScreen(navController = navController, isGuestMode = isGuestMode)
+                        }
+                        composable("ai_recs") {
+                            AiRecommendationsScreen(viewModel = viewModel)
+                        }
+                        composable("settings") {
+                            SettingsScreen(
+                                navController = navController,
+                                viewModel = viewModel,
+                                isGuestMode = isGuestMode,
+                                onLogout = { isGuestMode = false }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Loopa bottom navigation bar — warm, blurred, pill-style tabs
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 24.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .align(Alignment.BottomCenter)
+                    .hazeEffect(state = hazeState) {
+                        blurRadius = 24.dp
+                        progressive = HazeProgressive.verticalGradient(
+                            startIntensity = 0f,
+                            endIntensity = 1f
+                        )
+                    }
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.25f to Color(0x0D0F0E0C),
+                                0.45f to Color(0x730F0E0C),
+                                0.62f to Color(0xCC0F0E0C),
+                                1.0f to Color(0xF50F0E0C)
+                            )
+                        )
+                    )
             ) {
-                com.loopa.ui.LoopEmptyState(
-                    message = if (listQuery.isBlank()) "Your list is empty." else "No matches found."
-                )
-            }
-        } else {
-            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 160.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(filteredItems.size) { index ->
-                    MediaItemCard(item = filteredItems[index], viewModel = viewModel)
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RecommendationsScreen(viewModel: MediaViewModel = viewModel()) {
-    val recommendationState by viewModel.recommendationState.collectAsState()
-    val savedItems by viewModel.savedMediaItems.collectAsState()
-
-    LaunchedEffect(savedItems) {
-        if (savedItems.size >= 10 && recommendationState !is MediaUiState.Success) {
-            viewModel.fetchRecommendations(savedItems)
-        } else if (savedItems.size < 10) {
-            viewModel.fetchRecommendations(savedItems) // This will set InsufficientData state
-        }
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        CenterAlignedTopAppBar(
-            title = { Text("Recommended for You", fontWeight = FontWeight.Bold) },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
-        )
-        
-        when (val state = recommendationState) {
-            is MediaUiState.Loading -> {
-                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 90.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(6) {
-                        RecommendationCardSkeleton()
-                    }
-                }
-            }
-            is MediaUiState.InsufficientData -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                        Icon(Icons.Filled.Star, contentDescription = "Spark", modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Add at least 10 items to your lists to unlock smart recommendations.", textAlign = androidx.compose.ui.text.style.TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Currently: ${savedItems.size}/10", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            is MediaUiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
-                }
-            }
-            is MediaUiState.Success -> {
-                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(state.trending.size) { index ->
-                        val movie = state.trending[index]
-                        RecommendationCard(movie = movie)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
-@Composable
-fun RecommendationCardSkeleton() {
-    com.loopa.ui.LoopCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .shimmerEffect()
-        )
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
-@Composable
-fun RecommendationCard(
-    movie: TmdbMovie,
-    viewModel: MediaViewModel = viewModel(),
-    onLongPress: ((TmdbMovie) -> Unit)? = null,
-    onRelease: (() -> Unit)? = null
-) {
-    val title = movie.title ?: movie.name ?: "Unknown Title"
-    val date = movie.releaseDate ?: movie.firstAirDate ?: "Unknown Date"
-    val imageUrl = movie.backdropPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it" }
-        ?: movie.posterPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it" }
-
-    var showDetails by remember { mutableStateOf(false) }
-
-    val mediaTypeStr = when (movie.mediaType) {
-        "tv" -> "SERIES"
-        "movie" -> "MOVIE"
-        else -> "MEDIA"
-    }
-
-    com.loopa.ui.LoopPosterCard(
-        title = title,
-        imageUrl = imageUrl,
-        mediaType = movie.mediaType ?: "movie",
-        onClick = { showDetails = true },
-        onLongPress = { if (onLongPress != null) onLongPress(movie) },
-        onRelease = onRelease,
-        score = movie.voteAverage,
-        modifier = Modifier.fillMaxWidth()
-    )
-
-    if (showDetails) {
-        LaunchedEffect(showDetails) {
-            viewModel.setDetailOpen(true)
-        }
-        com.loopa.ui.MediaDetailSheet(
-            initialMovie = movie,
-            viewModel = viewModel,
-            onDismiss = {
-                showDetails = false
-                viewModel.setDetailOpen(false)
-            }
-        )
-    }
-}
-
-// ─── Shared Loop Track Dialog (used in Discover) ────────────────────────────
-@Composable
-fun LoopTrackDialog(
-    title: String,
-    mediaTypeStr: String,
-    overview: String?,
-    onDismiss: () -> Unit,
-    onWatched: () -> Unit,
-    onToWatch: () -> Unit
-) {
-    androidx.compose.ui.window.Dialog(
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .wrapContentHeight()
-        ) {
-            com.loopa.ui.LoopDialogContainer {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .align(Alignment.BottomCenter)
                 ) {
-                    Text(
-                        text = title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp,
-                        color = com.loopa.ui.Loopa.TextPrimary,
-                        lineHeight = 28.sp,
-                        maxLines = 2,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                    // Media type badge
-                    com.loopa.ui.LoopBadge(
-                        text = mediaTypeStr,
-                        textColor = com.loopa.ui.Loopa.Amber,
-                        borderColor = com.loopa.ui.Loopa.Amber.copy(0.4f)
-                    )
-
-                    if (!overview.isNullOrBlank()) {
-                        Text(
-                            text = overview,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = com.loopa.ui.Loopa.TextSecondary,
-                            maxLines = 4,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
-
-                    HorizontalDivider(color = com.loopa.ui.Loopa.Border)
-
-                    Text(
-                        text = "ADD TO LIST",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp,
-                        color = com.loopa.ui.Loopa.TextSecondary,
-                        letterSpacing = 0.5.sp
-                    )
-
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets.navigationBars)
                     ) {
-                        com.loopa.ui.LoopButton(
-                            text = "Watched",
-                            onClick = onWatched,
-                            isSecondary = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        com.loopa.ui.LoopButton(
-                            text = "Watching",
-                            onClick = onToWatch,
-                            isSecondary = false,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ─── Shared Loop Quick Action Dialog (long-press actions) ───────────────────
-@Composable
-fun LoopQuickActionDialog(
-    title: String,
-    onDismiss: () -> Unit,
-    onWatched: () -> Unit,
-    onToWatch: () -> Unit,
-    onRemove: (() -> Unit)? = null
-) {
-    androidx.compose.ui.window.Dialog(
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .wrapContentHeight()
-        ) {
-            com.loopa.ui.LoopDialogContainer {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = com.loopa.ui.Loopa.TextPrimary,
-                        maxLines = 2,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "MOVE TO LIST",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp,
-                        color = com.loopa.ui.Loopa.TextSecondary,
-                        letterSpacing = 0.5.sp
-                    )
-                    HorizontalDivider(color = com.loopa.ui.Loopa.Border)
-                    
-                    com.loopa.ui.LoopButton(
-                        text = "Watched",
-                        onClick = onWatched,
-                        isSecondary = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    com.loopa.ui.LoopButton(
-                        text = "Watching",
-                        onClick = onToWatch,
-                        isSecondary = false,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (onRemove != null) {
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(com.loopa.ui.Loopa.PillShape)
-                                .background(com.loopa.ui.Loopa.Error.copy(alpha = 0.1f))
-                                .border(1.dp, com.loopa.ui.Loopa.Error.copy(alpha = 0.4f), com.loopa.ui.Loopa.PillShape)
-                                .clickable(onClick = onRemove)
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Remove", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = com.loopa.ui.Loopa.Error)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+                            val tabs = listOf(
+                                "discover" to "Radar",
+                                "my_lists" to "My List",
+                                "ai_recs"  to "For You"
+                            )
 
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
-@Composable
-fun MediaItemCard(item: com.loopa.db.MediaItemEntity, viewModel: MediaViewModel) {
-    var showDetails by remember { mutableStateOf(false) }
-    var showQuickAdd by remember { mutableStateOf(false) }
-
-    val statusLabel = if (item.listName.equals("Watched", ignoreCase = true)) "Watched" else "Watching"
-
-    val progressText = if (item.listName == "Watching" && (item.mediaType == "tv" || item.mediaType == "anime")) {
-        "S${item.currentSeason} E${item.currentEpisode}"
-    } else {
-        item.progressString
-    }
-
-    com.loopa.ui.LoopPosterCard(
-        title = item.title,
-        imageUrl = item.imageUrl,
-        mediaType = item.mediaType,
-        onClick = { showDetails = true },
-        onLongPress = { showQuickAdd = true },
-        score = item.score,
-        statusLabel = statusLabel,
-        progressText = progressText,
-        totalEpisodes = item.totalEpisodes ?: 0,
-        currentEpisode = item.currentEpisode ?: 0,
-        modifier = Modifier.fillMaxWidth()
-    )
-
-    if (showDetails) {
-        val tmdbMovie = com.loopa.model.TmdbMovie(
-            id = item.id,
-            title = item.title,
-            name = item.title,
-            overview = item.personalNotes ?: "",
-            posterPath = item.imageUrl,
-            backdropPath = item.imageUrl,
-            voteAverage = item.score,
-            releaseDate = item.date,
-            firstAirDate = item.date,
-            mediaType = item.mediaType,
-            popularity = null,
-            genreIds = null
-        )
-        com.loopa.ui.MediaDetailSheet(
-            initialMovie = tmdbMovie,
-            viewModel = viewModel,
-            onDismiss = { showDetails = false }
-        )
-    }
-
-    if (showQuickAdd) {
-        LoopQuickActionDialog(
-            title = item.title,
-            onDismiss = { showQuickAdd = false },
-            onWatched = {
-                viewModel.updateMediaItem(item.copy(listName = "Watched"))
-                showQuickAdd = false
-            },
-            onToWatch = {
-                viewModel.updateMediaItem(item.copy(listName = "Watching"))
-                showQuickAdd = false
-            },
-            onRemove = {
-                viewModel.removeMediaItem(item.id, item.mediaType)
-                showQuickAdd = false
-            }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: MediaViewModel = viewModel(), hazeState: dev.chrisbanes.haze.HazeState? = null) {
-    var query by remember { mutableStateOf("") }
-    var hoverMovie by remember { mutableStateOf<TmdbMovie?>(null) }
-    val searchState by viewModel.searchState.collectAsState()
-    var selectedMediaType by remember { mutableStateOf("All") }
-
-    LaunchedEffect(Unit) {
-        if (query.isBlank()) {
-            viewModel.search("")
-        }
-    }
-    
-    val localHazeState = remember { dev.chrisbanes.haze.HazeState() }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // 1. The Scrollable Content
-        Box(modifier = Modifier.fillMaxSize().hazeSource(state = localHazeState)) {
-            if (query.isBlank()) {
-                HomeScreen(navController = navController, viewModel = viewModel)
-            } else {
-                when (val state = searchState) {
-                    is MediaUiState.Loading -> {
-                        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 16.dp, top = 170.dp, end = 16.dp, bottom = 120.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            items(6) {
-                                RecommendationCardSkeleton()
-                            }
-                        }
-                    }
-                    is MediaUiState.Error -> {
-                        Box(modifier = Modifier.fillMaxSize().padding(top = 180.dp), contentAlignment = Alignment.TopCenter) {
-                            Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
-                        }
-                    }
-                    is MediaUiState.InsufficientData -> {}
-                    is MediaUiState.Success -> {
-                        val filteredList = state.trending.filter { movie ->
-                            when (selectedMediaType) {
-                                "Movies" -> movie.mediaType == "movie"
-                                "TV Shows" -> movie.mediaType == "tv"
-                                "Anime" -> movie.genreIds?.contains(16) == true || movie.mediaType == "anime"
-                                else -> true
-                            }
-                        }
-
-                        if (filteredList.isEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(top = 180.dp),
-                                contentAlignment = Alignment.TopCenter
-                            ) {
-                                Text(
-                                    text = "No results found",
-                                    color = com.loopa.ui.Loopa.TextMuted,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium
+                            tabs.forEach { (tabId, label) ->
+                                val isSelected = currentRoute == tabId
+                                val interactionSource = remember { MutableInteractionSource() }
+                                val isPressed by interactionSource.collectIsPressedAsState()
+                                val scale by animateFloatAsState(
+                                    targetValue = if (isPressed) 0.93f else 1f,
+                                    label = "nav_scale_$tabId",
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
                                 )
-                            }
-                        } else {
-                            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 16.dp, top = 170.dp, end = 16.dp, bottom = 120.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(filteredList.size) { index ->
-                                    val movie = filteredList[index]
-                                    RecommendationCard(
-                                        movie = movie,
-                                        onLongPress = { hoverMovie = it },
-                                        onRelease = { hoverMovie = null }
+
+                                Box(
+                                    modifier = Modifier
+                                        .scale(scale)
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(
+                                            color = if (isSelected) Loopa.Amber else Color.Transparent
+                                        )
+                                        .then(
+                                            if (!isSelected) Modifier.border(
+                                                width = 1.dp,
+                                                color = Loopa.BorderMd,
+                                                shape = RoundedCornerShape(999.dp)
+                                            ) else Modifier
+                                        )
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = null,
+                                            onClick = {
+                                                if (currentRoute == "settings") {
+                                                    navController.popBackStack()
+                                                    if (tabId != "my_lists") {
+                                                        navController.navigate(tabId) {
+                                                            popUpTo("discover") { saveState = true }
+                                                            launchSingleTop = true
+                                                            restoreState = true
+                                                        }
+                                                    }
+                                                } else if (currentRoute != tabId) {
+                                                    navController.navigate(tabId) {
+                                                        popUpTo("discover") { saveState = true }
+                                                        launchSingleTop = true
+                                                        restoreState = true
+                                                    }
+                                                }
+                                            }
+                                        )
+                                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) Loopa.Base else Loopa.TextMuted,
+                                        fontSize = 13.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                     )
                                 }
                             }
@@ -958,489 +295,15 @@ fun DiscoverScreen(navController: androidx.navigation.NavController, viewModel: 
                     }
                 }
             }
-        }
 
-        // 2. Search bar with progressive blur overlaid on top
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .hazeEffect(state = localHazeState) {
-                    blurRadius = 24.dp
-                    progressive = dev.chrisbanes.haze.HazeProgressive.verticalGradient(
-                        startIntensity = 1f,
-                        endIntensity = 0f
-                    )
-                }
-                .background(
-                    brush = Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.0f to Color(0xF50F0E0C),
-                            0.45f to Color(0xCC0F0E0C),
-                            0.75f to Color(0x660F0E0C),
-                            1.0f to Color.Transparent
-                        )
-                    )
-                )
-                .windowInsetsPadding(WindowInsets.statusBars)
-        ) {
-            Spacer(modifier = Modifier.height(10.dp))
-            
-            // Custom search bar (pinned at top)
-            RadarSearchBar(
-                query = query,
-                onQueryChange = {
-                    query = it
-                    viewModel.search(it)
-                },
-                placeholder = "Search targets...",
+            // Loop Toast overlay — single host for the whole app
+            Box(
                 modifier = Modifier
-                    .padding(horizontal = 20.dp)
                     .fillMaxWidth()
-            )
-
-            if (query.isNotBlank()) {
-                // Quick filter pills matching Website
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    listOf("All", "Movies", "TV Shows", "Anime").forEach { type ->
-                        val isSelected = selectedMediaType == type
-                        Box(
-                            modifier = Modifier
-                                .clip(com.loopa.ui.Loopa.PillShape)
-                                .background(if (isSelected) com.loopa.ui.Loopa.Amber else com.loopa.ui.Loopa.Surface)
-                                .border(
-                                    1.dp,
-                                    if (isSelected) Color.Transparent else com.loopa.ui.Loopa.Border,
-                                    com.loopa.ui.Loopa.PillShape
-                                )
-                                .clickable { selectedMediaType = type }
-                                .padding(horizontal = 14.dp, vertical = 6.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = type,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                color = if (isSelected) com.loopa.ui.Loopa.Base else com.loopa.ui.Loopa.TextSecondary,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-    // ── Hover Preview Overlay ──
-    hoverMovie?.let { movie ->
-        val title = movie.title ?: movie.name ?: "Unknown"
-        val imageUrl = movie.backdropPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w500$it" }
-            ?: movie.posterPath?.let { "https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev/t/p/w342$it" }
-        val date = movie.releaseDate ?: movie.firstAirDate
-        val mediaTypeVal = movie.mediaType ?: "movie"
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(com.loopa.ui.Loopa.Base.copy(alpha = 0.85f))
-                .clickable { hoverMovie = null },
-            contentAlignment = Alignment.Center
-        ) {
-            // Rounded Loopa Preview Card
-            Box(
-                modifier = Modifier
-                    .width(320.dp)
-                    .clip(com.loopa.ui.Loopa.CardShape)
-                    .background(com.loopa.ui.Loopa.Surface)
-                    .border(1.dp, com.loopa.ui.Loopa.Border, com.loopa.ui.Loopa.CardShape)
-                    .padding(20.dp)
-                    .clickable(enabled = false) {}
+                    .align(Alignment.TopCenter)
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
-                        color = com.loopa.ui.Loopa.TextPrimary,
-                        lineHeight = 26.sp
-                    )
-
-                    if (imageUrl != null) {
-                        AsyncImage(
-                            model = imageUrl,
-                            contentDescription = title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(180.dp)
-                                .clip(com.loopa.ui.Loopa.CardShape)
-                        )
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        com.loopa.ui.LoopBadge(
-                            text = mediaTypeVal,
-                            textColor = com.loopa.ui.Loopa.Amber,
-                            borderColor = com.loopa.ui.Loopa.Amber.copy(0.4f)
-                        )
-
-                        val year = if (!date.isNullOrBlank() && date.length >= 4) {
-                            date.substring(0, 4)
-                        } else null
-                        if (year != null) {
-                            Text(
-                                text = year,
-                                color = com.loopa.ui.Loopa.TextSecondary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        if (movie.voteAverage != null && movie.voteAverage > 0.0) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Star,
-                                    contentDescription = "Rating",
-                                    tint = com.loopa.ui.Loopa.Amber,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = String.format("%.1f", movie.voteAverage),
-                                    color = com.loopa.ui.Loopa.TextPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    if (!movie.overview.isNullOrBlank()) {
-                        Text(
-                            text = movie.overview,
-                            fontSize = 13.sp,
-                            color = com.loopa.ui.Loopa.TextSecondary,
-                            lineHeight = 18.sp,
-                            maxLines = 5,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                    }
-                }
+                LoopToastHost(toastFlow = viewModel.toastEvent)
             }
         }
     }
 }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RadarSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    placeholder: String,
-    onFocusChange: (Boolean) -> Unit = {},
-    modifier: Modifier = Modifier
-) {
-    var isFocused by remember { mutableStateOf(false) }
-    val elevation by animateDpAsState(targetValue = if (isFocused) 6.dp else 2.dp, label = "elevation")
-    
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .shadow(elevation, com.loopa.ui.Loopa.PillShape)
-            .onFocusChanged { 
-                isFocused = it.isFocused
-                onFocusChange(it.isFocused)
-            },
-        color = Color(0x66161512),
-        shape = com.loopa.ui.Loopa.PillShape,
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (isFocused) com.loopa.ui.Loopa.Amber.copy(alpha = 0.5f) else Color(0x1FADACAB)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = "Search icon",
-                tint = if (isFocused) com.loopa.ui.Loopa.Amber else com.loopa.ui.Loopa.TextMuted,
-                modifier = Modifier.size(20.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            androidx.compose.foundation.text.BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(
-                    color = com.loopa.ui.Loopa.TextPrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium
-                ),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(com.loopa.ui.Loopa.Amber),
-                modifier = Modifier.weight(1f),
-                decorationBox = { innerTextField ->
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
-                        if (query.isEmpty()) {
-                            Text(
-                                text = placeholder,
-                                color = com.loopa.ui.Loopa.TextMuted.copy(alpha = 0.7f),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Normal
-                            )
-                        }
-                        innerTextField()
-                    }
-                }
-            )
-            
-            if (query.isNotEmpty()) {
-                IconButton(
-                    onClick = { onQueryChange("") },
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Clear,
-                        contentDescription = "Clear",
-                        tint = com.loopa.ui.Loopa.TextMuted,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SettingsScreen(
-    navController: androidx.navigation.NavController,
-    viewModel: MediaViewModel,
-    authViewModel: com.loopa.viewmodel.AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    isGuestMode: Boolean = false,
-    onLogout: () -> Unit = {}
-) {
-    var isSyncing by androidx.compose.runtime.remember { mutableStateOf(false) }
-    val lastSyncTime by viewModel.lastSyncTime.collectAsState()
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
-    
-    var currentTimeMs by androidx.compose.runtime.remember { mutableStateOf(System.currentTimeMillis()) }
-    
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(60000)
-            currentTimeMs = System.currentTimeMillis()
-        }
-    }
-    
-    val formattedLastSync = androidx.compose.runtime.remember(lastSyncTime, currentTimeMs) {
-        if (lastSyncTime == 0L) "Never synced"
-        else {
-            val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
-                lastSyncTime,
-                currentTimeMs,
-                android.text.format.DateUtils.MINUTE_IN_MILLIS,
-                android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE
-            ).toString()
-            "Last synced: $relativeTime"
-        }
-    }
-    
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .windowInsetsPadding(WindowInsets.statusBars)
-    ) {
-        // Loopa header for Settings
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            com.loopa.ui.LoopSectionHeader(
-                title = "Settings",
-                subtitle = if (isGuestMode) "Guest Mode" else "Preferences",
-                showDivider = false
-            )
-            // Back button
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(com.loopa.ui.Loopa.Surface)
-                    .border(1.dp, com.loopa.ui.Loopa.Border, CircleShape)
-                    .clickable { navController.popBackStack() }
-                    .padding(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = com.loopa.ui.Loopa.TextPrimary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 90.dp)
-        ) {
-            item {
-
-
-                // Section header: Account & Data
-                com.loopa.ui.LoopSectionHeader(
-                    title = "Account & Data",
-                    subtitle = null,
-                    showDivider = false,
-                    modifier = Modifier.padding(top = 8.dp, start = 16.dp, end = 16.dp)
-                )
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Sync with Cloud", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
-                    supportingContent = { 
-                        Column {
-                            Text(if (isSyncing) "Syncing..." else "Sync media items with Supabase", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (!isGuestMode && !isSyncing) {
-                                Text(formattedLastSync, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
-                            }
-                        }
-                    },
-                    leadingContent = { Icon(Icons.Filled.Refresh, contentDescription = "Sync", tint = MaterialTheme.colorScheme.primary) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Sync") },
-                    modifier = Modifier.clickable { 
-                        if (!isSyncing && !isGuestMode) {
-                            isSyncing = true
-                            coroutineScope.launch {
-                                try {
-                                    viewModel.syncData()
-                                    viewModel.showToast("Sync complete!")
-                                } catch (e: Exception) {
-                                    viewModel.showToast("Sync failed: ${e.message}")
-                                } finally {
-                                    isSyncing = false
-                                }
-                            }
-                        } else if (isGuestMode) {
-                            viewModel.showToast("Sign in to sync data")
-                        }
-                    }
-                )
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text(if (isGuestMode) "Log In" else "Log Out", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
-                    supportingContent = { Text(if (isGuestMode) "Sign in to sync your data" else "Sign out from your account", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    leadingContent = { Icon(Icons.Filled.AccountCircle, contentDescription = if (isGuestMode) "Login" else "Logout", tint = if (isGuestMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = if (isGuestMode) "Login" else "Logout") },
-                    modifier = Modifier.clickable { 
-                        if (!isGuestMode) authViewModel.signOut()
-                        onLogout() 
-                    }
-                )
-
-                // Section header: Preferences
-                com.loopa.ui.LoopSectionHeader(
-                    title = "Preferences",
-                    subtitle = null,
-                    showDivider = false,
-                    modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)
-                )
-                var notificationsEnabled by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Notifications", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
-                    supportingContent = { Text("Updates & reminders", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    leadingContent = { Icon(androidx.compose.material.icons.Icons.Filled.Notifications, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.primary) },
-                    trailingContent = { 
-                        Switch(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it }) 
-                    },
-                    modifier = Modifier.clickable { notificationsEnabled = !notificationsEnabled }
-                )
-
-                // Section header: Support & About
-                com.loopa.ui.LoopSectionHeader(
-                    title = "Support & About",
-                    subtitle = null,
-                    showDivider = false,
-                    modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)
-                )
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Help & Feedback", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
-                    leadingContent = { Icon(androidx.compose.material.icons.Icons.Filled.Help, contentDescription = "Help", tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    modifier = Modifier.clickable { }
-                )
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Privacy Policy", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
-                    leadingContent = { Icon(androidx.compose.material.icons.Icons.Filled.PrivacyTip, contentDescription = "Privacy Policy", tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    modifier = Modifier.clickable { }
-                )
-                ListItem(
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("About", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
-                    supportingContent = { Text("Loopa v1.0", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    leadingContent = { Icon(androidx.compose.material.icons.Icons.Filled.Info, contentDescription = "About", tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    modifier = Modifier.clickable { }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun <T> ResponsiveGrid(
-    items: List<T>,
-    modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(0.dp),
-    itemContent: @Composable (T) -> Unit
-) {
-    BoxWithConstraints(modifier = modifier) {
-        val columns = if (maxWidth > 600.dp) {
-            (maxWidth / 320.dp).toInt().coerceAtLeast(2)
-        } else {
-            1
-        }
-        
-        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(columns),
-            contentPadding = contentPadding,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(
-                count = items.size,
-                key = { index -> items[index].hashCode() }
-            ) { index ->
-                androidx.compose.foundation.layout.Box(modifier = Modifier.animateItem()) {
-                    itemContent(items[index])
-                }
-            }
-        }
-    }
-}
-

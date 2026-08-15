@@ -1,5 +1,6 @@
 import { getCorsHeaders, handleOptions, authorizeClient } from './utils/cors.js';
 import { handleFastSearch } from './routes/search.js';
+import { handleSemanticSearch } from './routes/semantic.js';
 import { handleMediaDetails } from './routes/details.js';
 import { handleAiRecommendations } from './routes/recommendations.js';
 
@@ -25,6 +26,11 @@ export default {
       }
 
       // 3. API Router
+      // ── AI Semantic Smart Search Endpoint ───────────────────────────────────
+      if (url.pathname === '/api/search/semantic') {
+        return await handleSemanticSearch(request, env, ctx);
+      }
+
       // ── Instant Fast Search Endpoint ──────────────────────────────────────────
       if (url.pathname === '/api/search/fast' || url.pathname === '/api/search') {
         if (request.method !== 'GET') {

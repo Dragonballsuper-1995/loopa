@@ -15,6 +15,8 @@ const App = {
         drawerItem: null,
         drawerDBEntry: null,
         searchDebounce: null,
+        searchAbortController: null,
+        searchSeqId: 0,
         aiLoaded: false,
         aiRecommendations: [],
         suggestionIndex: -1,
@@ -79,25 +81,29 @@ const App = {
             SBList.subscribeToChanges(
                 this.s.user.id,
                 async (newRow) => {
-                    this.s.watchlist = await SBList.getAll(this.s.user.id);
-                    if(this.s.view === 'watchlist') this._updateWLUI();
-                    if(this.s.drawerDBEntry && this.s.drawerDBEntry.id === newRow.id) {
+                    const idx = this.s.watchlist.findIndex(i => i.id === newRow.id && i.media_type === newRow.media_type);
+                    if (idx >= 0) this.s.watchlist[idx] = newRow;
+                    else this.s.watchlist.unshift(newRow);
+                    if (this.s.view === 'watchlist') this._updateWLUI();
+                    if (this.s.drawerDBEntry && this.s.drawerDBEntry.id === newRow.id && this.s.drawerDBEntry.media_type === newRow.media_type) {
                         this.s.drawerDBEntry = newRow;
                         UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
                     }
                 },
                 async (newRow) => {
-                    this.s.watchlist = await SBList.getAll(this.s.user.id);
-                    if(this.s.view === 'watchlist') this._updateWLUI();
-                    if(this.s.drawerDBEntry && this.s.drawerDBEntry.id === newRow.id) {
+                    const idx = this.s.watchlist.findIndex(i => i.id === newRow.id && i.media_type === newRow.media_type);
+                    if (idx >= 0) this.s.watchlist[idx] = newRow;
+                    else this.s.watchlist.unshift(newRow);
+                    if (this.s.view === 'watchlist') this._updateWLUI();
+                    if (this.s.drawerDBEntry && this.s.drawerDBEntry.id === newRow.id && this.s.drawerDBEntry.media_type === newRow.media_type) {
                         this.s.drawerDBEntry = newRow;
                         UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
                     }
                 },
                 async (oldRow) => {
-                    this.s.watchlist = await SBList.getAll(this.s.user.id);
-                    if(this.s.view === 'watchlist') this._updateWLUI();
-                    if(this.s.drawerDBEntry && this.s.drawerDBEntry.id === oldRow.id) {
+                    this.s.watchlist = this.s.watchlist.filter(i => !(i.id === oldRow.id && i.media_type === oldRow.media_type));
+                    if (this.s.view === 'watchlist') this._updateWLUI();
+                    if (this.s.drawerDBEntry && this.s.drawerDBEntry.id === oldRow.id && this.s.drawerDBEntry.media_type === oldRow.media_type) {
                         this.s.drawerDBEntry = null;
                         UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
                     }
@@ -190,6 +196,83 @@ const App = {
             });
         }
 
+        // Data Portability Suite (Export & Import)
+        const btnExpJSON = document.getElementById('btnExportJSON');
+        if (btnExpJSON) {
+            btnExpJSON.addEventListener('click', () => {
+                const list = this.s.watchlist || [];
+                if (list.length === 0) {
+                    UI.toast('WATCHLIST IS EMPTY', 'error');
+                    return;
+                }
+                Portability.exportJSON(list);
+                UI.toast('EXPORTED WATCHLIST (JSON)');
+            });
+        }
+
+        const btnExpCSV = document.getElementById('btnExportCSV');
+        if (btnExpCSV) {
+            btnExpCSV.addEventListener('click', () => {
+                const list = this.s.watchlist || [];
+                if (list.length === 0) {
+                    UI.toast('WATCHLIST IS EMPTY', 'error');
+                    return;
+                }
+                Portability.exportCSV(list);
+                UI.toast('EXPORTED WATCHLIST (CSV)');
+            });
+        }
+
+        const btnImp = document.getElementById('btnImportWatchlist');
+        const fileImp = document.getElementById('importFileInput');
+        if (btnImp && fileImp) {
+            btnImp.addEventListener('click', () => fileImp.click());
+            fileImp.addEventListener('change', async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const candidates = Portability.parseContent(text, file.name);
+                    if (!candidates || candidates.length === 0) {
+                        UI.toast('NO VALID ITEMS FOUND IN FILE', 'error');
+                        fileImp.value = '';
+                        return;
+                    }
+
+                    const modal = document.getElementById('importModal');
+                    const statusText = document.getElementById('importStatusText');
+                    const pBar = document.getElementById('importProgressBar');
+                    const pStats = document.getElementById('importProgressStats');
+
+                    if (modal) {
+                        modal.classList.remove('opacity-0', 'pointer-events-none');
+                    }
+
+                    const userId = this.s.user?.id || 'guest';
+                    const result = await Portability.importWatchlist(candidates, userId, (cur, tot, title) => {
+                        if (statusText) statusText.textContent = `Importing: ${title}`;
+                        if (pBar) pBar.style.width = `${Math.round((cur / tot) * 100)}%`;
+                        if (pStats) pStats.textContent = `${cur} / ${tot}`;
+                    });
+
+                    if (modal) {
+                        modal.classList.add('opacity-0', 'pointer-events-none');
+                    }
+
+                    this.s.watchlist = await SBList.getAll(userId);
+                    if (this.s.view === 'watchlist') this._updateWLUI();
+                    UI.toast(`IMPORTED ${result.imported} OF ${result.total} ITEMS`);
+                } catch (err) {
+                    console.error('[Import] Error:', err);
+                    UI.toast('IMPORT FAILED: ' + err.message, 'error');
+                    const modal = document.getElementById('importModal');
+                    if (modal) modal.classList.add('opacity-0', 'pointer-events-none');
+                } finally {
+                    fileImp.value = '';
+                }
+            });
+        }
+
         // Notification toggle
         const nt = document.getElementById('notificationToggle');
         if (nt) {
@@ -209,8 +292,8 @@ const App = {
         // Search
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
-            searchInput.addEventListener('input', e => {
-                const q = e.target.value.trim();
+            const triggerSearch = (immediate = false) => {
+                const q = searchInput.value.trim();
                 clearTimeout(this.s.searchDebounce);
 
                 if (this.s.view !== 'search' && q.length > 0) {
@@ -222,6 +305,10 @@ const App = {
                 const resultsContainer = document.getElementById('search-results-container');
                 
                 if (q.length === 0) {
+                    if (this.s.searchAbortController) {
+                        this.s.searchAbortController.abort();
+                        this.s.searchAbortController = null;
+                    }
                     if (browseContent) browseContent.classList.remove('hidden');
                     if (resultsContainer) resultsContainer.classList.add('hidden');
                     this.s.searchResults = [];
@@ -237,11 +324,25 @@ const App = {
                     return;
                 }
 
-                if (grid) grid.innerHTML = UI.skeletonGrid(8);
+                if (grid && (!grid.innerHTML.trim() || immediate)) {
+                    grid.innerHTML = UI.skeletonGrid(8);
+                }
 
-                this.s.searchDebounce = setTimeout(() => {
+                if (immediate) {
                     this._doSearch(q);
-                }, 90);
+                } else {
+                    this.s.searchDebounce = setTimeout(() => {
+                        this._doSearch(q);
+                    }, 300);
+                }
+            };
+
+            searchInput.addEventListener('input', () => triggerSearch(false));
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    triggerSearch(true);
+                }
             });
         }
 
@@ -693,6 +794,14 @@ const App = {
 
 
     async _doSearch(q) {
+        // Abort previous in-flight search requests and increment sequence ID
+        if (this.s.searchAbortController) {
+            this.s.searchAbortController.abort();
+        }
+        this.s.searchAbortController = new AbortController();
+        const signal = this.s.searchAbortController.signal;
+        const currentSeq = ++this.s.searchSeqId;
+
         try {
             let actualQuery = q;
             const cached = LoopaSearchEngine.getCachedCorrection(q);
@@ -701,12 +810,14 @@ const App = {
             }
 
             // 1. Perform instant fast search with unified Edge API (~20-80ms)
-            const fastResults = await API.searchFast(actualQuery);
+            const fastResults = await API.searchFast(actualQuery, signal);
+            if (currentSeq !== this.s.searchSeqId) return; // Stale query discarded
 
             // Fetch fuzzy matches from local watchlist index
             const localHits = LoopaSearchEngine.getSuggestions(q, 4);
 
             const renderResults = (remoteItems) => {
+                if (currentSeq !== this.s.searchSeqId) return; // Stale query discarded
                 const merged = [];
                 const seen = new Set();
                 const normalizedQ = q.toLowerCase().trim();
@@ -751,39 +862,57 @@ const App = {
             // RENDER INSTANTLY NOW (< 50ms)!
             renderResults(fastResults);
 
-            // 2. Asynchronously run AI query correction in background ONLY if results < 3 and query >= 4 chars
-            if (!cached && fastResults.length < 3 && q.length >= 4 && CONFIG.RECOMMENDATIONS_URL) {
+            // 2. Asynchronously run AI Semantic Smart Search in background
+            const isNaturalLanguage = q.split(/\s+/).length >= 3 || /(like|about|vibe|dystopian|cyberpunk|anime|movie|show|recommend|similar|dark|funny|robot|car|cook)/i.test(q);
+            if (isNaturalLanguage || (fastResults.length < 3 && q.length >= 4)) {
                 (async () => {
                     try {
-                        const prompt = `Correct any typos or spelling errors in this media search query: '${q}'. Return ONLY a raw JSON object: {"correctedQuery":"<corrected title>"}. Example: "Moha" -> {"correctedQuery":"Mohabbatein"}.`;
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 1200);
-                        const aiRes = await fetch(CONFIG.RECOMMENDATIONS_URL, {
-                            method: 'POST',
-                            signal: controller.signal,
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
-                            },
-                            body: JSON.stringify({ prompt })
-                        });
-                        clearTimeout(timeoutId);
-                        if (aiRes.ok) {
-                            let text = await aiRes.text();
-                            text = text.replace(/```json?/g, '').replace(/```/g, '').trim();
-                            const parsed = JSON.parse(text);
-                            if (parsed.correctedQuery && parsed.correctedQuery.toLowerCase() !== q.toLowerCase()) {
-                                LoopaSearchEngine.cacheCorrection(q, parsed.correctedQuery);
-                                const extraRes = await API.searchFast(parsed.correctedQuery);
-                                if (extraRes.length > 0) {
-                                    renderResults([...fastResults, ...extraRes]);
+                        const semanticResults = await API.searchSemantic(q, signal);
+                        if (currentSeq !== this.s.searchSeqId) return;
+                        if (semanticResults && semanticResults.length > 0) {
+                            renderResults([...semanticResults, ...fastResults]);
+                            return;
+                        }
+                    } catch (err) {
+                        if (err.name === 'AbortError') return;
+                    }
+
+                    // Fallback to spelling correction if semantic returned no extra results
+                    if (!cached && fastResults.length < 3 && CONFIG.RECOMMENDATIONS_URL) {
+                        try {
+                            const prompt = `Correct any typos or spelling errors in this media search query: '${q}'. Return ONLY a raw JSON object: {"correctedQuery":"<corrected title>"}. Example: "Moha" -> {"correctedQuery":"Mohabbatein"}.`;
+                            const aiRes = await fetch(CONFIG.RECOMMENDATIONS_URL, {
+                                method: 'POST',
+                                signal: signal,
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
+                                },
+                                body: JSON.stringify({ prompt })
+                            });
+                            if (currentSeq !== this.s.searchSeqId) return;
+                            if (aiRes.ok) {
+                                let text = await aiRes.text();
+                                text = text.replace(/```json?/g, '').replace(/```/g, '').trim();
+                                const parsed = JSON.parse(text);
+                                if (parsed.correctedQuery && parsed.correctedQuery.toLowerCase() !== q.toLowerCase()) {
+                                    LoopaSearchEngine.cacheCorrection(q, parsed.correctedQuery);
+                                    const extraRes = await API.searchFast(parsed.correctedQuery, signal);
+                                    if (currentSeq !== this.s.searchSeqId) return;
+                                    if (extraRes.length > 0) {
+                                        renderResults([...fastResults, ...extraRes]);
+                                    }
                                 }
                             }
+                        } catch (err) {
+                            if (err.name === 'AbortError') return;
                         }
-                    } catch {}
+                    }
                 })();
             }
         } catch (err) {
+            if (err.name === 'AbortError') return;
+            if (currentSeq !== this.s.searchSeqId) return;
             document.getElementById('searchResults').innerHTML = `
                 <div class="col-span-full py-16 text-center">
                     <p class="font-headers text-base text-red-400">ERROR: ${err.message}</p>
@@ -884,39 +1013,48 @@ const App = {
             input.value = '';
         };
 
-        btnSend.addEventListener('click', sendMsg);
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMsg();
+        if (btnSend) btnSend.addEventListener('click', sendMsg);
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMsg();
+            });
+        }
+
+        // Bind Mood / Vibe Starter Chips
+        document.querySelectorAll('#aiMoodChips .ai-chip').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const prompt = btn.dataset.prompt;
+                if (prompt) this._handleAiChat(prompt);
+            });
         });
         
         const btnClear = document.getElementById('btnAiClearChat');
-        if(btnClear) {
+        if (btnClear) {
             btnClear.addEventListener('click', () => {
                 this.s.chatHistory = [];
-                document.getElementById('aiChatLog').innerHTML = `
-                    <div class="flex flex-col gap-2 w-full max-w-4xl animate-fade-in-up">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber"><i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i></div>
-                            <span class="text-sm font-bold text-textPrimary">Loopa AI</span>
-                        </div>
-                        <div class="bg-loopSurface/60 border border-white/5 rounded-2xl rounded-tl-none p-4 text-textPrimary text-sm leading-relaxed inline-block self-start">
-                            Hello! I have access to your watchlist. What kind of movie, show, or anime are you in the mood for today?
-                        </div>
-                    </div>
-                `;
+                const chatLog = document.getElementById('aiChatLog');
+                if (chatLog) chatLog.innerHTML = '';
+                this._handleAiChat('Give me an exciting, unexpected movie or anime recommendation to surprise me tonight', true);
             });
         }
+
+        // Auto-fetch initial curated daily mix on first load
+        const chatLog = document.getElementById('aiChatLog');
+        if (chatLog) chatLog.innerHTML = '';
+        this._handleAiChat('Curated picks for you tonight', true);
     },
 
-    async _handleAiChat(message) {
+    async _handleAiChat(message, isInitialAuto = false) {
         if (this.s.isAiThinking) return;
         this.s.isAiThinking = true;
 
         const chatLog = document.getElementById('aiChatLog');
         
-        // Render User Message
-        chatLog.appendChild(UI.renderAiMessage('user', message));
-        chatLog.scrollTop = chatLog.scrollHeight;
+        // Render User Message if not an automatic background greeting
+        if (!isInitialAuto) {
+            chatLog.appendChild(UI.renderAiMessage('user', message));
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
         
         // Add loading state
         const loadingDiv = document.createElement('div');
@@ -933,25 +1071,29 @@ const App = {
         chatLog.scrollTop = chatLog.scrollHeight;
 
         try {
-            if (!this.s.watchlist.length) this.s.watchlist = await SBList.getAll(this.s.user.id);
+            if (!this.s.watchlist.length && !this.s.isGuest && this.s.user) {
+                this.s.watchlist = await SBList.getAll(this.s.user.id);
+            }
             let targets = this.s.watchlist.filter(i => i.list_name === 'Watched');
             if (targets.length === 0) targets = this.s.watchlist;
             
             const liked = JSON.parse(localStorage.getItem('oracle_liked_titles') || '[]');
             const disliked = JSON.parse(localStorage.getItem('oracle_disliked_titles') || '[]');
 
-            // Push to history
-            this.s.chatHistory.push({ role: 'user', content: message });
+            // Push to history if user prompt
+            if (!isInitialAuto) {
+                this.s.chatHistory.push({ role: 'user', content: message });
+            }
             
             const recs = await API.getAIRecommendations(targets, liked, disliked, this.s.chatHistory);
             
-            // Enrich results — Step 3.3: use unified schema field names matching Android
+            // Enrich results
             const enriched = await Promise.allSettled(recs.map(async rec => {
                 let r;
-                if(rec.mediaType==='anime') r = await API.searchAnime(rec.title);
-                else if(rec.mediaType==='movie') r = await API.searchMovies(rec.title);
+                if (rec.mediaType === 'anime') r = await API.searchAnime(rec.title);
+                else if (rec.mediaType === 'movie') r = await API.searchMovies(rec.title);
                 else r = await API.searchTV(rec.title);
-                return r[0]
+                return r && r[0]
                     ? { ...r[0], reason: rec.reasoning, reasoning: rec.reasoning,
                                  genre: rec.genre, releaseYear: rec.releaseYear }
                     : null;
@@ -960,13 +1102,22 @@ const App = {
             const valid = enriched.filter(r => r.status === 'fulfilled' && r.value).map(r => r.value);
             
             // Generate response text
-            let responseText = "Here are some recommendations based on what you asked:";
-            if (valid.length === 0) responseText = "I couldn't find any good matches for that. Could you try asking in a different way?";
+            let responseText = isInitialAuto
+                ? (targets.length > 0 
+                    ? "Welcome back! Based on your watchlist history, here is your curated daily mix:" 
+                    : "Hello! Here are top curated picks across Movies, TV Shows, and Anime to kickstart your journey:")
+                : "Here are some recommendations based on what you asked:";
+
+            if (valid.length === 0) {
+                responseText = "I couldn't find any good matches for that. Could you try asking in a different way?";
+            }
             
             this.s.chatHistory.push({ role: 'model', content: responseText });
             
             // Remove loading
-            chatLog.removeChild(loadingDiv);
+            if (chatLog.contains(loadingDiv)) {
+                chatLog.removeChild(loadingDiv);
+            }
             
             // Render Model Message
             chatLog.appendChild(UI.renderAiMessage('model', responseText));
@@ -984,7 +1135,9 @@ const App = {
             chatLog.scrollTop = chatLog.scrollHeight;
             
         } catch (err) {
-            chatLog.removeChild(loadingDiv);
+            if (chatLog.contains(loadingDiv)) {
+                chatLog.removeChild(loadingDiv);
+            }
             chatLog.appendChild(UI.renderAiMessage('model', `Sorry, I encountered an error: ${err.message}`));
             chatLog.scrollTop = chatLog.scrollHeight;
         } finally {

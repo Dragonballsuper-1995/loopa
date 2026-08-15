@@ -11,6 +11,11 @@ interface LoopaApiService {
         @Query("q") query: String
     ): List<FastSearchResult>
 
+    @GET("api/search/semantic")
+    suspend fun searchSemantic(
+        @Query("q") query: String
+    ): List<FastSearchResult>
+
     @GET("api/media/details")
     suspend fun getMediaDetails(
         @Query("id") id: Int,
