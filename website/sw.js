@@ -1,4 +1,4 @@
-const CACHE_NAME = 'loopa-cache-v8';
+const CACHE_NAME = 'loopa-cache-v9';
 
 // Static assets to cache immediately on install
 const PRECACHE_URLS = [
@@ -16,7 +16,10 @@ const PRECACHE_URLS = [
     './js/ui.js?v=20',
     './js/app.js?v=20',
     './assets/logo.svg',
-    './assets/favicon.svg'
+    './assets/favicon.svg',
+    './assets/icon-192.png',
+    './assets/icon-512.png',
+    './assets/icon-maskable-512.png'
 ];
 
 self.addEventListener('install', event => {

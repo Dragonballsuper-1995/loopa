@@ -1,26 +1,68 @@
 {
+  "id": "/",
   "name": "Loopa - Personal Media Universe",
   "short_name": "Loopa",
   "description": "Log everything you watch — movies, series, anime — and let AI curate your next obsession.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0c0b09",
-  "theme_color": "#0c0b09",
+  "background_color": "#0C0B09",
+  "theme_color": "#0C0B09",
   "orientation": "portrait-primary",
   "categories": ["entertainment", "movies", "lifestyle"],
   "icons": [
     {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "assets/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "assets/logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Radar / Discover",
+      "short_name": "Radar",
+      "description": "Explore trending movies, shows and anime",
+      "url": "./index.html#search",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My List",
+      "short_name": "Watchlist",
+      "description": "View your tracked media watchlist",
+      "url": "./index.html#watchlist",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "For You (AI)",
+      "short_name": "For You",
+      "description": "Get personalized AI recommendations",
+      "url": "./index.html#ai",
+      "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

@@ -402,11 +402,28 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
 
             try {
                 if (mediaType == "anime") {
-                    val detail = com.loopa.network.NetworkModule.jikanApi.getAnimeDetails(id).data
-                    finalGenres = detail.genres?.joinToString(", ") { it.name }
-                    finalEpisodes = detail.episodes ?: 0
-                    finalSeasons = if (finalEpisodes > 0) 1 else 0
-                    // Jikan doesn't expose director easily in details, leave null
+                    try {
+                        val detail = com.loopa.network.NetworkModule.jikanApi.getAnimeDetails(id).data
+                        finalGenres = detail.genres?.joinToString(", ") { it.name }
+                        finalEpisodes = detail.episodes ?: 0
+                        finalSeasons = if (finalEpisodes > 0) 1 else 0
+                    } catch (e: Exception) {
+                        try {
+                            val gql = """
+                            query (${"$"}id: Int) {
+                              Media (id: ${"$"}id, type: ANIME) {
+                                genres
+                                episodes
+                              }
+                            }
+                            """.trimIndent()
+                            val req = com.loopa.network.AniListRequest(gql, mapOf("id" to id))
+                            val aniMedia = com.loopa.network.NetworkModule.anilistApi.query(req).data?.Media
+                            finalGenres = aniMedia?.genres?.joinToString(", ")
+                            finalEpisodes = aniMedia?.episodes ?: 0
+                            finalSeasons = if (finalEpisodes > 0) 1 else 0
+                        } catch (_: Exception) {}
+                    }
                 } else if (mediaType == "movie") {
                     val detail = com.loopa.network.NetworkModule.tmdbApi.getMovieDetails(id, com.loopa.app.BuildConfig.TMDB_API_KEY)
                     finalRuntime = detail.runtime
@@ -777,7 +794,17 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun fetchGenres(id: Int, mediaType: String): List<String> {
         return when (mediaType) {
             "anime" -> {
-                fetchAnimeDetails(id)?.genres?.map { it.name } ?: emptyList()
+                fetchAnimeDetails(id)?.genres?.map { it.name } ?: runCatching {
+                    val gql = """
+                    query (${"$"}id: Int) {
+                      Media (id: ${"$"}id, type: ANIME) {
+                        genres
+                      }
+                    }
+                    """.trimIndent()
+                    val req = com.loopa.network.AniListRequest(gql, mapOf("id" to id))
+                    com.loopa.network.NetworkModule.anilistApi.query(req).data?.Media?.genres ?: emptyList()
+                }.getOrDefault(emptyList())
             }
             "movie" -> runCatching {
                 val apiKey = com.loopa.app.BuildConfig.TMDB_API_KEY

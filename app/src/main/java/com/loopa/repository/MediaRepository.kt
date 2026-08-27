@@ -901,9 +901,100 @@ class MediaRepository(
             emit(cached)
             return@flow
         }
-        val response = retryWithBackoff { jikanApi.getTopAnime() }
-        ApiCache.put(cacheKey, response.data)
-        emit(response.data)
+
+        // 1. Try AniList GraphQL (Fastest, reliable, matches website)
+        try {
+            val gql = """
+            query {
+              Page(page: 1, perPage: 20) {
+                media(type: ANIME, sort: SCORE_DESC, isAdult: false) {
+                  id
+                  title { english romaji userPreferred }
+                  coverImage { extraLarge large }
+                  bannerImage
+                  startDate { year }
+                  meanScore
+                  description
+                  genres
+                  episodes
+                  status
+                }
+              }
+            }
+            """.trimIndent()
+            val req = com.loopa.network.AniListRequest(gql, null)
+            val res = anilistApi.query(req)
+            val mediaList = res.data?.Page?.media
+            if (!mediaList.isNullOrEmpty()) {
+                val list = mediaList.map { a ->
+                    val cleanTitle = a.title?.english ?: a.title?.romaji ?: a.title?.userPreferred ?: "Unknown"
+                    val cover = a.coverImage?.extraLarge ?: a.coverImage?.large
+                    val cleanSynopsis = a.description?.replace(Regex("<[^>]*>"), "")
+                    val scoreOutOf10 = a.meanScore?.let { it / 10.0 }
+                    JikanAnime(
+                        malId = a.id,
+                        title = cleanTitle,
+                        synopsis = cleanSynopsis,
+                        images = com.loopa.model.JikanImages(
+                            jpg = com.loopa.model.JikanJpg(
+                                imageUrl = cover,
+                                largeImageUrl = cover
+                            )
+                        ),
+                        score = scoreOutOf10
+                    )
+                }
+                ApiCache.put(cacheKey, list)
+                emit(list)
+                return@flow
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "AniList getTopAnime failed: ${e.message}")
+        }
+
+        // 2. Try Jikan API
+        try {
+            val response = jikanApi.getTopAnime(20)
+            if (response.data.isNotEmpty()) {
+                ApiCache.put(cacheKey, response.data)
+                emit(response.data)
+                return@flow
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "Jikan getTopAnime failed: ${e.message}")
+        }
+
+        // 3. Try Kitsu Trending API
+        try {
+            val response = kitsuApi.getTrendingAnime(20)
+            val kitsuList = response.data
+            if (!kitsuList.isNullOrEmpty()) {
+                val list = kitsuList.map { k ->
+                    val t = k.attributes?.canonicalTitle ?: k.attributes?.titles?.en ?: k.attributes?.titles?.en_jp ?: "Unknown"
+                    val img = k.attributes?.posterImage?.large ?: k.attributes?.posterImage?.original ?: k.attributes?.posterImage?.small
+                    val scoreVal = k.attributes?.averageRating?.toDoubleOrNull()?.let { it / 10.0 }
+                    JikanAnime(
+                        malId = k.id.toIntOrNull() ?: (100000 + t.hashCode()),
+                        title = t,
+                        synopsis = k.attributes?.synopsis,
+                        images = com.loopa.model.JikanImages(
+                            jpg = com.loopa.model.JikanJpg(
+                                imageUrl = img,
+                                largeImageUrl = img
+                            )
+                        ),
+                        score = scoreVal
+                    )
+                }
+                ApiCache.put(cacheKey, list)
+                emit(list)
+                return@flow
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "Kitsu getTopAnime fallback failed: ${e.message}")
+        }
+
+        emit(emptyList())
     }
 
     fun getUpcomingAnime(): Flow<List<JikanAnime>> = flow {
@@ -913,9 +1004,100 @@ class MediaRepository(
             emit(cached)
             return@flow
         }
-        val response = retryWithBackoff { jikanApi.getUpcomingAnime() }
-        ApiCache.put(cacheKey, response.data)
-        emit(response.data)
+
+        // 1. Try AniList GraphQL
+        try {
+            val gql = """
+            query {
+              Page(page: 1, perPage: 20) {
+                media(type: ANIME, status: NOT_YET_RELEASED, sort: POPULARITY_DESC, isAdult: false) {
+                  id
+                  title { english romaji userPreferred }
+                  coverImage { extraLarge large }
+                  bannerImage
+                  startDate { year }
+                  meanScore
+                  description
+                  genres
+                  episodes
+                  status
+                }
+              }
+            }
+            """.trimIndent()
+            val req = com.loopa.network.AniListRequest(gql, null)
+            val res = anilistApi.query(req)
+            val mediaList = res.data?.Page?.media
+            if (!mediaList.isNullOrEmpty()) {
+                val list = mediaList.map { a ->
+                    val cleanTitle = a.title?.english ?: a.title?.romaji ?: a.title?.userPreferred ?: "Unknown"
+                    val cover = a.coverImage?.extraLarge ?: a.coverImage?.large
+                    val cleanSynopsis = a.description?.replace(Regex("<[^>]*>"), "")
+                    val scoreOutOf10 = a.meanScore?.let { it / 10.0 }
+                    JikanAnime(
+                        malId = a.id,
+                        title = cleanTitle,
+                        synopsis = cleanSynopsis,
+                        images = com.loopa.model.JikanImages(
+                            jpg = com.loopa.model.JikanJpg(
+                                imageUrl = cover,
+                                largeImageUrl = cover
+                            )
+                        ),
+                        score = scoreOutOf10
+                    )
+                }
+                ApiCache.put(cacheKey, list)
+                emit(list)
+                return@flow
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "AniList getUpcomingAnime failed: ${e.message}")
+        }
+
+        // 2. Try Jikan API
+        try {
+            val response = jikanApi.getUpcomingAnime(20)
+            if (response.data.isNotEmpty()) {
+                ApiCache.put(cacheKey, response.data)
+                emit(response.data)
+                return@flow
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "Jikan getUpcomingAnime failed: ${e.message}")
+        }
+
+        // 3. Fallback to Kitsu Trending
+        try {
+            val response = kitsuApi.getTrendingAnime(20)
+            val kitsuList = response.data
+            if (!kitsuList.isNullOrEmpty()) {
+                val list = kitsuList.map { k ->
+                    val t = k.attributes?.canonicalTitle ?: k.attributes?.titles?.en ?: k.attributes?.titles?.en_jp ?: "Unknown"
+                    val img = k.attributes?.posterImage?.large ?: k.attributes?.posterImage?.original ?: k.attributes?.posterImage?.small
+                    val scoreVal = k.attributes?.averageRating?.toDoubleOrNull()?.let { it / 10.0 }
+                    JikanAnime(
+                        malId = k.id.toIntOrNull() ?: (100000 + t.hashCode()),
+                        title = t,
+                        synopsis = k.attributes?.synopsis,
+                        images = com.loopa.model.JikanImages(
+                            jpg = com.loopa.model.JikanJpg(
+                                imageUrl = img,
+                                largeImageUrl = img
+                            )
+                        ),
+                        score = scoreVal
+                    )
+                }
+                ApiCache.put(cacheKey, list)
+                emit(list)
+                return@flow
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MediaRepository", "Kitsu upcoming anime fallback failed: ${e.message}")
+        }
+
+        emit(emptyList())
     }
 
     suspend fun getDiscoverRecommendations(

@@ -57,6 +57,7 @@ const App = {
         });
 
         this._bindAll();
+        PWAInstaller.init();
     },
 
     async _boot() {
@@ -1542,4 +1543,172 @@ const App = {
     }
 };
 
+/**
+ * PWA Installation Controller
+ * Manages beforeinstallprompt capture, custom install banners, settings triggers, and iOS guide.
+ */
+const PWAInstaller = {
+    deferredPrompt: null,
+    isStandalone: false,
+    isIOS: false,
+    DISMISS_KEY: 'loopa_pwa_dismissed_at',
+    COOLDOWN_MS: 7 * 24 * 60 * 60 * 1000, // 7 days
+
+    init() {
+        this.isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        // If already installed and running standalone, suppress prompts
+        if (this.isStandalone) {
+            console.log('[PWA] Running in standalone mode');
+            this.hideAll();
+            return;
+        }
+
+        // 1. Capture beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            console.log('[PWA] beforeinstallprompt captured');
+
+            // Show install option in settings dropdown
+            const btnDropdownInstall = document.getElementById('btnInstallApp');
+            if (btnDropdownInstall) {
+                btnDropdownInstall.classList.remove('hidden');
+            }
+
+            // Check if user dismissed prompt recently
+            const dismissedAt = parseInt(localStorage.getItem(this.DISMISS_KEY) || '0', 10);
+            const now = Date.now();
+            if (now - dismissedAt > this.COOLDOWN_MS) {
+                // Show banner after brief delay
+                this.bannerTimeout = setTimeout(() => this.showBanner(), 2500);
+            }
+        });
+
+        // 2. Listen for appinstalled
+        window.addEventListener('appinstalled', () => {
+            this.deferredPrompt = null;
+            this.hideAll();
+            UI.toast('LOOPA INSTALLED SUCCESSFULLY!');
+            console.log('[PWA] App installed successfully');
+        });
+
+        this.bindEvents();
+    },
+
+    bindEvents() {
+        const btnPrompt = document.getElementById('btnPwaInstallPrompt');
+        const btnDismiss = document.getElementById('btnPwaDismissPrompt');
+        const btnDropdownInstall = document.getElementById('btnInstallApp');
+        const btnCloseIos = document.getElementById('btnCloseIosInstall');
+        const modalIos = document.getElementById('iosInstallModal');
+
+        if (btnPrompt) {
+            btnPrompt.addEventListener('click', () => this.triggerInstall());
+        }
+
+        if (btnDismiss) {
+            btnDismiss.addEventListener('click', () => this.dismissBanner());
+        }
+
+        if (btnDropdownInstall) {
+            btnDropdownInstall.addEventListener('click', () => {
+                const settingsDropdown = document.getElementById('settingsDropdown');
+                if (settingsDropdown) settingsDropdown.classList.add('hidden');
+                this.triggerInstall();
+            });
+        }
+
+        if (btnCloseIos) {
+            btnCloseIos.addEventListener('click', () => this.hideIosModal());
+        }
+
+        if (modalIos) {
+            modalIos.addEventListener('click', (e) => {
+                if (e.target === modalIos) this.hideIosModal();
+            });
+        }
+    },
+
+    showBanner() {
+        if (this.isStandalone) return;
+        const banner = document.getElementById('pwaInstallBanner');
+        if (banner) {
+            banner.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-28');
+            banner.classList.add('opacity-100', 'translate-y-0');
+        }
+    },
+
+    dismissBanner() {
+        if (this.bannerTimeout) {
+            clearTimeout(this.bannerTimeout);
+            this.bannerTimeout = null;
+        }
+        const banner = document.getElementById('pwaInstallBanner');
+        if (banner) {
+            banner.classList.remove('opacity-100', 'translate-y-0');
+            banner.classList.add('opacity-0', 'pointer-events-none', 'translate-y-28');
+        }
+        localStorage.setItem(this.DISMISS_KEY, Date.now().toString());
+    },
+
+    showIosModal() {
+        const modal = document.getElementById('iosInstallModal');
+        if (modal) {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+        }
+    },
+
+    hideIosModal() {
+        const modal = document.getElementById('iosInstallModal');
+        if (modal) {
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+    },
+
+    async triggerInstall() {
+        if (this.isStandalone) {
+            UI.toast('LOOPA IS ALREADY INSTALLED');
+            return;
+        }
+
+        if (this.deferredPrompt) {
+            this.dismissBanner();
+            try {
+                this.deferredPrompt.prompt();
+                const { outcome } = await this.deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    UI.toast('INSTALLING LOOPA...');
+                } else {
+                    console.log('[PWA] User dismissed prompt');
+                }
+                this.deferredPrompt = null;
+            } catch (err) {
+                console.warn('[PWA] Prompt error:', err);
+            }
+        } else if (this.isIOS) {
+            this.showIosModal();
+        } else {
+            // For desktop/android browsers before or without beforeinstallprompt
+            UI.toast('USE BROWSER MENU (⋮) > "INSTALL APP"');
+        }
+    },
+
+    hideAll() {
+        const banner = document.getElementById('pwaInstallBanner');
+        if (banner) {
+            banner.classList.add('opacity-0', 'pointer-events-none', 'translate-y-28');
+        }
+        const settingsBtn = document.getElementById('btnInstallApp');
+        if (settingsBtn && this.isStandalone) {
+            settingsBtn.parentElement?.parentElement?.classList.add('hidden');
+        }
+        this.hideIosModal();
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => App.init());
+

@@ -215,6 +215,13 @@
                                     <p class="text-[11px] text-textSecondary font-bold tracking-wider uppercase">Support & About</p>
                                 </div>
                                 <div class="bg-black/35 rounded-lg p-1.5 space-y-1 border border-white/[0.03]">
+                                    <button id="btnInstallApp" class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center justify-between group">
+                                        <span class="flex items-center gap-3">
+                                            <i class="fa-solid fa-download w-4 text-center text-loopAmber"></i>
+                                            <span>Install Loopa App</span>
+                                        </span>
+                                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-loopAmber/10 text-loopAmber border border-loopAmber/20">PWA</span>
+                                    </button>
                                     <button class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
                                         <i class="fa-solid fa-circle-question w-4 text-center text-textMuted"></i> Help & Feedback
                                     </button>
@@ -744,35 +751,74 @@
         <span id="toastMsg"></span>
     </div>
 
-    <!-- ── Import Progress Modal ─────────────────────────────────────────────── -->
-    <div id="importModal" class="fixed inset-0 z-[110] opacity-0 pointer-events-none flex justify-center items-center px-4 bg-loopBase/90 backdrop-blur-md transition-opacity duration-200">
-        <div class="relative w-full max-w-sm frosted-glass rounded-2xl overflow-hidden p-6 border border-white/10 text-center">
-            <h3 class="text-base font-bold text-textPrimary mb-2 flex items-center justify-center gap-2">
-                <i class="fa-solid fa-cloud-arrow-down text-loopAmber"></i> Importing Watchlist
-            </h3>
-            <p id="importStatusText" class="text-xs text-textSecondary mb-4 truncate px-2">Parsing file...</p>
-            <div class="w-full bg-loopRaised rounded-full h-2 mb-3 overflow-hidden">
-                <div id="importProgressBar" class="bg-loopAmber h-full w-0 transition-all duration-150"></div>
+    <!-- ── Floating PWA Install Banner ───────────────────────────────────────── -->
+    <div id="pwaInstallBanner"
+        class="fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-[120] max-w-sm w-[calc(100vw-2rem)] sm:w-auto p-4 rounded-2xl frosted-glass border border-loopAmber/25 shadow-2xl transition-all duration-500 transform translate-y-28 opacity-0 pointer-events-none flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-xl bg-loopBase border border-white/10 flex items-center justify-center shrink-0 shadow-inner">
+            <img src="assets/favicon.svg" alt="Loopa" class="w-6 h-6">
+        </div>
+        <div class="flex-1 min-w-0 pr-2">
+            <div class="flex items-center gap-1.5">
+                <h4 class="text-sm font-bold text-textPrimary truncate">Install Loopa App</h4>
+                <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-loopAmber/20 text-loopAmber border border-loopAmber/30">Free</span>
             </div>
-            <p id="importProgressStats" class="text-xs text-textMuted font-mono">0 / 0</p>
+            <p class="text-[11px] text-textSecondary truncate mt-0.5">Fast offline access & fullscreen mode</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <button id="btnPwaInstallPrompt" class="px-3.5 py-1.5 rounded-full bg-loopAmber hover:bg-loopAmberStrong text-loopBase text-xs font-bold transition-all shadow-md active:scale-95">
+                Install
+            </button>
+            <button id="btnPwaDismissPrompt" class="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-textMuted hover:text-textPrimary flex items-center justify-center transition-colors text-xs" title="Dismiss">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
     </div>
 
-    <script src="js/config.js?v=20"></script>
-    <script src="js/storage.js?v=20"></script>
-    <script src="js/api.js?v=20"></script>
-    <script src="js/supabase.js?v=20"></script>
-    <script src="js/portability.js?v=20"></script>
-    <script src="js/search-engine.js?v=20"></script>
-    <script src="js/ui.js?v=20"></script>
-    <script src="js/app.js?v=20"></script>
+    <!-- ── iOS Safari Install Instructions Modal ─────────────────────────────── -->
+    <div id="iosInstallModal" class="fixed inset-0 z-[130] opacity-0 pointer-events-none flex justify-center items-end sm:items-center px-4 pb-6 sm:pb-0 bg-loopBase/85 backdrop-blur-md transition-opacity duration-300">
+        <div class="relative w-full max-w-sm frosted-glass rounded-2xl p-6 border border-white/15 shadow-2xl text-center space-y-4">
+            <div class="w-12 h-12 mx-auto rounded-xl bg-loopBase border border-loopAmber/30 flex items-center justify-center shadow-lg">
+                <img src="assets/favicon.svg" alt="Loopa" class="w-7 h-7">
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-textPrimary">Install Loopa on iOS</h3>
+                <p class="text-xs text-textSecondary mt-1">Install to your home screen for the full app experience</p>
+            </div>
+            <div class="bg-loopRaised/60 rounded-xl p-4 text-left space-y-3 text-xs border border-white/5">
+                <div class="flex items-start gap-3">
+                    <span class="w-5 h-5 rounded-full bg-loopAmber/20 text-loopAmber font-bold flex items-center justify-center shrink-0 text-[11px]">1</span>
+                    <span class="text-textPrimary">Tap the <strong>Share</strong> icon <i class="fa-solid fa-arrow-up-from-bracket text-loopAmber mx-1"></i> in Safari's bottom toolbar</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="w-5 h-5 rounded-full bg-loopAmber/20 text-loopAmber font-bold flex items-center justify-center shrink-0 text-[11px]">2</span>
+                    <span class="text-textPrimary">Scroll down and tap <strong>Add to Home Screen</strong> <i class="fa-regular fa-square-plus text-loopAmber mx-1"></i></span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="w-5 h-5 rounded-full bg-loopAmber/20 text-loopAmber font-bold flex items-center justify-center shrink-0 text-[11px]">3</span>
+                    <span class="text-textPrimary">Tap <strong>Add</strong> in the top-right corner</span>
+                </div>
+            </div>
+            <button id="btnCloseIosInstall" class="btn-primary w-full py-2.5 text-xs font-bold rounded-full">
+                Got it
+            </button>
+        </div>
+    </div>
+
+    <script src="js/config.js?v=21"></script>
+    <script src="js/storage.js?v=21"></script>
+    <script src="js/api.js?v=21"></script>
+    <script src="js/supabase.js?v=21"></script>
+    <script src="js/portability.js?v=21"></script>
+    <script src="js/search-engine.js?v=21"></script>
+    <script src="js/ui.js?v=21"></script>
+    <script src="js/app.js?v=21"></script>
 
 
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=20').then(registration => {
+                navigator.serviceWorker.register('sw.js?v=21').then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
                 }, err => {
                     console.log('ServiceWorker registration failed: ', err);

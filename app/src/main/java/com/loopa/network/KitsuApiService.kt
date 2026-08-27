@@ -11,4 +11,9 @@ interface KitsuApiService {
         @Query("filter[text]") query: String,
         @Query("page[limit]") limit: Int = 12
     ): KitsuResponse
+
+    @GET("trending/anime")
+    suspend fun getTrendingAnime(
+        @Query("limit") limit: Int = 20
+    ): KitsuResponse
 }
