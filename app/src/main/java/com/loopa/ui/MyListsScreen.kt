@@ -296,12 +296,13 @@ fun MyListsScreen(
         }
 
         // Search Bar
-        LoopTextField(
-            value = listQuery,
-            onValueChange = { listQuery = it },
-            label = "Search My List…",
-            leadingIcon = { Icon(Icons.Filled.Search, "Search", tint = Loopa.Amber) },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        RadarSearchBar(
+            query = listQuery,
+            onQueryChange = { listQuery = it },
+            placeholder = "Search My List...",
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp)
         )
 
         // Saved List Content

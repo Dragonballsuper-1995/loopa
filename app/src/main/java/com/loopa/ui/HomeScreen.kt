@@ -43,7 +43,8 @@ import com.loopa.viewmodel.MediaViewModel
 @Composable
 fun HomeScreen(
     navController: androidx.navigation.NavController,
-    viewModel: MediaViewModel
+    viewModel: MediaViewModel,
+    onSeeAllCategory: ((SeeAllCategory) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val popularMovies by viewModel.popularMovies.collectAsState()
@@ -59,9 +60,27 @@ fun HomeScreen(
 
     var activeTrackMovie by remember { mutableStateOf<TmdbMovie?>(null) }
     var hoverMovie by remember { mutableStateOf<TmdbMovie?>(null) }
+    var internalSeeAllCategory by remember { mutableStateOf<SeeAllCategory?>(null) }
+
+    val handleSeeAll = { category: SeeAllCategory ->
+        if (onSeeAllCategory != null) {
+            onSeeAllCategory(category)
+        } else {
+            internalSeeAllCategory = category
+        }
+    }
 
     val currentlyWatching = remember(savedItems) {
         savedItems.firstOrNull { it.listName == "Watching" }
+    }
+
+    if (onSeeAllCategory == null && internalSeeAllCategory != null) {
+        SeeAllScreen(
+            category = internalSeeAllCategory!!,
+            onBack = { internalSeeAllCategory = null },
+            viewModel = viewModel
+        )
+        return
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Loopa.Base)) {
@@ -92,7 +111,12 @@ fun HomeScreen(
                 LoopSectionHeader(
                     title = "Trending",
                     showDivider = false,
-                    onSeeAll = { navController.navigate("discover") }
+                    onSeeAll = {
+                        val state = uiState
+                        if (state is MediaUiState.Success && state.trending.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Trending", state.trending))
+                        }
+                    }
                 )
                 Spacer(Modifier.height(12.dp))
                 when (val state = uiState) {
@@ -126,7 +150,12 @@ fun HomeScreen(
                 LoopSectionHeader(
                     title = "Top 10 Today",
                     showDivider = false,
-                    onSeeAll = { navController.navigate("discover") }
+                    onSeeAll = {
+                        val state = uiState
+                        if (state is MediaUiState.Success && state.trending.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Top 10 Today", state.trending.take(10)))
+                        }
+                    }
                 )
                 Spacer(Modifier.height(12.dp))
                 when (val state = uiState) {
@@ -161,7 +190,11 @@ fun HomeScreen(
                 LoopSectionHeader(
                     title = "Anime",
                     showDivider = false,
-                    onSeeAll = { navController.navigate("discover") }
+                    onSeeAll = {
+                        if (topAnime.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Top Anime", mapAnimeListToTmdb(topAnime)))
+                        }
+                    }
                 )
                 Spacer(Modifier.height(12.dp))
                 if (topAnime.isEmpty()) {
@@ -206,7 +239,11 @@ fun HomeScreen(
                 LoopSectionHeader(
                     title = "Popular Movies",
                     showDivider = false,
-                    onSeeAll = { navController.navigate("discover") }
+                    onSeeAll = {
+                        if (popularMovies.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Popular Movies", popularMovies))
+                        }
+                    }
                 )
                 Spacer(Modifier.height(12.dp))
                 if (popularMovies.isEmpty()) {
@@ -237,7 +274,11 @@ fun HomeScreen(
                 LoopSectionHeader(
                     title = "Popular TV",
                     showDivider = false,
-                    onSeeAll = { navController.navigate("discover") }
+                    onSeeAll = {
+                        if (popularTv.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Popular TV", popularTv))
+                        }
+                    }
                 )
                 Spacer(Modifier.height(12.dp))
                 if (popularTv.isEmpty()) {
@@ -265,7 +306,15 @@ fun HomeScreen(
 
             // ── 6. Top Rated Movies ───────────────────────────────────────────
             item {
-                LoopSectionHeader(title = "Top Rated Movies", showDivider = false)
+                LoopSectionHeader(
+                    title = "Top Rated Movies",
+                    showDivider = false,
+                    onSeeAll = {
+                        if (topRatedMovies.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Top Rated Movies", topRatedMovies))
+                        }
+                    }
+                )
                 Spacer(Modifier.height(12.dp))
                 if (topRatedMovies.isEmpty()) {
                     LoadingRow()
@@ -292,7 +341,15 @@ fun HomeScreen(
 
             // ── 7. Upcoming Movies ───────────────────────────────────────────
             item {
-                LoopSectionHeader(title = "Upcoming Movies", showDivider = false)
+                LoopSectionHeader(
+                    title = "Upcoming Movies",
+                    showDivider = false,
+                    onSeeAll = {
+                        if (upcomingMovies.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Upcoming Movies", upcomingMovies))
+                        }
+                    }
+                )
                 Spacer(Modifier.height(12.dp))
                 if (upcomingMovies.isEmpty()) {
                     LoadingRow()
@@ -319,7 +376,15 @@ fun HomeScreen(
 
             // ── 8. Top Rated TV ───────────────────────────────────────────
             item {
-                LoopSectionHeader(title = "Top Rated TV", showDivider = false)
+                LoopSectionHeader(
+                    title = "Top Rated TV",
+                    showDivider = false,
+                    onSeeAll = {
+                        if (topRatedTv.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Top Rated TV", topRatedTv))
+                        }
+                    }
+                )
                 Spacer(Modifier.height(12.dp))
                 if (topRatedTv.isEmpty()) {
                     LoadingRow()
@@ -346,7 +411,15 @@ fun HomeScreen(
 
             // ── 9. Airing Today TV ───────────────────────────────────────────
             item {
-                LoopSectionHeader(title = "Airing Today TV", showDivider = false)
+                LoopSectionHeader(
+                    title = "Airing Today TV",
+                    showDivider = false,
+                    onSeeAll = {
+                        if (airingTodayTv.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Airing Today TV", airingTodayTv))
+                        }
+                    }
+                )
                 Spacer(Modifier.height(12.dp))
                 if (airingTodayTv.isEmpty()) {
                     LoadingRow()
@@ -373,7 +446,15 @@ fun HomeScreen(
 
             // ── 10. Upcoming Anime ───────────────────────────────────────────
             item {
-                LoopSectionHeader(title = "Upcoming Anime", showDivider = false)
+                LoopSectionHeader(
+                    title = "Upcoming Anime",
+                    showDivider = false,
+                    onSeeAll = {
+                        if (upcomingAnime.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Upcoming Anime", mapAnimeListToTmdb(upcomingAnime)))
+                        }
+                    }
+                )
                 Spacer(Modifier.height(12.dp))
                 if (upcomingAnime.isEmpty()) {
                     LoadingRow()
@@ -430,6 +511,26 @@ fun HomeScreen(
                 }
             )
         }
+    }
+}
+
+private fun mapAnimeListToTmdb(animeList: List<com.loopa.model.JikanAnime>): List<TmdbMovie> {
+    return animeList.map { anime ->
+        val imageUrl = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl
+        TmdbMovie(
+            id = anime.malId,
+            title = anime.title,
+            name = anime.title,
+            posterPath = imageUrl,
+            backdropPath = imageUrl,
+            releaseDate = "",
+            firstAirDate = "",
+            voteAverage = anime.score,
+            overview = anime.synopsis ?: "",
+            mediaType = "anime",
+            genreIds = null,
+            popularity = null
+        )
     }
 }
 
