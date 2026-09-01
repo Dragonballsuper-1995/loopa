@@ -47,6 +47,7 @@ fun HomeScreen(
     onSeeAllCategory: ((SeeAllCategory) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val top10Today by viewModel.top10Today.collectAsState()
     val popularMovies by viewModel.popularMovies.collectAsState()
     val popularTv by viewModel.popularTv.collectAsState()
     val topAnime by viewModel.topAnime.collectAsState()
@@ -69,9 +70,6 @@ fun HomeScreen(
         }
     }
 
-    val currentlyWatching = remember(savedItems) {
-        savedItems.firstOrNull { it.listName == "Watching" }
-    }
 
     if (onSeeAllCategory == null && internalSeeAllCategory != null) {
         SeeAllScreen(
@@ -98,7 +96,6 @@ fun HomeScreen(
                 HeroCarousel(
                     heroItems = heroItems,
                     viewModel = viewModel,
-                    currentlyWatching = currentlyWatching,
                     onActiveTrackMovieChange = { activeTrackMovie = it },
                     onHoverMovieChange = { hoverMovie = it }
                 )
@@ -150,36 +147,32 @@ fun HomeScreen(
                     title = "Top 10 Today",
                     showDivider = false,
                     onSeeAll = {
-                        val state = uiState
-                        if (state is MediaUiState.Success && state.trending.isNotEmpty()) {
-                            handleSeeAll(SeeAllCategory("Top 10 Today", state.trending.take(10)))
+                        if (top10Today.isNotEmpty()) {
+                            handleSeeAll(SeeAllCategory("Top 10 Today", top10Today))
                         }
                     }
                 )
                 Spacer(Modifier.height(12.dp))
-                when (val state = uiState) {
-                    is MediaUiState.Loading -> LoadingRow()
-                    is MediaUiState.Success -> {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(0.dp)
-                        ) {
-                            itemsIndexed(state.trending.take(10)) { index, movie ->
-                                val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
-                                Top10PosterCard(
-                                    rank = index + 1,
-                                    title = movie.title ?: movie.name ?: "Unknown",
-                                    imageUrl = imageUrl,
-                                    mediaType = movie.mediaType ?: "movie",
-                                    onClick = { activeTrackMovie = movie },
-                                    onLongPress = { hoverMovie = movie },
-                                    onRelease = { hoverMovie = null }
-                                )
-                            }
+                if (top10Today.isEmpty()) {
+                    LoadingRow()
+                } else {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        itemsIndexed(top10Today) { index, movie ->
+                            val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
+                            Top10PosterCard(
+                                rank = index + 1,
+                                title = movie.title ?: movie.name ?: "Unknown",
+                                imageUrl = imageUrl,
+                                mediaType = movie.mediaType ?: "movie",
+                                onClick = { activeTrackMovie = movie },
+                                onLongPress = { hoverMovie = movie },
+                                onRelease = { hoverMovie = null }
+                            )
                         }
                     }
-                    is MediaUiState.Error -> ErrorRow("Failed to load Top 10")
-                    else -> {}
                 }
                 Spacer(Modifier.height(28.dp))
             }
@@ -543,7 +536,6 @@ private fun mapAnimeListToTmdb(animeList: List<com.loopa.model.JikanAnime>): Lis
 fun HeroCarousel(
     heroItems: List<TmdbMovie>,
     viewModel: MediaViewModel,
-    currentlyWatching: MediaItemEntity?,
     onActiveTrackMovieChange: (TmdbMovie) -> Unit,
     onHoverMovieChange: (TmdbMovie?) -> Unit
 ) {
@@ -648,41 +640,9 @@ fun HeroCarousel(
                             .padding(start = 20.dp, end = 60.dp, bottom = 24.dp, top = 80.dp),
                         verticalArrangement = Arrangement.Bottom
                     ) {
-                        // Continue badge (if currently watching something)
-                        if (currentlyWatching != null) {
-                            Row(
-                                modifier = Modifier
-                                    .clip(Loopa.PillShape)
-                                    .background(Loopa.Surface.copy(alpha = 0.85f))
-                                    .border(1.dp, Loopa.Border, Loopa.PillShape)
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                                    .clickable { onHoverMovieChange(null) },
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .clip(Loopa.PillShape)
-                                        .background(Loopa.Amber),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = null,
-                                        tint = Loopa.Base,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                }
-                                Text("Continue:", color = Loopa.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                Text(currentlyWatching.title, color = Loopa.TextSecondary, fontSize = 12.sp, maxLines = 1)
-                            }
-                            Spacer(Modifier.height(10.dp))
-                        }
-
-                        // Phase 2A: Metadata row — Year · Type · ★ Rating
+                        // Metadata row — Year · Type · ★ Rating
                         val year = (item.releaseDate ?: item.firstAirDate)?.take(4)
-                        val mediaType = (item.mediaType ?: "").uppercase()
+                        val mediaType = (item.mediaType ?: if (item.name != null) "TV" else "MOVIE").uppercase()
                         val rating = item.voteAverage?.takeIf { it > 0.0 }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

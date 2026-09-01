@@ -244,7 +244,12 @@ const API = {
 
     async fetchTrending() {
         const d = await this._tmdb('/trending/all/week');
-        return (d.results || []).filter(i => i.poster_path).slice(0, 20).map(i => this._normTMDB(i));
+        return (d.results || []).filter(i => i.poster_path || i.backdrop_path).slice(0, 20).map(i => this._normTMDB(i));
+    },
+
+    async fetchTop10Today() {
+        const d = await this._tmdb('/trending/all/day');
+        return (d.results || []).filter(i => i.poster_path || i.backdrop_path).slice(0, 10).map(i => this._normTMDB(i));
     },
 
     async fetchTrendingByRegion(region = 'IN') {

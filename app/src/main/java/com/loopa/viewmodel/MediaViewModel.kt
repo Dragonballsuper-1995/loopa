@@ -275,6 +275,9 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow<MediaUiState>(MediaUiState.Loading)
     val uiState: StateFlow<MediaUiState> = _uiState.asStateFlow()
 
+    private val _top10Today = MutableStateFlow<List<TmdbMovie>>(emptyList())
+    val top10Today: StateFlow<List<TmdbMovie>> = _top10Today.asStateFlow()
+
     private val _popularMovies = MutableStateFlow<List<TmdbMovie>>(emptyList())
     val popularMovies: StateFlow<List<TmdbMovie>> = _popularMovies.asStateFlow()
 
@@ -351,6 +354,7 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
             if (searchTrending is MediaUiState.Success) {
                 com.loopa.search.SearchEngine.indexMediaItems(searchTrending.trending)
             }
+            com.loopa.search.SearchEngine.indexMediaItems(_top10Today.value)
             com.loopa.search.SearchEngine.indexMediaItems(_popularMovies.value)
             com.loopa.search.SearchEngine.indexMediaItems(_popularTv.value)
             
@@ -820,11 +824,17 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
 
             _uiState.value = MediaUiState.Loading
 
-            // ── Tier 1: Trending (hero renders first) ─────────────────────────
+            // ── Tier 1: Trending (hero renders first) & Top 10 Today ───────────
             launch {
                 repository.getTrendingMovies(apiKey)
                     .catch { e -> _uiState.value = MediaUiState.Error(e.localizedMessage ?: "Unknown error occurred") }
                     .collect { movies -> _uiState.value = MediaUiState.Success(movies) }
+            }
+
+            launch {
+                repository.getTop10Today(apiKey)
+                    .catch { /* ignore */ }
+                    .collect { top10 -> _top10Today.value = top10 }
             }
 
             // ── Tier 2: Above-fold rows (100ms delay) ─────────────────────────

@@ -751,28 +751,6 @@
         <span id="toastMsg"></span>
     </div>
 
-    <!-- ── Floating PWA Install Banner ───────────────────────────────────────── -->
-    <div id="pwaInstallBanner"
-        class="fixed bottom-24 lg:bottom-8 right-4 sm:right-8 z-[120] max-w-sm w-[calc(100vw-2rem)] sm:w-auto p-4 rounded-2xl frosted-glass border border-loopAmber/25 shadow-2xl transition-all duration-500 transform translate-y-28 opacity-0 pointer-events-none flex items-center gap-3.5">
-        <div class="w-11 h-11 rounded-xl bg-loopBase border border-white/10 flex items-center justify-center shrink-0 shadow-inner">
-            <img src="assets/favicon.svg" alt="Loopa" class="w-6 h-6">
-        </div>
-        <div class="flex-1 min-w-0 pr-2">
-            <div class="flex items-center gap-1.5">
-                <h4 class="text-sm font-bold text-textPrimary truncate">Install Loopa App</h4>
-                <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-loopAmber/20 text-loopAmber border border-loopAmber/30">Free</span>
-            </div>
-            <p class="text-[11px] text-textSecondary truncate mt-0.5">Fast offline access & fullscreen mode</p>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-            <button id="btnPwaInstallPrompt" class="px-3.5 py-1.5 rounded-full bg-loopAmber hover:bg-loopAmberStrong text-loopBase text-xs font-bold transition-all shadow-md active:scale-95">
-                Install
-            </button>
-            <button id="btnPwaDismissPrompt" class="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-textMuted hover:text-textPrimary flex items-center justify-center transition-colors text-xs" title="Dismiss">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    </div>
 
     <!-- ── iOS Safari Install Instructions Modal ─────────────────────────────── -->
     <div id="iosInstallModal" class="fixed inset-0 z-[130] opacity-0 pointer-events-none flex justify-center items-end sm:items-center px-4 pb-6 sm:pb-0 bg-loopBase/85 backdrop-blur-md transition-opacity duration-300">

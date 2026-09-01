@@ -22,6 +22,7 @@ const App = {
         suggestionIndex: -1,
         currentSuggestions: [],
         trendingList: [],
+        top10List: [],
         animeList: [],
         moviesList: [],
         tvList: [],
@@ -593,11 +594,12 @@ const App = {
         // If dashboard was already loaded and we're not forcing a refresh,
         // re-render from in-memory lists instantly (zero network cost).
         if (this.s.dashboardLoaded && !forceRefresh) {
-            const watching = this.s.watchlist.find(i => i.list_name === 'Watching');
-            this._startHeroCarousel(this.s.trendingList.filter(i => i.backdropUrl || i.posterUrl).slice(0, 5), watching);
+            this._startHeroCarousel(this.s.trendingList.filter(i => i.backdropUrl || i.posterUrl).slice(0, 5));
             if (this.s.trendingList.length) {
                 UI.renderScrollRow('row-trending', this.s.trendingList.slice(0, 10));
-                UI.renderTop10Row(this.s.trendingList.slice(0, 10));
+            }
+            if (this.s.top10List.length) {
+                UI.renderTop10Row(this.s.top10List);
             }
             if (this.s.animeList.length)   UI.renderScrollRow('row-anime',    this.s.animeList.slice(0, 10));
             if (this.s.moviesList.length)  UI.renderScrollRow('row-movies',   this.s.moviesList.slice(0, 10));
@@ -613,14 +615,19 @@ const App = {
 
         // ── Tier 1: Critical — renders hero immediately ───────────────────────
         document.getElementById('row-trending').innerHTML = UI.skeletonRow(6);
+        const top10Container = document.getElementById('row-top10');
+        if (top10Container) top10Container.innerHTML = UI.skeletonRow(6);
 
-        const [trending, wl] = await Promise.allSettled([
-            API.fetchTrendingByRegion('IN'),
+        const [trending, top10, wl] = await Promise.allSettled([
+            API.fetchTrending(),
+            API.fetchTop10Today(),
             this.s.isGuest ? Promise.resolve([]) : SBList.getAll(this.s.user.id)
         ]);
 
         const t = trending.status === 'fulfilled' ? trending.value : [];
+        const top10List = top10.status === 'fulfilled' ? top10.value : [];
         this.s.trendingList = t;
+        this.s.top10List = top10List;
 
         if (wl.status === 'fulfilled') {
             this.s.watchlist = wl.value;
@@ -632,12 +639,13 @@ const App = {
 
         this._reindexSearch();
 
-        const watching = this.s.watchlist.find(i => i.list_name === 'Watching');
         const heroItems = t.filter(i => i.backdropUrl || i.posterUrl).slice(0, 5);
-        this._startHeroCarousel(heroItems, watching);
+        this._startHeroCarousel(heroItems);
         if (t.length) {
             UI.renderScrollRow('row-trending', t.slice(0, 10));
-            UI.renderTop10Row(t.slice(0, 10));
+        }
+        if (top10List.length) {
+            UI.renderTop10Row(top10List);
         }
 
         // ── Tier 2: Above-fold rows — fire shortly after hero renders ─────────
@@ -672,20 +680,20 @@ const App = {
     },
 
     // ── Hero Carousel Management ─────────────────────────────────────────────
-    _startHeroCarousel(heroItems, watching) {
+    _startHeroCarousel(heroItems) {
         clearInterval(this.s.heroInterval);
         this.s.heroInterval = null;
 
         if (!heroItems.length) return;
 
         let heroIndex = 0;
-        UI.renderHero(heroItems[heroIndex], watching, heroItems, heroIndex);
+        UI.renderHero(heroItems[heroIndex], heroItems, heroIndex);
 
         this.s.heroInterval = setInterval(() => {
             // Don't advance carousel if hero is paused (modal open / tab hidden)
             if (this.s.heroPaused) return;
             heroIndex = (heroIndex + 1) % heroItems.length;
-            UI.renderHero(heroItems[heroIndex], watching, heroItems, heroIndex);
+            UI.renderHero(heroItems[heroIndex], heroItems, heroIndex);
         }, 6000);  // Phase 2B: 6s — longer dwell time for cinematic hero
 
         // Pause hero when page is hidden (user switches browser tab) or modal is open
@@ -699,7 +707,6 @@ const App = {
 
         // Store ref to heroItems for jump method
         this.s._heroItems = heroItems;
-        this.s._heroWatching = watching;
         this.s._heroIndexRef = { value: heroIndex };
 
         // Phase 2B: _jumpHero — jump to a specific slide from dot click
@@ -707,12 +714,12 @@ const App = {
             if (idx < 0 || idx >= heroItems.length) return;
             heroIndex = idx;
             clearInterval(this.s.heroInterval);
-            UI.renderHero(heroItems[heroIndex], watching, heroItems, heroIndex);
+            UI.renderHero(heroItems[heroIndex], heroItems, heroIndex);
             // Restart interval so the next auto-advance starts fresh from this slide
             this.s.heroInterval = setInterval(() => {
                 if (this.s.heroPaused) return;
                 heroIndex = (heroIndex + 1) % heroItems.length;
-                UI.renderHero(heroItems[heroIndex], watching, heroItems, heroIndex);
+                UI.renderHero(heroItems[heroIndex], heroItems, heroIndex);
             }, 6000);
         };
     },
@@ -934,6 +941,7 @@ const App = {
         LoopaSearchEngine.clearIndex();
         
         if (this.s.trendingList) LoopaSearchEngine.indexMediaItems(this.s.trendingList);
+        if (this.s.top10List) LoopaSearchEngine.indexMediaItems(this.s.top10List);
         if (this.s.animeList) LoopaSearchEngine.indexMediaItems(this.s.animeList);
         if (this.s.moviesList) LoopaSearchEngine.indexMediaItems(this.s.moviesList);
         if (this.s.tvList) LoopaSearchEngine.indexMediaItems(this.s.tvList);
@@ -1529,14 +1537,12 @@ const App = {
 
 /**
  * PWA Installation Controller
- * Manages beforeinstallprompt capture, custom install banners, settings triggers, and iOS guide.
+ * Handles manual PWA installation triggers from settings and native browser integration.
  */
 const PWAInstaller = {
     deferredPrompt: null,
     isStandalone: false,
     isIOS: false,
-    DISMISS_KEY: 'loopa_pwa_dismissed_at',
-    COOLDOWN_MS: 7 * 24 * 60 * 60 * 1000, // 7 days
 
     init() {
         this.isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -1560,14 +1566,6 @@ const PWAInstaller = {
             if (btnDropdownInstall) {
                 btnDropdownInstall.classList.remove('hidden');
             }
-
-            // Check if user dismissed prompt recently
-            const dismissedAt = parseInt(localStorage.getItem(this.DISMISS_KEY) || '0', 10);
-            const now = Date.now();
-            if (now - dismissedAt > this.COOLDOWN_MS) {
-                // Show banner after brief delay
-                this.bannerTimeout = setTimeout(() => this.showBanner(), 2500);
-            }
         });
 
         // 2. Listen for appinstalled
@@ -1582,19 +1580,9 @@ const PWAInstaller = {
     },
 
     bindEvents() {
-        const btnPrompt = document.getElementById('btnPwaInstallPrompt');
-        const btnDismiss = document.getElementById('btnPwaDismissPrompt');
         const btnDropdownInstall = document.getElementById('btnInstallApp');
         const btnCloseIos = document.getElementById('btnCloseIosInstall');
         const modalIos = document.getElementById('iosInstallModal');
-
-        if (btnPrompt) {
-            btnPrompt.addEventListener('click', () => this.triggerInstall());
-        }
-
-        if (btnDismiss) {
-            btnDismiss.addEventListener('click', () => this.dismissBanner());
-        }
 
         if (btnDropdownInstall) {
             btnDropdownInstall.addEventListener('click', () => {
@@ -1613,28 +1601,6 @@ const PWAInstaller = {
                 if (e.target === modalIos) this.hideIosModal();
             });
         }
-    },
-
-    showBanner() {
-        if (this.isStandalone) return;
-        const banner = document.getElementById('pwaInstallBanner');
-        if (banner) {
-            banner.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-28');
-            banner.classList.add('opacity-100', 'translate-y-0');
-        }
-    },
-
-    dismissBanner() {
-        if (this.bannerTimeout) {
-            clearTimeout(this.bannerTimeout);
-            this.bannerTimeout = null;
-        }
-        const banner = document.getElementById('pwaInstallBanner');
-        if (banner) {
-            banner.classList.remove('opacity-100', 'translate-y-0');
-            banner.classList.add('opacity-0', 'pointer-events-none', 'translate-y-28');
-        }
-        localStorage.setItem(this.DISMISS_KEY, Date.now().toString());
     },
 
     showIosModal() {
@@ -1660,7 +1626,6 @@ const PWAInstaller = {
         }
 
         if (this.deferredPrompt) {
-            this.dismissBanner();
             try {
                 this.deferredPrompt.prompt();
                 const { outcome } = await this.deferredPrompt.userChoice;
@@ -1682,10 +1647,6 @@ const PWAInstaller = {
     },
 
     hideAll() {
-        const banner = document.getElementById('pwaInstallBanner');
-        if (banner) {
-            banner.classList.add('opacity-0', 'pointer-events-none', 'translate-y-28');
-        }
         const settingsBtn = document.getElementById('btnInstallApp');
         if (settingsBtn && this.isStandalone) {
             settingsBtn.parentElement?.parentElement?.classList.add('hidden');

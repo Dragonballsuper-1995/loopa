@@ -578,6 +578,19 @@ class MediaRepository(
         emit(response.results)
     }
 
+    fun getTop10Today(apiKey: String): Flow<List<TmdbMovie>> = flow {
+        val cacheKey = "top_10_today"
+        val cached = ApiCache.get<List<TmdbMovie>>(cacheKey)
+        if (cached != null) {
+            emit(cached)
+            return@flow
+        }
+        val response = retryWithBackoff { tmdbApi.getTrendingToday(apiKey) }
+        val items = response.results.take(10)
+        ApiCache.put(cacheKey, items)
+        emit(items)
+    }
+
     fun getPopularMovies(apiKey: String): Flow<List<TmdbMovie>> = flow {
         val cacheKey = "popular_movies"
         val cached = ApiCache.get<List<TmdbMovie>>(cacheKey)

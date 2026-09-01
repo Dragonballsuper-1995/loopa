@@ -286,7 +286,7 @@ const UI = {
     _heroItems: [],
     _heroCurrentIndex: 0,
 
-    renderHero(item, currentlyWatching, heroItems, currentIndex) {
+    renderHero(item, heroItems, currentIndex) {
         const container = document.getElementById('hero-section');
         if (!container) return;
 
@@ -295,33 +295,19 @@ const UI = {
         if (currentIndex !== undefined) this._heroCurrentIndex = currentIndex;
 
         const backdrop = item.backdropUrl || item.posterUrl || '';
-        const year = (item.releaseDate || item.firstAirDate || '').slice(0, 4);
-        const type = (item.mediaType || item.media_type || '').toUpperCase();
-        const rating = item.voteAverage && item.voteAverage > 0
-            ? `<i class="fa-solid fa-star text-loopAmber text-[10px]"></i> <span class="font-semibold text-textPrimary">${Number(item.voteAverage).toFixed(1)}</span>`
+        const year = (item.year || item.releaseDate || item.release_date || item.firstAirDate || item.first_air_date || '').toString().slice(0, 4);
+        const type = (item.mediaType || item.media_type || (item.name ? 'tv' : 'movie')).toUpperCase();
+        const vote = (item.score !== undefined && item.score !== null) ? item.score : (item.voteAverage || item.vote_average);
+        const rating = vote && Number(vote) > 0
+            ? `<i class="fa-solid fa-star text-loopAmber text-[10px]"></i> <span class="font-semibold text-textPrimary">${Number(vote).toFixed(1)}</span>`
             : '';
 
         const metaParts = [];
         if (year) metaParts.push(`<span>${year}</span>`);
         if (type) metaParts.push(`<span>${this._escapeHTML(type)}</span>`);
+        if (rating) metaParts.push(rating);
 
-        const metaHtml = metaParts.length
-            ? metaParts.join('<span class="w-1 h-1 rounded-full bg-textMuted/60 inline-block mx-1"></span>')
-            : '';
-
-        // Continue-watching badge
-        let trackingHtml = '';
-        if (currentlyWatching) {
-            trackingHtml = `
-                <div class="inline-flex items-center gap-2.5 mb-4 bg-loopSurface/80 backdrop-blur border border-white/10 rounded-full px-4 py-2 cursor-pointer hover:border-loopAmber/30 transition-colors group" id="hero-resume-btn">
-                    <div class="w-4 h-4 rounded-full bg-loopAmber flex items-center justify-center flex-shrink-0">
-                        <i class="fa-solid fa-play text-loopBase" style="font-size:6px; margin-left:1px;"></i>
-                    </div>
-                    <span class="text-xs font-semibold text-textPrimary">Continue:</span>
-                    <span class="text-xs text-textSecondary truncate max-w-[180px]">${this._escapeHTML(currentlyWatching.title)}</span>
-                </div>
-            `;
-        }
+        const metaHtml = metaParts.join('<span class="w-1 h-1 rounded-full bg-textMuted/60 inline-block mx-1"></span>');
 
         // Pagination dots
         const totalItems = (heroItems || this._heroItems).length;
@@ -356,10 +342,7 @@ const UI = {
                 if (titleEl) titleEl.textContent = item.title;
 
                 const metaEl = document.getElementById('hero-meta-row');
-                if (metaEl) metaEl.innerHTML = metaHtml + (rating ? `<span class="w-1 h-1 rounded-full bg-textMuted/60 inline-block mx-1"></span>${rating}` : '');
-
-                const trackingContainer = document.getElementById('hero-tracking-container');
-                if (trackingContainer) trackingContainer.innerHTML = trackingHtml;
+                if (metaEl) metaEl.innerHTML = metaHtml;
 
                 const dotsContainer = document.getElementById('hero-dots-wrapper');
                 if (dotsContainer) dotsContainer.innerHTML = dotsHtml;
@@ -368,10 +351,6 @@ const UI = {
                 if (trackBtn) trackBtn.onclick = () => App.openDrawer(item);
                 const infoBtn = document.getElementById('hero-info-btn');
                 if (infoBtn) infoBtn.onclick = () => App.openDrawer(item);
-
-                if (currentlyWatching && document.getElementById('hero-resume-btn')) {
-                    document.getElementById('hero-resume-btn').onclick = () => App.openDrawerFromDB(currentlyWatching);
-                }
 
                 this._bindHeroDots(heroItems || this._heroItems);
 
@@ -411,18 +390,15 @@ const UI = {
             <!-- Content overlay — bottom-left aligned -->
             <div id="hero-content-wrapper" class="absolute bottom-0 left-0 right-0 max-w-[1600px] mx-auto px-5 md:px-8 lg:px-14 pb-8 md:pb-10 flex flex-col transition-opacity duration-300">
 
-                <!-- Continue badge -->
-                <div id="hero-tracking-container">${trackingHtml}</div>
-
                 <!-- Metadata row: Year · Type · ★ Rating -->
                 <div id="hero-meta-row" class="hero-meta-text flex items-center gap-1 mb-2">
-                    ${metaHtml}${rating ? `<span class="w-1 h-1 rounded-full bg-textMuted/60 inline-block mx-1"></span>${rating}` : ''}
+                    ${metaHtml}
                 </div>
 
                 <!-- Title -->
                 <h1 id="hero-title" class="hero-title text-textPrimary max-w-2xl mb-4 line-clamp-2">${this._escapeHTML(item.title)}</h1>
 
-                <!-- Phase 2B: Dual CTA — primary Track + ghost More Info -->
+                <!-- Dual CTA — primary Track + ghost More Info -->
                 <div class="flex gap-3 flex-wrap">
                     <button id="hero-track-btn" class="btn-primary text-sm flex items-center gap-2 px-6 py-3">
                         <i class="fa-solid fa-plus text-xs"></i> Track This
@@ -439,9 +415,6 @@ const UI = {
 
         document.getElementById('hero-track-btn').onclick = () => App.openDrawer(item);
         document.getElementById('hero-info-btn').onclick = () => App.openDrawer(item);
-        if (currentlyWatching && document.getElementById('hero-resume-btn')) {
-            document.getElementById('hero-resume-btn').onclick = () => App.openDrawerFromDB(currentlyWatching);
-        }
 
         this._bindHeroDots(heroItems || this._heroItems);
     },

@@ -13,6 +13,12 @@ interface TmdbApiService {
         @Query("language") language: String = "en-US"
     ): TmdbResponse<TmdbMovie>
 
+    @GET("3/trending/all/day")
+    suspend fun getTrendingToday(
+        @Query("api_key") apiKey: String,
+        @Query("language") language: String = "en-US"
+    ): TmdbResponse<TmdbMovie>
+
     @GET("3/search/multi")
     suspend fun searchMulti(
         @Query("api_key") apiKey: String,
