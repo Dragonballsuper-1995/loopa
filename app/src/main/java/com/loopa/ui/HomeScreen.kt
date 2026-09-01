@@ -56,7 +56,6 @@ fun HomeScreen(
     val airingTodayTv by viewModel.airingTodayTv.collectAsState()
     val upcomingAnime by viewModel.upcomingAnime.collectAsState()
     val savedItems by viewModel.savedMediaItems.collectAsState()
-    val isDetailOpen by viewModel.isDetailOpen.collectAsState()
 
     var activeTrackMovie by remember { mutableStateOf<TmdbMovie?>(null) }
     var hoverMovie by remember { mutableStateOf<TmdbMovie?>(null) }
@@ -98,7 +97,7 @@ fun HomeScreen(
                 }
                 HeroCarousel(
                     heroItems = heroItems,
-                    isDetailOpen = isDetailOpen,
+                    viewModel = viewModel,
                     currentlyWatching = currentlyWatching,
                     onActiveTrackMovieChange = { activeTrackMovie = it },
                     onHoverMovieChange = { hoverMovie = it }
@@ -200,13 +199,11 @@ fun HomeScreen(
                 if (topAnime.isEmpty()) {
                     LoadingRow()
                 } else {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(topAnime.take(10)) { anime ->
+                    // Pre-compute once when topAnime changes — avoids TmdbMovie allocation on every scroll frame
+                    val topAnimeMapped = remember(topAnime) {
+                        topAnime.take(10).map { anime ->
                             val imageUrl = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl
-                            val tmdbEquivalent = TmdbMovie(
+                            TmdbMovie(
                                 id = anime.malId,
                                 title = anime.title,
                                 name = anime.title,
@@ -220,9 +217,16 @@ fun HomeScreen(
                                 genreIds = null,
                                 popularity = null
                             )
+                        }
+                    }
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(topAnimeMapped) { tmdbEquivalent ->
                             HomePosterCard(
-                                title = anime.title,
-                                imageUrl = imageUrl,
+                                title = tmdbEquivalent.title ?: "",
+                                imageUrl = tmdbEquivalent.posterPath,
                                 mediaType = "anime",
                                 onClick = { activeTrackMovie = tmdbEquivalent },
                                 onLongPress = { hoverMovie = tmdbEquivalent },
@@ -538,11 +542,14 @@ private fun mapAnimeListToTmdb(animeList: List<com.loopa.model.JikanAnime>): Lis
 @Composable
 fun HeroCarousel(
     heroItems: List<TmdbMovie>,
-    isDetailOpen: Boolean,
+    viewModel: MediaViewModel,
     currentlyWatching: MediaItemEntity?,
     onActiveTrackMovieChange: (TmdbMovie) -> Unit,
     onHoverMovieChange: (TmdbMovie?) -> Unit
 ) {
+    // Collect here so only HeroCarousel recomposes when detail sheet opens/closes,
+    // not the entire HomeScreen LazyColumn.
+    val isDetailOpen by viewModel.isDetailOpen.collectAsState()
     var currentHeroIndex by remember { mutableIntStateOf(0) }
 
     if (heroItems.isNotEmpty()) {

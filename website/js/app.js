@@ -79,28 +79,20 @@ const App = {
             this.s.watchlist = await SBList.getAll(this.s.user.id);
             if(this.s.view === 'watchlist') this._updateWLUI();
 
+            const handleUpsert = async (newRow) => {
+                    const idx = this.s.watchlist.findIndex(i => i.id === newRow.id && i.media_type === newRow.media_type);
+                    if (idx >= 0) this.s.watchlist[idx] = newRow;
+                    else this.s.watchlist.unshift(newRow);
+                    if (this.s.view === 'watchlist') this._updateWLUI();
+                    if (this.s.drawerDBEntry && this.s.drawerDBEntry.id === newRow.id && this.s.drawerDBEntry.media_type === newRow.media_type) {
+                        this.s.drawerDBEntry = newRow;
+                        UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
+                    }
+                };
             SBList.subscribeToChanges(
                 this.s.user.id,
-                async (newRow) => {
-                    const idx = this.s.watchlist.findIndex(i => i.id === newRow.id && i.media_type === newRow.media_type);
-                    if (idx >= 0) this.s.watchlist[idx] = newRow;
-                    else this.s.watchlist.unshift(newRow);
-                    if (this.s.view === 'watchlist') this._updateWLUI();
-                    if (this.s.drawerDBEntry && this.s.drawerDBEntry.id === newRow.id && this.s.drawerDBEntry.media_type === newRow.media_type) {
-                        this.s.drawerDBEntry = newRow;
-                        UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
-                    }
-                },
-                async (newRow) => {
-                    const idx = this.s.watchlist.findIndex(i => i.id === newRow.id && i.media_type === newRow.media_type);
-                    if (idx >= 0) this.s.watchlist[idx] = newRow;
-                    else this.s.watchlist.unshift(newRow);
-                    if (this.s.view === 'watchlist') this._updateWLUI();
-                    if (this.s.drawerDBEntry && this.s.drawerDBEntry.id === newRow.id && this.s.drawerDBEntry.media_type === newRow.media_type) {
-                        this.s.drawerDBEntry = newRow;
-                        UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
-                    }
-                },
+                handleUpsert,
+                handleUpsert,
                 async (oldRow) => {
                     this.s.watchlist = this.s.watchlist.filter(i => !(i.id === oldRow.id && i.media_type === oldRow.media_type));
                     if (this.s.view === 'watchlist') this._updateWLUI();
@@ -508,14 +500,6 @@ const App = {
             window.addEventListener('scroll', updateHeaderTransparency, { passive: true });
             // Run once immediately so state is correct on load
             requestAnimationFrame(updateHeaderTransparency);
-        }
-    },
-
-    _updateSyncTime() {
-        const lastSync = localStorage.getItem('lastSyncTime');
-        const el = document.getElementById('dropdownSyncTime');
-        if(el) {
-            el.textContent = lastSync ? new Date(parseInt(lastSync)).toLocaleString() : 'NEVER';
         }
     },
 

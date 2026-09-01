@@ -650,18 +650,6 @@ class MediaRepository(
         emit(response.results)
     }
 
-    fun searchMedia(apiKey: String, query: String): Flow<List<TmdbMovie>> = flow {
-        val cacheKey = "search_$query"
-        val cached = ApiCache.get<List<TmdbMovie>>(cacheKey)
-        if (cached != null) {
-            emit(cached)
-            return@flow
-        }
-        val response = retryWithBackoff { tmdbApi.searchMulti(apiKey, query) }
-        ApiCache.put(cacheKey, response.results)
-        emit(response.results)
-    }
-
     /**
      * Parallel unified search via Cloudflare Edge API with direct client fallback.
      */

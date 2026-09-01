@@ -41,7 +41,10 @@ object NetworkModule {
             chain.proceed(request)
         }
         .addInterceptor(HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (com.loopa.app.BuildConfig.DEBUG)
+                HttpLoggingInterceptor.Level.BODY
+            else
+                HttpLoggingInterceptor.Level.NONE
         })
         .build()
 
@@ -80,15 +83,6 @@ object NetworkModule {
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(JikanApiService::class.java)
-    }
-
-    val geminiApi: GeminiApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl("https://generativelanguage.googleapis.com/")
-            .client(okHttpClient.newBuilder().readTimeout(60, java.util.concurrent.TimeUnit.SECONDS).build())
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(GeminiApiService::class.java)
     }
 
     val loopaApi: LoopaApiService by lazy {

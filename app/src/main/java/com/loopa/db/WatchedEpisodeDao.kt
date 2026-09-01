@@ -26,6 +26,9 @@ interface WatchedEpisodeDao {
     @Query("SELECT * FROM watched_episodes")
     suspend fun getAllWatchedEpisodesSync(): List<WatchedEpisodeEntity>
 
+    @Query("SELECT COUNT(*) FROM watched_episodes WHERE mediaId = :mediaId AND mediaType = :mediaType")
+    suspend fun countWatchedForMedia(mediaId: Int, mediaType: String): Int
+
     @Query("DELETE FROM watched_episodes")
     suspend fun deleteAllWatchedEpisodes()
 }

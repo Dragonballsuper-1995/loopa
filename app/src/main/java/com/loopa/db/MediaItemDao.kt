@@ -14,6 +14,9 @@ interface MediaItemDao {
     @Query("SELECT * FROM media_items")
     suspend fun getAllMediaItemsSync(): List<MediaItemEntity>
 
+    @Query("SELECT * FROM media_items WHERE id = :id AND mediaType = :mediaType LIMIT 1")
+    suspend fun getMediaItem(id: Int, mediaType: String): MediaItemEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMediaItem(item: MediaItemEntity)
 

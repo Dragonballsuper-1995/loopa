@@ -80,11 +80,6 @@ const UI = {
         ).join('');
     },
 
-    // ── Micro-interactions ────────────────────────────────────────────────────
-    _applyTiltEffect(el) {
-        // 3D Tilt removed
-    },
-
     // ── Helpers ───────────────────────────────────────────────────────────────
     _fallbackPoster(title) {
         return `https://placehold.co/400x600/1A1915/A09990?text=${encodeURIComponent((title || '?').substring(0, 12))}`;
@@ -188,7 +183,6 @@ const UI = {
                 App.showContextMenu(e, item, !!wlEntry);
             }
         });
-        this._applyTiltEffect(el.querySelector('.media-card'));
         return el;
     },
 
@@ -250,7 +244,6 @@ const UI = {
                 App.showContextMenu(e, item, inList);
             }
         });
-        this._applyTiltEffect(el);
 
         if (isAI && item.reason) {
             const wrap = document.createElement('div');

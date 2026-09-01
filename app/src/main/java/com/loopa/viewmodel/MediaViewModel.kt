@@ -18,17 +18,14 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.combine
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
 import io.github.jan.supabase.auth.auth
 
 import com.loopa.network.NetworkModule
-import com.loopa.network.GenerateContentRequest
-import com.loopa.network.Content
-import com.loopa.network.Part
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -308,9 +305,6 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchSuggestionsState = MutableStateFlow<List<TmdbMovie>>(emptyList())
     val searchSuggestionsState: StateFlow<List<TmdbMovie>> = _searchSuggestionsState.asStateFlow()
 
-    private val _recommendationState = MutableStateFlow<MediaUiState>(MediaUiState.Loading)
-    val recommendationState: StateFlow<MediaUiState> = _recommendationState.asStateFlow()
-
     // ── Detail Open State (pauses hero carousel) ──────────────────────────────
     private val _isDetailOpen = MutableStateFlow(false)
     val isDetailOpen: StateFlow<Boolean> = _isDetailOpen.asStateFlow()
@@ -326,17 +320,11 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         fetchHomeData()
         fetchAiRecommendations()
         
-        viewModelScope.launch {
-            savedMediaItems.collect { reindexSearchEngine() }
-        }
-        viewModelScope.launch {
-            _popularMovies.collect { reindexSearchEngine() }
-        }
-        viewModelScope.launch {
-            _popularTv.collect { reindexSearchEngine() }
-        }
-        viewModelScope.launch {
-            _topAnime.collect { reindexSearchEngine() }
+        // Single combine collector — fires once per debounce window even when all 4 flows
+        // emit simultaneously on startup, eliminating 4× redundant Trie rebuilds.
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            combine(savedMediaItems, _popularMovies, _popularTv, _topAnime) { _, _, _, _ -> Unit }
+                .collect { reindexSearchEngine() }
         }
     }
 
@@ -895,33 +883,6 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun fetchRecommendations(savedItems: List<MediaItemEntity>) {
-        if (savedItems.size < 10) {
-            _recommendationState.value = MediaUiState.InsufficientData
-            return
-        }
-
-        val proxyUrl = BuildConfig.AI_PROXY_URL
-        val tmdbApiKey = BuildConfig.TMDB_API_KEY
-        
-        // Return immediately if empty to avoid continuous loading state
-        if (proxyUrl.isEmpty() || proxyUrl == "YOUR_CLOUDFLARE_WORKER_URL") {
-            _aiRecsError.value = "AI Proxy URL is missing. Add it in .env"
-            return
-        }
-
-        viewModelScope.launch {
-            _recommendationState.value = MediaUiState.Loading
-            try {
-                val titles = savedItems.joinToString(", ") { it.title }
-                val results = repository.getSimilarTitles(proxyUrl, tmdbApiKey, titles)
-                _recommendationState.value = MediaUiState.Success(results)
-            } catch (e: Exception) {
-                _recommendationState.value = MediaUiState.Error(e.localizedMessage ?: "Unknown error")
-            }
-        }
-    }
-
     suspend fun fetchTvSeasonDetails(tvId: Int, seasonNumber: Int): com.loopa.model.TmdbSeasonResponse? {
         val apiKey = BuildConfig.TMDB_API_KEY
         if (apiKey.isEmpty() || apiKey == "MY_TMDB_API_KEY") return null
@@ -978,8 +939,8 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun autoUpdateWatchStatus(mediaId: Int, mediaType: String, totalEpisodes: Int) {
-        val currentCount = watchedEpisodeDao.getAllWatchedEpisodesSync().filter { it.mediaId == mediaId && it.mediaType == mediaType }.size
-        val item = mediaItemDao.getAllMediaItemsSync().find { it.id == mediaId && it.mediaType == mediaType } ?: return
+        val currentCount = watchedEpisodeDao.countWatchedForMedia(mediaId, mediaType)
+        val item = mediaItemDao.getMediaItem(mediaId, mediaType) ?: return
         
         val newStatus = when {
             totalEpisodes > 0 && currentCount >= totalEpisodes -> "Watched"
