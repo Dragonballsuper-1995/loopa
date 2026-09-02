@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>About Loopa — Your Personal Media Universe</title>
+    <meta name="description" content="Learn about Loopa — the fast, beautiful, and distraction-free media tracker built for movies, series, and anime.">
+
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0c0b09">
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/output.css?v=21">
+</head>
+
+<body class="flex flex-col min-h-screen bg-loopBase text-textPrimary selection:bg-loopAmber/20 selection:text-textPrimary">
+
+    <!-- Header Navigation -->
+    <header class="w-full frosted-glass sticky top-0 z-40 px-5 lg:px-8 border-b border-white/5">
+        <div class="max-w-[1200px] mx-auto flex items-center justify-between h-16">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <img src="assets/logo.svg" alt="Loopa Logo" class="h-8 w-auto transition-transform group-hover:scale-105">
+            </a>
+
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="px-4 py-2 rounded-full text-xs font-semibold text-textSecondary hover:text-textPrimary bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-[1000px] w-full mx-auto px-5 py-10 md:py-16 space-y-12">
+
+        <!-- Hero Section -->
+        <div class="text-center space-y-4">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-loopAmber/10 border border-loopAmber/30 text-loopAmber text-xs font-bold tracking-wide uppercase">
+                <i class="fa-solid fa-circle-info text-[11px]"></i>
+                <span>About Loopa</span>
+            </div>
+            <h1 class="text-3xl md:text-5xl font-black tracking-tight text-textPrimary">
+                Built for People Who Love Stories
+            </h1>
+            <p class="text-textSecondary text-sm md:text-base max-w-xl mx-auto leading-relaxed">
+                Loopa was made to make tracking everything you watch effortless, beautiful, and completely your own.
+            </p>
+        </div>
+
+        <!-- Story & Mission Banner -->
+        <section class="frosted-glass rounded-3xl p-6 md:p-10 border border-white/10 relative overflow-hidden space-y-4">
+            <div class="w-2 h-2 rounded-full bg-loopAmber"></div>
+            <h2 class="text-xl md:text-2xl font-bold text-textPrimary">Our Mission</h2>
+            <p class="text-xs md:text-sm text-textSecondary leading-relaxed max-w-2xl">
+                Most streaming apps are cluttered, slow, and try to sell you subscriptions you don’t need. Loopa is different. It is a clean, lightning-fast media tracker designed to be your single command center for movies, TV series, and anime.
+            </p>
+            <div class="flex flex-wrap gap-3 pt-2">
+                <span class="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-textSecondary flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-loopAmber"></i> Lightning Fast
+                </span>
+                <span class="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-textSecondary flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-loopAmber"></i> 100% Ad-Free
+                </span>
+                <span class="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-textSecondary flex items-center gap-2">
+                    <i class="fa-solid fa-sync text-loopAmber"></i> Instant Cloud Sync
+                </span>
+            </div>
+        </section>
+
+        <!-- Feature Pillars -->
+        <section class="space-y-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-loopAmber"></span>
+                <h2 class="text-lg font-bold text-textPrimary">Core Features</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="frosted-glass rounded-2xl p-5 border border-white/10 space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-loopAmber/10 border border-loopAmber/30 flex items-center justify-center text-loopAmber text-sm">
+                        <i class="fa-solid fa-satellite-dish"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-textPrimary">Radar Search</h3>
+                    <p class="text-xs text-textSecondary leading-relaxed">
+                        Find movies, series, and anime instantly across global databases with rich summaries, cast info, and high-res posters.
+                    </p>
+                </div>
+
+                <div class="frosted-glass rounded-2xl p-5 border border-white/10 space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-loopAmber/10 border border-loopAmber/30 flex items-center justify-center text-loopAmber text-sm">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-textPrimary">My List & Progress</h3>
+                    <p class="text-xs text-textSecondary leading-relaxed">
+                        Organize your media into Watching, Plan to Watch, and Watched. Log episode counts and personal ratings with a single tap.
+                    </p>
+                </div>
+
+                <div class="frosted-glass rounded-2xl p-5 border border-white/10 space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-loopAmber/10 border border-loopAmber/30 flex items-center justify-center text-loopAmber text-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-textPrimary">AI "For You"</h3>
+                    <p class="text-xs text-textSecondary leading-relaxed">
+                        Discover your next obsession with personalized AI recommendations that adapt to your taste without annoying algorithms.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tech Stack & Credits -->
+        <section class="space-y-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-loopAmber"></span>
+                <h2 class="text-lg font-bold text-textPrimary">Open Data & Technology Credits</h2>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-loopSurface/60 rounded-xl p-4 border border-white/5 space-y-1.5">
+                    <div class="text-xs font-bold text-textPrimary">TMDB</div>
+                    <p class="text-xs text-textSecondary">Movie and television series metadata & imagery.</p>
+                </div>
+
+                <div class="bg-loopSurface/60 rounded-xl p-4 border border-white/5 space-y-1.5">
+                    <div class="text-xs font-bold text-textPrimary">AniList & Kitsu</div>
+                    <p class="text-xs text-textSecondary">Comprehensive anime discovery & episode data.</p>
+                </div>
+
+                <div class="bg-loopSurface/60 rounded-xl p-4 border border-white/5 space-y-1.5">
+                    <div class="text-xs font-bold text-textPrimary">Supabase</div>
+                    <p class="text-xs text-textSecondary">High-security cloud database and instant real-time sync.</p>
+                </div>
+
+                <div class="bg-loopSurface/60 rounded-xl p-4 border border-white/5 space-y-1.5">
+                    <div class="text-xs font-bold text-textPrimary">Jetpack Compose</div>
+                    <p class="text-xs text-textSecondary">Modern declarative UI toolkit powering our Android app.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Developer & Version Info -->
+        <section class="frosted-glass rounded-2xl p-6 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div class="space-y-1 text-center sm:text-left">
+                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-loopAmber/10 border border-loopAmber/20 text-loopAmber text-[11px] font-bold">
+                    Version 2.3
+                </div>
+                <h3 class="text-sm font-bold text-textPrimary pt-1">Crafted with care</h3>
+                <p class="text-xs text-textSecondary">
+                    Built by passionate developers for cinephiles & anime fans everywhere.
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <a href="https://github.com/Dragonballsuper-1995/loopa" target="_blank" rel="noopener noreferrer" class="btn-secondary text-xs font-bold flex items-center gap-2">
+                    <i class="fa-brands fa-github text-sm"></i>
+                    <span>GitHub</span>
+                </a>
+                <a href="mailto:support@loopa.app" class="btn-primary text-xs font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-envelope"></i>
+                    <span>Contact</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Bottom Footer Links -->
+        <footer class="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-textMuted">
+            <p>© 2026 Loopa. All rights reserved.</p>
+            <div class="flex items-center gap-6 font-medium">
+                <a href="help.html" class="hover:text-loopAmber transition-colors">Help & Feedback</a>
+                <a href="privacy.html" class="hover:text-loopAmber transition-colors">Privacy Policy</a>
+                <a href="index.html" class="hover:text-loopAmber transition-colors">App</a>
+            </div>
+        </footer>
+
+    </main>
+
+</body>
+
+</html>

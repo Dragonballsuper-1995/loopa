@@ -319,20 +319,20 @@ fun SettingsScreen(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     headlineContent = { Text("Help & Feedback", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
                     leadingContent = { Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Help", tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable { navController.navigate("help_feedback") }
                 )
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     headlineContent = { Text("Privacy Policy", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
                     leadingContent = { Icon(Icons.Filled.PrivacyTip, contentDescription = "Privacy Policy", tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable { navController.navigate("privacy_policy") }
                 )
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     headlineContent = { Text("About", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium) },
-                    supportingContent = { Text("Loopa v2.0.0", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    supportingContent = { Text("Loopa v2.3", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     leadingContent = { Icon(Icons.Filled.Info, contentDescription = "About", tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable { navController.navigate("about") }
                 )
             }
         }

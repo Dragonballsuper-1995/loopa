@@ -105,7 +105,8 @@ const App = {
             );
         }
         
-        this.navigateTo('search');
+        const savedView = sessionStorage.getItem('loopa_last_view') || 'search';
+        this.navigateTo(savedView);
     },
 
     _updateSyncTime() {
@@ -160,6 +161,41 @@ const App = {
                 }
             });
         }
+
+        // PJAX Overlay for Static Pages
+        document.querySelectorAll('.static-page-link').forEach(link => {
+            link.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const url = link.getAttribute('href');
+                const overlay = document.getElementById('staticPageOverlay');
+                if(dropdown) dropdown.classList.add('hidden'); // Close dropdown
+                overlay.innerHTML = '<div class="flex items-center justify-center min-h-screen text-loopAmber"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i></div>';
+                overlay.classList.remove('hidden');
+                requestAnimationFrame(() => overlay.classList.remove('opacity-0'));
+                
+                try {
+                    const res = await fetch(url);
+                    const html = await res.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    
+                    overlay.innerHTML = doc.body.innerHTML;
+                    
+                    const backBtn = overlay.querySelector('a[href="index.html"]');
+                    if (backBtn) {
+                        backBtn.addEventListener('click', (ev) => {
+                            ev.preventDefault();
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => {
+                                overlay.classList.add('hidden');
+                                overlay.innerHTML = '';
+                            }, 300);
+                        });
+                    }
+                } catch(err) {
+                    overlay.innerHTML = '<div class="p-10 text-loopError text-center font-bold mt-20">Failed to load page.</div>';
+                }
+            });
+        });
 
         
         // Context Menu outside click
@@ -544,6 +580,8 @@ const App = {
 
     // ── Navigation ────────────────────────────────────────────────────────────
     navigateTo(view, fromSearchInput = false) {
+        sessionStorage.setItem('loopa_last_view', view);
+        
         if (view !== 'search') {
             // Pause hero carousel when leaving Radar tab (don't destroy the interval)
             this.s.heroPaused = true;
@@ -572,7 +610,21 @@ const App = {
         if (view === 'search') {
             if (!fromSearchInput) {
                 const searchInput = document.getElementById('searchInput');
-                if (searchInput) searchInput.value = '';
+                if (searchInput) {
+                    const savedSearch = sessionStorage.getItem('loopa_last_search');
+                    if (savedSearch) {
+                        searchInput.value = savedSearch;
+                        // Trigger search automatically if we had one
+                        if (savedSearch.trim().length > 0) {
+                            // Let the input event handle it, or just set it
+                            setTimeout(() => {
+                                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            }, 50);
+                        }
+                    } else {
+                        searchInput.value = '';
+                    }
+                }
                 const browseContent = document.getElementById('radar-browse-content');
                 const resultsContainer = document.getElementById('search-results-container');
                 if (browseContent) browseContent.classList.remove('hidden');
@@ -590,6 +642,22 @@ const App = {
 
 
     async _loadDashboard(forceRefresh = false) {
+        // ── Session State Recovery ───────────────────────────────────────────
+        if (!this.s.dashboardLoaded && !forceRefresh) {
+            const cached = sessionStorage.getItem('loopa_dashboard');
+            if (cached) {
+                try {
+                    const data = JSON.parse(cached);
+                    this.s.trendingList = data.trendingList || [];
+                    this.s.top10List = data.top10List || [];
+                    this.s.animeList = data.animeList || [];
+                    this.s.moviesList = data.moviesList || [];
+                    this.s.tvList = data.tvList || [];
+                    this.s.dashboardLoaded = true;
+                } catch(e) {}
+            }
+        }
+
         // ── Session cache guard ───────────────────────────────────────────────
         // If dashboard was already loaded and we're not forcing a refresh,
         // re-render from in-memory lists instantly (zero network cost).
@@ -669,6 +737,8 @@ const App = {
             if (anime.status  === 'fulfilled') UI.renderScrollRow('row-anime',  anime.value.slice(0, 10));
             if (movies.status === 'fulfilled') UI.renderScrollRow('row-movies', movies.value.slice(0, 10));
             if (tv.status     === 'fulfilled') UI.renderScrollRow('row-tv',     tv.value.slice(0, 10));
+            
+            this._saveDashboardCache();
         }, 100);
 
         // ── Tier 3: Below-fold — IntersectionObserver lazy-load ──────────────
@@ -677,6 +747,18 @@ const App = {
         // Mark as loaded and schedule auto-refresh
         this.s.dashboardLoaded = true;
         this._scheduleAutoRefresh();
+    },
+    
+    _saveDashboardCache() {
+        try {
+            sessionStorage.setItem('loopa_dashboard', JSON.stringify({
+                trendingList: this.s.trendingList,
+                top10List: this.s.top10List,
+                animeList: this.s.animeList,
+                moviesList: this.s.moviesList,
+                tvList: this.s.tvList
+            }));
+        } catch(e) {}
     },
 
     // ── Hero Carousel Management ─────────────────────────────────────────────

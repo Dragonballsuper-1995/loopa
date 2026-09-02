@@ -51,7 +51,7 @@ The experience is designed to feel like the opening credits of an action thrille
 
 Under the hood, Loopa is architected for resilience. A battle-tested **Offline-First, Last-Write-Wins (LWW) synchronization protocol** ensures your data is always captured locally first and reconciled with the cloud gracefully — whether you're on a subway, a plane, or a remote cabin.
 
-> **Current Version: `v2.0.0`** — The Data Portability, AI Semantic Search & Clean Architecture release. Complete cross-platform sync, 1-click multi-format import/export, and natural language semantic discovery.
+> **Current Version: `v2.3`** — The Data Portability, AI Semantic Search & Clean Architecture release. Complete cross-platform sync, 1-click multi-format import/export, and natural language semantic discovery.
 
 ---
 

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Help & Feedback — Loopa</title>
+    <meta name="description" content="Get help, learn how to use Loopa, and share your feedback with our team.">
+
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0c0b09">
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/output.css?v=21">
+</head>
+
+<body class="flex flex-col min-h-screen bg-loopBase text-textPrimary selection:bg-loopAmber/20 selection:text-textPrimary">
+
+    <!-- Header Navigation -->
+    <header class="w-full frosted-glass sticky top-0 z-40 px-5 lg:px-8 border-b border-white/5">
+        <div class="max-w-[1200px] mx-auto flex items-center justify-between h-16">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <img src="assets/logo.svg" alt="Loopa Logo" class="h-8 w-auto transition-transform group-hover:scale-105">
+            </a>
+
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="px-4 py-2 rounded-full text-xs font-semibold text-textSecondary hover:text-textPrimary bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-[1000px] w-full mx-auto px-5 py-10 md:py-16 space-y-12">
+
+        <!-- Hero Section -->
+        <div class="text-center space-y-4">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-loopAmber/10 border border-loopAmber/30 text-loopAmber text-xs font-bold tracking-wide uppercase">
+                <i class="fa-solid fa-circle-question text-[11px]"></i>
+                <span>Support Center</span>
+            </div>
+            <h1 class="text-3xl md:text-5xl font-black tracking-tight text-textPrimary">
+                How can we help you?
+            </h1>
+            <p class="text-textSecondary text-sm md:text-base max-w-xl mx-auto">
+                Simple answers to common questions, quick tips, and direct contact if you ever need a hand.
+            </p>
+        </div>
+
+        <!-- Quick 3-Step Starter Guide -->
+        <section class="space-y-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-loopAmber"></span>
+                <h2 class="text-lg font-bold text-textPrimary">Getting Started in 3 Steps</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="frosted-glass rounded-2xl p-5 border border-white/10 space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-loopAmber/10 border border-loopAmber/30 flex items-center justify-center text-loopAmber font-bold text-sm">
+                        1
+                    </div>
+                    <h3 class="text-sm font-bold text-textPrimary">Search anything</h3>
+                    <p class="text-xs text-textSecondary leading-relaxed">
+                        Type any movie, TV show, or anime in the top search bar. Instant results appear as you type.
+                    </p>
+                </div>
+
+                <div class="frodest-glass frosted-glass rounded-2xl p-5 border border-white/10 space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-loopAmber/10 border border-loopAmber/30 flex items-center justify-center text-loopAmber font-bold text-sm">
+                        2
+                    </div>
+                    <h3 class="text-sm font-bold text-textPrimary">Add to My List</h3>
+                    <p class="text-xs text-textSecondary leading-relaxed">
+                        Choose <strong>Watching</strong>, <strong>Plan to Watch</strong>, or <strong>Watched</strong> to save it to your personal vault.
+                    </p>
+                </div>
+
+                <div class="frosted-glass rounded-2xl p-5 border border-white/10 space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-loopAmber/10 border border-loopAmber/30 flex items-center justify-center text-loopAmber font-bold text-sm">
+                        3
+                    </div>
+                    <h3 class="text-sm font-bold text-textPrimary">Track episodes & sync</h3>
+                    <p class="text-xs text-textSecondary leading-relaxed">
+                        Log episodes with one tap. Log in with your email to automatically sync your progress across Web and Android.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Frequently Asked Questions (FAQ) -->
+        <section class="space-y-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-loopAmber"></span>
+                <h2 class="text-lg font-bold text-textPrimary">Frequently Asked Questions</h2>
+            </div>
+
+            <div class="space-y-3">
+                <!-- FAQ 1 -->
+                <details class="group frosted-glass rounded-xl border border-white/10 overflow-hidden transition-all duration-200">
+                    <summary class="flex items-center justify-between p-4 cursor-pointer select-none font-semibold text-sm text-textPrimary group-hover:text-loopAmber transition-colors">
+                        <span class="flex items-center gap-3">
+                            <i class="fa-solid fa-wallet text-loopAmber text-xs"></i>
+                            Is Loopa completely free?
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-xs text-textMuted transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-1 text-xs text-textSecondary leading-relaxed border-t border-white/5 space-y-2">
+                        <p>Yes! Loopa is 100% free to use. There are no paid tiers, hidden subscriptions, or annoying ads.</p>
+                    </div>
+                </details>
+
+                <!-- FAQ 2 -->
+                <details class="group frosted-glass rounded-xl border border-white/10 overflow-hidden transition-all duration-200">
+                    <summary class="flex items-center justify-between p-4 cursor-pointer select-none font-semibold text-sm text-textPrimary group-hover:text-loopAmber transition-colors">
+                        <span class="flex items-center gap-3">
+                            <i class="fa-solid fa-wifi text-loopAmber text-xs"></i>
+                            Does Loopa work without internet?
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-xs text-textMuted transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-1 text-xs text-textSecondary leading-relaxed border-t border-white/5 space-y-2">
+                        <p>Yes. Your watchlist is always stored locally on your device. Any changes you make while offline are queued and automatically uploaded once you're back online.</p>
+                    </div>
+                </details>
+
+                <!-- FAQ 3 -->
+                <details class="group frosted-glass rounded-xl border border-white/10 overflow-hidden transition-all duration-200">
+                    <summary class="flex items-center justify-between p-4 cursor-pointer select-none font-semibold text-sm text-textPrimary group-hover:text-loopAmber transition-colors">
+                        <span class="flex items-center gap-3">
+                            <i class="fa-solid fa-wand-magic-sparkles text-loopAmber text-xs"></i>
+                            How do AI recommendations work?
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-xs text-textMuted transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-1 text-xs text-textSecondary leading-relaxed border-t border-white/5 space-y-2">
+                        <p>When you visit <strong>For You</strong>, our AI looks at what titles and genres you love in your watchlist and discovers hidden gems tailored to your taste.</p>
+                    </div>
+                </details>
+
+                <!-- FAQ 4 -->
+                <details class="group frosted-glass rounded-xl border border-white/10 overflow-hidden transition-all duration-200">
+                    <summary class="flex items-center justify-between p-4 cursor-pointer select-none font-semibold text-sm text-textPrimary group-hover:text-loopAmber transition-colors">
+                        <span class="flex items-center gap-3">
+                            <i class="fa-solid fa-file-arrow-up text-loopAmber text-xs"></i>
+                            Can I export or backup my watchlist?
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-xs text-textMuted transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-1 text-xs text-textSecondary leading-relaxed border-t border-white/5 space-y-2">
+                        <p>Yes! In the profile menu (or Settings in the App), open <strong>Data Portability</strong> to download your full list in JSON or CSV format, or import a list anytime.</p>
+                    </div>
+                </details>
+
+                <!-- FAQ 5 -->
+                <details class="group frosted-glass rounded-xl border border-white/10 overflow-hidden transition-all duration-200">
+                    <summary class="flex items-center justify-between p-4 cursor-pointer select-none font-semibold text-sm text-textPrimary group-hover:text-loopAmber transition-colors">
+                        <span class="flex items-center gap-3">
+                            <i class="fa-solid fa-mobile-screen text-loopAmber text-xs"></i>
+                            Is there an Android app?
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-xs text-textMuted transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-1 text-xs text-textSecondary leading-relaxed border-t border-white/5 space-y-2">
+                        <p>Yes! Loopa is built natively for Android with offline support, fluid Jetpack Compose UI, and instant cloud sync.</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- Troubleshooting Tips -->
+        <section class="space-y-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-loopAmber"></span>
+                <h2 class="text-lg font-bold text-textPrimary">Quick Troubleshooting</h2>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-loopSurface/60 rounded-xl p-4 border border-white/5 space-y-2">
+                    <div class="flex items-center gap-2 text-loopAmber font-semibold text-xs">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>Sync Not Updating?</span>
+                    </div>
+                    <p class="text-xs text-textSecondary leading-relaxed">
+                        Open the profile menu and click <strong>Sync Data</strong>. Ensure you are signed in with the same email on both Web and Android.
+                    </p>
+                </div>
+
+                <div class="bg-loopSurface/60 rounded-xl p-4 border border-white/5 space-y-2">
+                    <div class="flex items-center gap-2 text-loopAmber font-semibold text-xs">
+                        <i class="fa-solid fa-image"></i>
+                        <span>Missing Posters or Data?</span>
+                    </div>
+                    <p class="text-xs text-textSecondary leading-relaxed">
+                        Loopa retrieves metadata from TMDB and AniList. If a title is brand new or rare, check back soon or try searching with the alternative English/Japanese title.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Send Feedback & Contact -->
+        <section class="frosted-glass rounded-2xl p-6 md:p-8 border border-loopAmber/30 bg-gradient-to-r from-loopAmber/10 via-transparent to-transparent space-y-5">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <h2 class="text-xl font-bold text-textPrimary">Send Us Feedback & Suggestions</h2>
+                    <p class="text-xs md:text-sm text-textSecondary max-w-lg">
+                        Have a feature idea, found a bug, or just want to say hi? We'd love to hear from you!
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="mailto:support@loopa.app?subject=Loopa%20Help%20%26%20Feedback" class="btn-primary text-xs font-bold flex items-center gap-2 shadow-lg shadow-loopAmber/20">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Email Support</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs text-textMuted">
+                <span>Direct Support: <strong class="text-textSecondary">support@loopa.app</strong></span>
+                <span>Response time: Usually within 24–48 hours</span>
+            </div>
+        </section>
+
+        <!-- Bottom Footer Links -->
+        <footer class="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-textMuted">
+            <p>© 2026 Loopa. All rights reserved.</p>
+            <div class="flex items-center gap-6 font-medium">
+                <a href="privacy.html" class="hover:text-loopAmber transition-colors">Privacy Policy</a>
+                <a href="about.html" class="hover:text-loopAmber transition-colors">About Loopa</a>
+                <a href="index.html" class="hover:text-loopAmber transition-colors">App</a>
+            </div>
+        </footer>
+
+    </main>
+
+</body>
+
+</html>

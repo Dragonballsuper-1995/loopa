@@ -222,15 +222,15 @@
                                         </span>
                                         <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-loopAmber/10 text-loopAmber border border-loopAmber/20">PWA</span>
                                     </button>
-                                    <button class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
-                                        <i class="fa-solid fa-circle-question w-4 text-center text-textMuted"></i> Help & Feedback
-                                    </button>
-                                    <button class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
-                                        <i class="fa-solid fa-shield-halved w-4 text-center text-textMuted"></i> Privacy Policy
-                                    </button>
-                                    <button class="w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
-                                        <i class="fa-solid fa-info-circle w-4 text-center text-textMuted"></i> About Loopa
-                                    </button>
+                                    <a href="help.html" class="static-page-link w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
+                                        <i class="fa-solid fa-circle-question w-4 text-center text-loopAmber"></i> Help & Feedback
+                                    </a>
+                                    <a href="privacy.html" class="static-page-link w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
+                                        <i class="fa-solid fa-shield-halved w-4 text-center text-loopAmber"></i> Privacy Policy
+                                    </a>
+                                    <a href="about.html" class="static-page-link w-full text-left px-2.5 py-2 hover:bg-white/5 rounded-md text-sm font-medium text-textPrimary transition-colors flex items-center gap-3">
+                                        <i class="fa-solid fa-circle-info w-4 text-center text-loopAmber"></i> About Loopa
+                                    </a>
                                 </div>
                             </div>
                             
@@ -781,6 +781,9 @@
             </button>
         </div>
     </div>
+
+    <!-- PJAX Overlay Container -->
+    <div id="staticPageOverlay" class="fixed inset-0 z-[200] bg-loopBase overflow-y-auto hidden opacity-0 transition-opacity duration-300"></div>
 
     <script src="js/config.js?v=21" defer></script>
     <script src="js/storage.js?v=21" defer></script>

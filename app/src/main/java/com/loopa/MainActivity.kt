@@ -179,6 +179,15 @@ fun MediaTrackerApp(
                                 onLogout = { isGuestMode = false }
                             )
                         }
+                        composable("help_feedback") {
+                            HelpFeedbackScreen(navController = navController)
+                        }
+                        composable("privacy_policy") {
+                            PrivacyPolicyScreen(navController = navController)
+                        }
+                        composable("about") {
+                            AboutScreen(navController = navController)
+                        }
                     }
                 }
             }
