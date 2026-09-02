@@ -591,7 +591,11 @@ header.header-transparent {
     display: flex;
     align-items: flex-end;
     flex-shrink: 0;
-    margin-right: 6px;
+    margin-right: 2px;
+}
+
+.top10-card-wrapper > div {
+    width: auto !important;
 }
 
 .top10-rank {
@@ -602,21 +606,20 @@ header.header-transparent {
     font-weight: 900;
     line-height: 0.8;
     letter-spacing: -5px;
-    color: transparent;
-    -webkit-text-stroke: 2px rgba(240, 237, 232, 0.22);
+    color: rgba(122, 116, 109, 0.28);
     pointer-events: none;
     z-index: 5;
     user-select: none;
 }
 
 .top10-rank.top3 {
-    -webkit-text-stroke: 2px rgba(232, 168, 124, 0.60);
+    color: rgba(232, 168, 124, 0.50);
 }
 
 .top10-card-wrapper .media-card {
-    margin-left: 44px;
+    margin-left: 38px;
     z-index: 10;
-    width: 120px;
+    width: 125px;
 }
 
 /* ── Phase 4C: See All Link ────────────────────────────────────────────────── */

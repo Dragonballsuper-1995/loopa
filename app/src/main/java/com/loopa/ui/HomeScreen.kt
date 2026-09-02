@@ -106,6 +106,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Trending",
+                    highlightPrefix = "Trending",
                     showDivider = false,
                     onSeeAll = {
                         val state = uiState
@@ -145,6 +146,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Top 10 Today",
+                    highlightPrefix = "Top 10",
                     showDivider = false,
                     onSeeAll = {
                         if (top10Today.isNotEmpty()) {
@@ -181,6 +183,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Anime",
+                    highlightPrefix = "Anime",
                     showDivider = false,
                     onSeeAll = {
                         if (topAnime.isNotEmpty()) {
@@ -235,6 +238,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Popular Movies",
+                    highlightPrefix = "Popular",
                     showDivider = false,
                     onSeeAll = {
                         if (popularMovies.isNotEmpty()) {
@@ -270,6 +274,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Popular TV",
+                    highlightPrefix = "Popular",
                     showDivider = false,
                     onSeeAll = {
                         if (popularTv.isNotEmpty()) {
@@ -305,6 +310,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Top Rated Movies",
+                    highlightPrefix = "Top Rated",
                     showDivider = false,
                     onSeeAll = {
                         if (topRatedMovies.isNotEmpty()) {
@@ -340,6 +346,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Upcoming Movies",
+                    highlightPrefix = "Upcoming",
                     showDivider = false,
                     onSeeAll = {
                         if (upcomingMovies.isNotEmpty()) {
@@ -375,6 +382,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Top Rated TV",
+                    highlightPrefix = "Top Rated",
                     showDivider = false,
                     onSeeAll = {
                         if (topRatedTv.isNotEmpty()) {
@@ -410,6 +418,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Airing Today TV",
+                    highlightPrefix = "Airing Today",
                     showDivider = false,
                     onSeeAll = {
                         if (airingTodayTv.isNotEmpty()) {
@@ -445,6 +454,7 @@ fun HomeScreen(
             item {
                 LoopSectionHeader(
                     title = "Upcoming Anime",
+                    highlightPrefix = "Upcoming",
                     showDivider = false,
                     onSeeAll = {
                         if (upcomingAnime.isNotEmpty()) {
@@ -778,7 +788,7 @@ fun HomePosterCard(
     )
 }
 
-// Phase 4B: Top 10 Poster Card with giant overlapping rank number
+// Phase 4B: Top 10 Poster Card with giant overlapping rank number (solid style)
 @Composable
 fun Top10PosterCard(
     rank: Int,

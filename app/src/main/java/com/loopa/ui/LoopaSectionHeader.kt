@@ -19,25 +19,31 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LoopSectionHeader — left-accent section header matching Loopa website style.
-//   Uses a warm amber 3dp left bar + lowercase DM Sans title.
+//   Supports highlighting keywords in Loopa Amber.
 //
 // Usage:
-//   LoopSectionHeader("Trending", onSeeAll = { ... })
-//   LoopSectionHeader("top anime", subtitle = "Updated daily")
+//   LoopSectionHeader("Trending", highlightPrefix = "Trending", onSeeAll = { ... })
+//   LoopSectionHeader("Top 10 Today", highlightPrefix = "Top 10")
+//   LoopSectionHeader("Popular Movies", highlightPrefix = "Popular")
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun LoopSectionHeader(
     title: String,
+    highlightPrefix: String? = null,
     accentColor: Color = Loopa.Amber,
     subtitle: String? = null,
     titleSize: Int = 18,
@@ -45,6 +51,27 @@ fun LoopSectionHeader(
     onSeeAll: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val annotatedTitle = remember(title, highlightPrefix, accentColor) {
+        buildAnnotatedString {
+            if (!highlightPrefix.isNullOrEmpty() && title.startsWith(highlightPrefix, ignoreCase = true)) {
+                val prefix = title.substring(0, highlightPrefix.length)
+                val rest = title.substring(highlightPrefix.length)
+                withStyle(SpanStyle(color = accentColor, fontWeight = FontWeight.Bold)) {
+                    append(prefix)
+                }
+                if (rest.isNotEmpty()) {
+                    withStyle(SpanStyle(color = Loopa.TextPrimary, fontWeight = FontWeight.Bold)) {
+                        append(rest)
+                    }
+                }
+            } else {
+                withStyle(SpanStyle(color = Loopa.TextPrimary, fontWeight = FontWeight.Bold)) {
+                    append(title)
+                }
+            }
+        }
+    }
+
     Column(modifier = modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -53,10 +80,8 @@ fun LoopSectionHeader(
         ) {
             Column {
                 Text(
-                    text = title,
-                    fontWeight = FontWeight.Bold,
+                    text = annotatedTitle,
                     fontSize = titleSize.sp,
-                    color = Loopa.TextPrimary,
                     lineHeight = (titleSize * 1.3f).sp
                 )
                 if (subtitle != null) {
@@ -104,6 +129,7 @@ fun LoopSectionHeader(
 @Composable
 fun LoopaSectionHeader(
     title: String,
+    highlightPrefix: String? = null,
     accentColor: Color = Loopa.Amber,
     subtitle: String? = null,
     titleSize: Int = 18,
@@ -112,7 +138,8 @@ fun LoopaSectionHeader(
     modifier: Modifier = Modifier
 ) = LoopSectionHeader(
     title = title,
-    accentColor = Loopa.Amber, // always use Loopa Amber regardless of old cyan/orange
+    highlightPrefix = highlightPrefix,
+    accentColor = Loopa.Amber,
     subtitle = subtitle,
     titleSize = titleSize,
     showDivider = showDivider,

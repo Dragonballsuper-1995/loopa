@@ -436,6 +436,7 @@ const UI = {
         if (!c) return;
         c.innerHTML = '';
         items.forEach(item => c.appendChild(this.posterCardRow(item, i => App.openDrawer(i))));
+        c.scrollLeft = 0;
     },
 
     // Phase 4B: Top 10 Row with giant overlapping rank numbers
@@ -454,6 +455,7 @@ const UI = {
             wrapper.appendChild(card);
             c.appendChild(wrapper);
         });
+        c.scrollLeft = 0;
     },
 
     renderSearchGrid(items) {
