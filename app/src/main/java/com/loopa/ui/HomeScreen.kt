@@ -32,10 +32,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.loopa.ui.components.LoopTrackDialog
 import com.loopa.db.MediaItemEntity
 import com.loopa.model.TmdbMovie
+import com.loopa.ui.theme.DmSans
 import com.loopa.util.TmdbUrlHelper
 import com.loopa.viewmodel.MediaUiState
 import com.loopa.viewmodel.MediaViewModel
@@ -573,7 +575,7 @@ fun HeroCarousel(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(520.dp)  // Phase 2A: taller hero — more cinematic
+            .height(540.dp)  // Cinematic Hero Height
             .background(Loopa.Surface)
             .pointerInput(heroItems) {
                 detectHorizontalDragGestures(
@@ -608,36 +610,36 @@ fun HeroCarousel(
                             contentDescription = item.title,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
-                            alpha = 0.82f
+                            alpha = 0.85f
                         )
                     }
 
-                    // Phase 2A: 4-zone cinematic gradient — top subtle, open art window, strong bottom
+                    // Multi-zone cinematic gradient
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
                                     colorStops = arrayOf(
-                                        0.00f to Loopa.Base.copy(alpha = 0.35f),  // subtle top fade
-                                        0.15f to Color.Transparent,                // open window starts
-                                        0.52f to Color.Transparent,                // open window ends
-                                        0.78f to Loopa.Base.copy(alpha = 0.55f),  // strong base fade begins
-                                        1.00f to Loopa.Base                        // solid at bottom
+                                        0.00f to Loopa.Base.copy(alpha = 0.40f),
+                                        0.18f to Color.Transparent,
+                                        0.50f to Color.Transparent,
+                                        0.76f to Loopa.Base.copy(alpha = 0.70f),
+                                        1.00f to Loopa.Base
                                     )
                                 )
                             )
                     )
 
-                    // Phase 2A: Left-side vignette — editorial depth between overlay and art
+                    // Left-side vignette for text contrast
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
                                 Brush.horizontalGradient(
                                     colorStops = arrayOf(
-                                        0.00f to Loopa.Base.copy(alpha = 0.72f),
-                                        0.42f to Color.Transparent
+                                        0.00f to Loopa.Base.copy(alpha = 0.78f),
+                                        0.48f to Color.Transparent
                                     )
                                 )
                             )
@@ -647,58 +649,106 @@ fun HeroCarousel(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(start = 20.dp, end = 60.dp, bottom = 24.dp, top = 80.dp),
+                            .padding(start = 20.dp, end = 40.dp, bottom = 24.dp, top = 70.dp),
                         verticalArrangement = Arrangement.Bottom
                     ) {
-                        // Metadata row — Year · Type · ★ Rating
+                        // Metadata row — ★ Rating · Year · Type · 4K UHD · DOLBY
                         val year = (item.releaseDate ?: item.firstAirDate)?.take(4)
                         val mediaType = (item.mediaType ?: if (item.name != null) "TV" else "MOVIE").uppercase()
                         val rating = item.voteAverage?.takeIf { it > 0.0 }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(bottom = 6.dp)
                         ) {
+                            if (rating != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(Loopa.PillShape)
+                                        .background(Color.Black.copy(alpha = 0.55f))
+                                        .border(1.dp, Loopa.Gold.copy(alpha = 0.4f), Loopa.PillShape)
+                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Star,
+                                            contentDescription = null,
+                                            tint = Loopa.Gold,
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                        Text(
+                                            text = String.format("%.1f", rating),
+                                            color = Loopa.Gold,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
                             if (!year.isNullOrBlank()) {
-                                Text(year, color = Loopa.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                Box(Modifier.size(3.dp).clip(CircleShape).background(Loopa.TextMuted))
+                                Text(year, color = Loopa.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                             if (mediaType.isNotBlank()) {
-                                Text(mediaType, color = Loopa.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color.White.copy(alpha = 0.08f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(mediaType, color = Loopa.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
-                            if (rating != null) {
-                                Box(Modifier.size(3.dp).clip(CircleShape).background(Loopa.TextMuted))
-                                Icon(
-                                    imageVector = Icons.Filled.Star,
-                                    contentDescription = null,
-                                    tint = Loopa.Amber,
-                                    modifier = Modifier.size(11.dp)
-                                )
-                                Text(
-                                    text = String.format("%.1f", rating),
-                                    color = Loopa.TextPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            ) {
+                                Text("4K UHD", color = Color.White.copy(alpha = 0.9f), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .border(1.dp, Loopa.Cyan.copy(alpha = 0.25f), RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            ) {
+                                Text("DOLBY", color = Loopa.Cyan, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
                             }
                         }
 
-                        Spacer(Modifier.height(8.dp))
-
-                        // Hero Title — 46sp ExtraBold, tight tracking
+                        // Hero Title — 44sp ExtraBold, tight tracking
                         Text(
                             text = item.title ?: item.name ?: "Loopa",
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 46.sp,
+                            fontSize = 44.sp,
                             color = Loopa.TextPrimary,
-                            lineHeight = 50.sp,
+                            lineHeight = 48.sp,
                             letterSpacing = (-1.5).sp,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
 
+                        // Synopsis Overview Snippet
+                        if (!item.overview.isNullOrBlank()) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = item.overview,
+                                color = Loopa.TextSecondary,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
                         Spacer(Modifier.height(16.dp))
 
-                        // Phase 2A: Dual CTA — primary Track + ghost More Info
+                        // Dual CTA: Primary Track + Ghost More Info
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             LoopButton(
                                 text = "Track This",
@@ -707,7 +757,7 @@ fun HeroCarousel(
                                     Icon(
                                         imageVector = Icons.Filled.PlayArrow,
                                         contentDescription = null,
-                                        tint = Loopa.Base,
+                                        tint = Color.White,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -729,14 +779,14 @@ fun HeroCarousel(
 
                         Spacer(Modifier.height(18.dp))
 
-                        // Phase 2A: Carousel pagination dots
+                        // Carousel pagination dots
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             heroItems.indices.forEach { i ->
                                 val isActive = i == currentHeroIndex
                                 Box(
                                     Modifier
                                         .height(6.dp)
-                                        .width(if (isActive) 22.dp else 6.dp)
+                                        .width(if (isActive) 26.dp else 6.dp)
                                         .clip(RoundedCornerShape(999.dp))
                                         .background(
                                             if (isActive) Loopa.Amber
@@ -788,7 +838,7 @@ fun HomePosterCard(
     )
 }
 
-// Phase 4B: Top 10 Poster Card with giant overlapping rank number (solid style)
+// Top 10 Poster Card with giant monumental rank number & Cineby ribbon
 @Composable
 fun Top10PosterCard(
     rank: Int,
@@ -800,18 +850,29 @@ fun Top10PosterCard(
     onRelease: (() -> Unit)? = null
 ) {
     Box(
-        modifier = Modifier.width(155.dp)
+        modifier = Modifier.width(172.dp)
     ) {
+        // Monumental 3D Rank Numeral Layered Behind Poster
+        val rankColor = if (rank <= 3) Loopa.Amber else Loopa.TextMuted.copy(alpha = 0.38f)
         Text(
             text = rank.toString(),
-            fontSize = 76.sp,
+            fontSize = 112.sp,
             fontWeight = FontWeight.Black,
-            color = if (rank <= 3) Loopa.Amber.copy(alpha = 0.50f) else Loopa.TextMuted.copy(alpha = 0.28f),
+            fontFamily = DmSans,
+            color = rankColor,
+            lineHeight = 100.sp,
+            letterSpacing = (-8).sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = (-4).dp, y = 8.dp)
+                .offset(x = (-6).dp, y = 14.dp)
         )
-        Box(modifier = Modifier.padding(start = 32.dp)) {
+
+        // Poster Card with Cineby-style Top Rank Ribbon
+        Box(
+            modifier = Modifier
+                .padding(start = 44.dp)
+                .zIndex(1f)
+        ) {
             HomePosterCard(
                 title = title,
                 imageUrl = imageUrl,
@@ -820,6 +881,31 @@ fun Top10PosterCard(
                 onLongPress = onLongPress,
                 onRelease = onRelease
             )
+
+            // Cineby-style TOP 01 Ribbon at top-left of poster
+            val ribbonText = if (rank < 10) "TOP 0$rank" else "TOP $rank"
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(topStart = 16.dp, bottomEnd = 8.dp))
+                    .background(
+                        if (rank <= 3) Brush.linearGradient(listOf(Loopa.Amber, Loopa.Terracotta))
+                        else Brush.linearGradient(listOf(Loopa.Raised, Loopa.Surface))
+                    )
+                    .border(
+                        1.dp,
+                        if (rank <= 3) Loopa.Amber.copy(alpha = 0.5f) else Loopa.Border,
+                        RoundedCornerShape(topStart = 16.dp, bottomEnd = 8.dp)
+                    )
+                    .padding(horizontal = 7.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = ribbonText,
+                    color = if (rank <= 3) Color.White else Loopa.TextSecondary,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.5.sp
+                )
+            }
         }
     }
 }

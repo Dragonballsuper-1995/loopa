@@ -30,10 +30,13 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LoopSectionHeader — left-accent section header matching Loopa website style.
-//   Supports highlighting keywords in Loopa Amber.
+//   Supports highlighting keywords in Loopa Amber and vertical accent bar.
 //
 // Usage:
 //   LoopSectionHeader("Trending", highlightPrefix = "Trending", onSeeAll = { ... })
@@ -78,18 +81,35 @@ fun LoopSectionHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
         ) {
-            Column {
-                Text(
-                    text = annotatedTitle,
-                    fontSize = titleSize.sp,
-                    lineHeight = (titleSize * 1.3f).sp
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Cineby-style vertical accent indicator
+                Box(
+                    modifier = Modifier
+                        .width(3.5.dp)
+                        .height(18.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Loopa.Amber, Loopa.Terracotta)
+                            )
+                        )
                 )
-                if (subtitle != null) {
+                Column {
                     Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = accentColor
+                        text = annotatedTitle,
+                        fontSize = titleSize.sp,
+                        lineHeight = (titleSize * 1.3f).sp
                     )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = accentColor
+                        )
+                    }
                 }
             }
 

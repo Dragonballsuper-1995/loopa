@@ -600,13 +600,14 @@ header.header-transparent {
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
 }
 
-/* ── Phase 4B: Top 10 Row Cards & Rank Overlay ────────────────────────────── */
+/* ── Top 10 Row Cards & Monumental 3D Rank Typography ───────────────────────── */
 .top10-card-wrapper {
     position: relative;
     display: flex;
     align-items: flex-end;
     flex-shrink: 0;
-    margin-right: 2px;
+    margin-right: 12px;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .top10-card-wrapper > div {
@@ -615,26 +616,65 @@ header.header-transparent {
 
 .top10-rank {
     position: absolute;
-    left: -4px;
-    bottom: -6px;
-    font-size: 82px;
+    left: -12px;
+    bottom: -10px;
+    font-size: 130px;
     font-weight: 900;
-    line-height: 0.8;
-    letter-spacing: -5px;
-    color: rgba(122, 116, 109, 0.28);
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    line-height: 0.75;
+    letter-spacing: -8px;
+    color: #060608;
+    -webkit-text-stroke: 3.5px rgba(255, 255, 255, 0.22);
+    text-shadow: 4px 6px 20px rgba(0, 0, 0, 0.95);
     pointer-events: none;
     z-index: 5;
     user-select: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .top10-rank.top3 {
-    color: rgba(232, 168, 124, 0.50);
+    -webkit-text-stroke: 4px #FF5A36;
+    text-shadow: 0 0 30px rgba(255, 90, 54, 0.45), 4px 6px 20px rgba(0, 0, 0, 0.95);
+}
+
+.top10-card-wrapper:hover .top10-rank {
+    transform: scale(1.06) translateY(-4px);
+    -webkit-text-stroke: 4px #FFFFFF;
+}
+
+.top10-card-wrapper:hover .top10-rank.top3 {
+    -webkit-text-stroke: 4px #FF7B5C;
 }
 
 .top10-card-wrapper .media-card {
-    margin-left: 38px;
+    margin-left: 64px;
     z-index: 10;
-    width: 125px;
+    width: 140px;
+}
+
+/* Cineby-style Top Rank Ribbon */
+.top-rank-ribbon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: linear-gradient(135deg, #FF5A36 0%, #D43815 100%);
+    color: #FFFFFF;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-bottom-right-radius: 8px;
+    box-shadow: 0 4px 12px rgba(255, 90, 54, 0.4);
+    z-index: 25;
+    pointer-events: none;
+}
+
+.top-rank-ribbon.subtle {
+    background: rgba(24, 24, 32, 0.85);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    color: #A3A3B2;
 }
 
 /* ── Phase 4C: See All Link ────────────────────────────────────────────────── */

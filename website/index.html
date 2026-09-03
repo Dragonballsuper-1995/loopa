@@ -262,18 +262,19 @@
 
                 <!-- Curated browse content (Type-to-Reveal: visible by default, hidden when searching) -->
                 <div id="radar-browse-content" class="w-full">
-                    <!-- Hero Section (Full width) — Phase 2B: taller, cinematic -->
-                    <div id="hero-section" class="relative w-full h-[55vh] md:h-[580px]">
+                    <!-- Hero Section (Full width) — Cinematic Spotlight -->
+                    <div id="hero-section" class="relative w-full h-[62vh] min-h-[520px] max-h-[720px] overflow-hidden">
                         <div class="absolute inset-0 bg-loopSurface"></div>
                     </div>
 
                     <!-- Curated rows -->
-                    <div class="max-w-[1600px] mx-auto px-4 md:px-6 pt-10 md:pt-14 flex flex-col gap-10">
+                    <div class="max-w-[1600px] mx-auto px-4 md:px-6 pt-8 md:pt-12 flex flex-col gap-10">
                         <section>
                             <div class="flex items-center justify-between mb-3 px-1 md:px-2">
-                                <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="section-accent"></span>
                                     <h2 class="text-xl font-bold text-textPrimary"><span class="text-loopAmber font-bold">Trending</span></h2>
-                                    <a class="see-all-link" href="#" data-see-all="trending">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
+                                    <a class="see-all-link ml-2" href="#" data-see-all="trending">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
                                 </div>
                                 <div class="flex gap-2 items-center">
                                     <button id="btnRefreshRadar" title="Refresh content" class="header-nav-btn" onclick="App.refreshDashboard()">
@@ -293,10 +294,11 @@
                             </div>
                         </section>
 
-                        <!-- Phase 4B: Top 10 Today Row -->
+                        <!-- Top 10 Today Row -->
                         <section id="top10-section">
                             <div class="flex items-center justify-between mb-3 px-1 md:px-2">
                                 <div class="flex items-center gap-3">
+                                    <span class="section-accent"></span>
                                     <h2 class="text-xl font-extrabold text-textPrimary flex items-center gap-2">
                                         <span class="text-loopAmber text-2xl font-black tracking-tighter">TOP 10</span>
                                         <span class="text-textSecondary font-semibold text-sm">Today</span>
@@ -319,9 +321,10 @@
 
                         <section>
                             <div class="flex items-center justify-between mb-3 px-1 md:px-2">
-                                <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="section-accent"></span>
                                     <h2 class="text-xl font-bold text-textPrimary"><span class="text-loopAmber font-bold">Anime</span></h2>
-                                    <a class="see-all-link" href="#" data-see-all="anime">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
+                                    <a class="see-all-link ml-2" href="#" data-see-all="anime">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
                                 </div>
                                 <div class="flex gap-2">
                                     <button class="header-nav-btn" onclick="App.scrollRow('row-anime', 'left')">
@@ -339,9 +342,10 @@
 
                         <section>
                             <div class="flex items-center justify-between mb-3 px-1 md:px-2">
-                                <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="section-accent"></span>
                                     <h2 class="text-xl font-bold text-textPrimary"><span class="text-loopAmber font-bold">Popular</span> Movies</h2>
-                                    <a class="see-all-link" href="#" data-see-all="movies">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
+                                    <a class="see-all-link ml-2" href="#" data-see-all="movies">See All <i class="fa-solid fa-chevron-right text-[9px]"></i></a>
                                 </div>
                                 <div class="flex gap-2">
                                     <button class="header-nav-btn" onclick="App.scrollRow('row-movies', 'left')">

@@ -282,7 +282,7 @@ const UI = {
         return el;
     },
 
-    // ── Hero Banner — Phase 2B Cinematic Upgrade ──────────────────────────────
+    // ── Hero Banner — Phase 2 Cinematic Spotlight Upgrade ─────────────────────
     _heroItems: [],
     _heroCurrentIndex: 0,
 
@@ -298,25 +298,29 @@ const UI = {
         const year = (item.year || item.releaseDate || item.release_date || item.firstAirDate || item.first_air_date || '').toString().slice(0, 4);
         const type = (item.mediaType || item.media_type || (item.name ? 'tv' : 'movie')).toUpperCase();
         const vote = (item.score !== undefined && item.score !== null) ? item.score : (item.voteAverage || item.vote_average);
-        const rating = vote && Number(vote) > 0
-            ? `<i class="fa-solid fa-star text-loopAmber text-[10px]"></i> <span class="font-semibold text-textPrimary">${Number(vote).toFixed(1)}</span>`
+        
+        const ratingBadge = vote && Number(vote) > 0
+            ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/60 border border-accentGold/40 text-accentGold text-xs font-bold shadow-sm backdrop-blur-md"><i class="fa-solid fa-star text-[10px]"></i> ${Number(vote).toFixed(1)}</span>`
             : '';
 
-        const metaParts = [];
-        if (year) metaParts.push(`<span>${year}</span>`);
-        if (type) metaParts.push(`<span>${this._escapeHTML(type)}</span>`);
-        if (rating) metaParts.push(rating);
+        const metaBadges = [];
+        if (ratingBadge) metaBadges.push(ratingBadge);
+        if (year) metaBadges.push(`<span class="text-xs font-semibold text-textSecondary px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10">${year}</span>`);
+        if (type) metaBadges.push(`<span class="text-[11px] font-bold tracking-wider uppercase text-textPrimary px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15">${this._escapeHTML(type)}</span>`);
+        metaBadges.push(`<span class="text-[10px] font-extrabold tracking-wider px-2 py-0.5 rounded bg-white/10 border border-white/15 text-white/90">4K UHD</span>`);
+        metaBadges.push(`<span class="text-[10px] font-extrabold tracking-wider px-2 py-0.5 rounded bg-white/10 border border-white/15 text-accentCyan">DOLBY</span>`);
 
-        const metaHtml = metaParts.join('<span class="w-1 h-1 rounded-full bg-textMuted/60 inline-block mx-1"></span>');
+        const metaHtml = metaBadges.join('');
+        const synopsis = item.overview || item.synopsis || '';
 
         // Pagination dots
         const totalItems = (heroItems || this._heroItems).length;
         const activeIdx = currentIndex !== undefined ? currentIndex : this._heroCurrentIndex;
         const dotsHtml = totalItems > 1 ? `
-            <div class="flex items-center gap-2 mt-4" id="hero-dots">
+            <div class="flex items-center gap-2 mt-2" id="hero-dots">
                 ${Array.from({ length: totalItems }, (_, i) => `
                     <button
-                        class="hero-dot h-[6px] rounded-full transition-all duration-300 ${i === activeIdx ? 'w-[22px] bg-loopAmber' : 'w-[6px] bg-white/25 hover:bg-white/50'}"
+                        class="hero-dot h-[6px] rounded-full transition-all duration-300 ${i === activeIdx ? 'w-[26px] bg-loopAmber shadow-[0_0_12px_rgba(255,90,54,0.6)]' : 'w-[7px] bg-white/25 hover:bg-white/50'}"
                         data-hero-dot="${i}"
                         aria-label="Go to slide ${i + 1}"
                     ></button>
@@ -331,7 +335,6 @@ const UI = {
             if (content) content.classList.add('opacity-0');
             bgImg.classList.add('opacity-0');
 
-            // Preload backdrop image in memory so text & artwork swap at the exact same instant
             const preloader = new Image();
             preloader.src = backdrop;
 
@@ -344,6 +347,9 @@ const UI = {
                 const metaEl = document.getElementById('hero-meta-row');
                 if (metaEl) metaEl.innerHTML = metaHtml;
 
+                const descEl = document.getElementById('hero-overview');
+                if (descEl) descEl.textContent = synopsis;
+
                 const dotsContainer = document.getElementById('hero-dots-wrapper');
                 if (dotsContainer) dotsContainer.innerHTML = dotsHtml;
 
@@ -351,6 +357,8 @@ const UI = {
                 if (trackBtn) trackBtn.onclick = () => App.openDrawer(item);
                 const infoBtn = document.getElementById('hero-info-btn');
                 if (infoBtn) infoBtn.onclick = () => App.openDrawer(item);
+                const detailsBtn = document.getElementById('hero-details-btn');
+                if (detailsBtn) detailsBtn.onclick = () => App.openDrawer(item);
 
                 this._bindHeroDots(heroItems || this._heroItems);
 
@@ -379,42 +387,49 @@ const UI = {
         // ── Initial render ────────────────────────────────────────────────────
         container.innerHTML = `
             <img id="hero-bg-img" src="${this._escapeHTML(backdrop)}"
-                 class="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500"
+                 class="absolute inset-0 w-full h-full object-cover object-[center_15%] transition-opacity duration-500 scale-105"
                  alt="${this._escapeHTML(item.title)}">
 
-            <!-- Phase 2B: 4-zone gradient system -->
-            <div class="absolute inset-0 hero-gradient-top"></div>
-            <div class="absolute inset-0 hero-gradient-base"></div>
-            <div class="absolute inset-0 hero-gradient-side hidden md:block"></div>
+            <!-- Deep cinematic vignette layers -->
+            <div class="absolute inset-0 bg-gradient-to-t from-loopBase via-loopBase/50 to-transparent"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-loopBase via-loopBase/60 to-transparent hidden md:block"></div>
+            <div class="absolute inset-0 bg-radial-gradient from-transparent via-black/20 to-black/60 pointer-events-none"></div>
 
             <!-- Content overlay — bottom-left aligned -->
-            <div id="hero-content-wrapper" class="absolute bottom-0 left-0 right-0 max-w-[1600px] mx-auto px-5 md:px-8 lg:px-14 pb-8 md:pb-10 flex flex-col transition-opacity duration-300">
+            <div id="hero-content-wrapper" class="absolute bottom-0 left-0 right-0 max-w-[1600px] mx-auto px-5 md:px-8 lg:px-14 pb-8 md:pb-12 flex flex-col transition-opacity duration-300 z-20">
 
-                <!-- Metadata row: Year · Type · ★ Rating -->
-                <div id="hero-meta-row" class="hero-meta-text flex items-center gap-1 mb-2">
+                <!-- Metadata row: Rating · Year · Type · 4K · Dolby -->
+                <div id="hero-meta-row" class="flex items-center gap-2 mb-3 flex-wrap">
                     ${metaHtml}
                 </div>
 
                 <!-- Title -->
-                <h1 id="hero-title" class="hero-title text-textPrimary max-w-2xl mb-4 line-clamp-2">${this._escapeHTML(item.title)}</h1>
+                <h1 id="hero-title" class="hero-title text-textPrimary max-w-3xl mb-3 line-clamp-2">${this._escapeHTML(item.title)}</h1>
 
-                <!-- Dual CTA — primary Track + ghost More Info -->
-                <div class="flex gap-3 flex-wrap">
-                    <button id="hero-track-btn" class="btn-primary text-sm flex items-center gap-2 px-6 py-3">
-                        <i class="fa-solid fa-plus text-xs"></i> Track This
+                <!-- Synopsis Overview Snippet -->
+                <p id="hero-overview" class="text-sm md:text-base text-textSecondary/90 max-w-2xl line-clamp-2 md:line-clamp-3 mb-6 leading-relaxed font-normal">${this._escapeHTML(synopsis)}</p>
+
+                <!-- Dual CTA Action Row -->
+                <div class="flex items-center gap-3 flex-wrap">
+                    <button id="hero-track-btn" class="btn-primary text-sm flex items-center gap-2.5 px-7 py-3 shadow-lg shadow-loopAmber/25 hover:scale-105 transition-all">
+                        <i class="fa-solid fa-play text-xs"></i> Watch Trailer
                     </button>
-                    <button id="hero-info-btn" class="btn-secondary text-sm flex items-center gap-2 px-6 py-3">
-                        <i class="fa-solid fa-circle-info text-xs"></i> More Info
+                    <button id="hero-info-btn" class="btn-secondary text-sm flex items-center gap-2 px-6 py-3 hover:border-white/30 transition-all">
+                        <i class="fa-solid fa-plus text-xs"></i> Add to List
+                    </button>
+                    <button id="hero-details-btn" class="header-nav-btn !w-11 !h-11 !rounded-full text-white/80 hover:text-white" title="More Details">
+                        <i class="fa-solid fa-circle-info text-sm"></i>
                     </button>
                 </div>
 
                 <!-- Pagination dots -->
-                <div id="hero-dots-wrapper">${dotsHtml}</div>
+                <div id="hero-dots-wrapper" class="mt-4">${dotsHtml}</div>
             </div>
         `;
 
         document.getElementById('hero-track-btn').onclick = () => App.openDrawer(item);
         document.getElementById('hero-info-btn').onclick = () => App.openDrawer(item);
+        document.getElementById('hero-details-btn').onclick = () => App.openDrawer(item);
 
         this._bindHeroDots(heroItems || this._heroItems);
     },
@@ -439,7 +454,7 @@ const UI = {
         c.scrollLeft = 0;
     },
 
-    // Phase 4B: Top 10 Row with giant overlapping rank numbers
+    // Top 10 Row with giant 3D rank numbers and Cineby-style ribbons
     renderTop10Row(items) {
         const c = document.getElementById('row-top10');
         if (!c) return;
@@ -447,11 +462,23 @@ const UI = {
         items.slice(0, 10).forEach((item, idx) => {
             const rank = idx + 1;
             const wrapper = document.createElement('div');
-            wrapper.className = 'top10-card-wrapper';
+            wrapper.className = 'top10-card-wrapper group';
             wrapper.innerHTML = `
                 <span class="top10-rank ${rank <= 3 ? 'top3' : ''}">${rank}</span>
             `;
             const card = this.posterCardRow(item, i => App.openDrawer(i));
+            
+            // Append Cineby-style TOP 01 ribbon
+            const ribbon = document.createElement('div');
+            ribbon.className = `top-rank-ribbon ${rank > 3 ? 'subtle' : ''}`;
+            ribbon.textContent = rank < 10 ? `TOP 0${rank}` : `TOP ${rank}`;
+            const mediaCardEl = card.querySelector('.media-card');
+            if (mediaCardEl) {
+                mediaCardEl.appendChild(ribbon);
+            } else {
+                card.appendChild(ribbon);
+            }
+
             wrapper.appendChild(card);
             c.appendChild(wrapper);
         });
