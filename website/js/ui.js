@@ -41,25 +41,27 @@ const UI = {
 
     renderAiMessage(role, content) {
         const div = document.createElement('div');
-        div.className = `flex flex-col gap-2 w-full max-w-4xl animate-fade-in-up ${role === 'user' ? 'self-end items-end' : 'self-start items-start'}`;
+        div.className = `flex flex-col gap-2.5 w-full max-w-4xl animate-fade-in-up ${role === 'user' ? 'self-end items-end' : 'self-start items-start'}`;
         
         if (role === 'user') {
             div.innerHTML = `
-                <div class="flex items-center gap-3 flex-row-reverse">
-                    <div class="w-8 h-8 rounded-full bg-loopSurface border border-white/10 flex items-center justify-center text-textSecondary"><i class="fa-solid fa-user text-xs"></i></div>
-                    <span class="text-sm font-bold text-textPrimary">You</span>
+                <div class="flex items-center gap-2.5 flex-row-reverse">
+                    <div class="w-7 h-7 rounded-full bg-loopRaised border border-white/10 flex items-center justify-center text-textSecondary text-[11px]"><i class="fa-solid fa-user"></i></div>
+                    <span class="text-xs font-bold text-textPrimary uppercase tracking-wider">You</span>
                 </div>
-                <div class="bg-loopRaised/60 border border-white/5 rounded-2xl rounded-tr-none p-4 text-textPrimary text-sm leading-relaxed inline-block">
+                <div class="bg-loopRaised/90 border border-white/10 rounded-2xl rounded-tr-none px-5 py-3.5 text-textPrimary text-sm leading-relaxed inline-block shadow-lg">
                     ${this._escapeHTML(content)}
                 </div>
             `;
         } else {
             div.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-loopSurface border border-loopAmber/20 flex items-center justify-center text-loopAmber"><i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i></div>
-                    <span class="text-sm font-bold text-textPrimary">Loopa AI</span>
+                <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-full bg-loopAmber/15 border border-loopAmber/30 flex items-center justify-center text-loopAmber text-[11px] shadow-[0_0_12px_rgba(255,90,54,0.35)]">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </div>
+                    <span class="text-xs font-bold text-textPrimary uppercase tracking-wider">Loopa AI Concierge</span>
                 </div>
-                <div class="bg-loopSurface/60 border border-white/5 rounded-2xl rounded-tl-none p-4 text-textPrimary text-sm leading-relaxed inline-block">
+                <div class="bg-loopSurface/90 border border-white/10 rounded-2xl rounded-tl-none px-5 py-4 text-textPrimary text-sm leading-relaxed inline-block shadow-xl">
                     ${this._escapeHTML(content)}
                 </div>
             `;

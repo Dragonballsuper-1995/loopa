@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -219,12 +220,12 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
         // ── Vibe & Mood Starter Chips ──────────────────────────────────────
         val moodChips = remember {
             listOf(
-                "🎲 Surprise Me" to "Give me an exciting, unexpected movie or anime recommendation to surprise me tonight",
-                "🍿 Weekend Movie Night" to "Suggest top-rated, crowd-pleasing blockbuster movies for a weekend movie night",
-                "🌌 Mind-Bending Sci-Fi" to "Recommend mind-bending sci-fi movies or shows with high concepts and plot twists",
-                "⚔️ Top Shonen Anime" to "Suggest thrilling, acclaimed action/shonen anime series with great animation",
-                "🔍 Gripping Whodunit" to "Recommend clever murder mystery or psychological detective thrillers",
-                "🌿 Feel-Good Comfort" to "Recommend cozy, feel-good comfort movies or slice-of-life anime"
+                "🚀 Interstellar Sci-Fi" to "Recommend mind-bending cosmic sci-fi movies like Interstellar and Arrival",
+                "⚡ 90s Anime Thrillers" to "Suggest gritty, acclaimed 90s anime thrillers with legendary animation",
+                "⏱️ Action Under 100m" to "Fast-paced adrenaline action movies that clock in under 100 minutes",
+                "🧠 Mind-Bending Twists" to "Clever psychological thrillers with shocking third-act plot twists",
+                "🌿 Cozy Comfort Picks" to "Wholesome, feel-good comfort movies and slice-of-life anime",
+                "🎲 Surprise Me Tonight" to "Give me an exciting, unexpected masterpiece to surprise me tonight"
             )
         }
 
@@ -364,25 +365,36 @@ fun RecommendationCard(
 
             Spacer(Modifier.height(14.dp))
 
-            // AI Reasoning box — warm, not neon
+            // AI Reasoning box — "Why you'll love it"
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .clip(Loopa.CardShape)
-                    .background(Loopa.AmberSubtle)
-                    .border(1.dp, Loopa.Amber.copy(alpha = 0.2f), Loopa.CardShape)
+                    .background(Loopa.AmberSubtle.copy(alpha = 0.5f))
+                    .border(1.dp, Loopa.Amber.copy(alpha = 0.25f), Loopa.CardShape)
                     .padding(12.dp)
             ) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Filled.Star, null, tint = Loopa.Amber, modifier = Modifier.size(14.dp).padding(top = 2.dp))
-                    Spacer(Modifier.width(8.dp))
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.AutoFixHigh, null, tint = Loopa.Amber, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "WHY YOU'LL LOVE IT",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Loopa.Amber,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
                     Text(
-                        text = rec.reasoning ?: "",
-                        fontSize = 13.sp,
-                        fontStyle = FontStyle.Italic,
+                        text = rec.reasoning ?: "Matches your current taste profile and watchlist history.",
+                        fontSize = 12.sp,
                         color = Loopa.TextSecondary,
-                        lineHeight = 18.sp
+                        lineHeight = 17.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

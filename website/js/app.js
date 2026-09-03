@@ -1067,13 +1067,6 @@ const App = {
         if (this.s.aiLoaded) return;
         this.s.aiLoaded = true;
 
-        if (this.s.isGuest) {
-            const chatLog = document.getElementById('aiChatLog');
-            chatLog.innerHTML = '';
-            chatLog.appendChild(UI.renderAiMessage('model', 'GUEST PROTOCOL: AI Assistant requires an active account. Please sign in.'));
-            return;
-        }
-
         // Initialize state
         this.s.chatHistory = [];
         this.s.isAiThinking = false;
@@ -1109,7 +1102,7 @@ const App = {
                 this.s.chatHistory = [];
                 const chatLog = document.getElementById('aiChatLog');
                 if (chatLog) chatLog.innerHTML = '';
-                this._handleAiChat('Give me an exciting, unexpected movie or anime recommendation to surprise me tonight', true);
+                this._handleAiChat('Give me an exciting, unexpected masterpiece to surprise me tonight', true);
             });
         }
 
@@ -1151,6 +1144,13 @@ const App = {
             }
             let targets = this.s.watchlist.filter(i => i.list_name === 'Watched');
             if (targets.length === 0) targets = this.s.watchlist;
+            if (targets.length === 0 && this.s.trendingList?.length > 0) {
+                targets = this.s.trendingList.slice(0, 5).map(t => ({
+                    title: t.title,
+                    media_type: t.mediaType || 'movie',
+                    list_name: 'Watched'
+                }));
+            }
             
             const liked = JSON.parse(localStorage.getItem('oracle_liked_titles') || '[]');
             const disliked = JSON.parse(localStorage.getItem('oracle_disliked_titles') || '[]');

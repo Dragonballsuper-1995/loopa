@@ -12,6 +12,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,12 +21,17 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -192,111 +198,102 @@ fun MediaTrackerApp(
                 }
             }
 
-            // Loopa bottom navigation bar — warm, blurred, pill-style tabs
+            // Loopa Floating Frosted Glass Capsule Dock
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
                     .align(Alignment.BottomCenter)
-                    .hazeEffect(state = hazeState) {
-                        blurRadius = 24.dp
-                        progressive = HazeProgressive.verticalGradient(
-                            startIntensity = 0f,
-                            endIntensity = 1f
-                        )
-                    }
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.25f to Color(0x0D0F0E0C),
-                                0.45f to Color(0x730F0E0C),
-                                0.62f to Color(0xCC0F0E0C),
-                                1.0f to Color(0xF50F0E0C)
-                            )
-                        )
-                    )
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
             ) {
-                Column(
+                Surface(
+                    shape = RoundedCornerShape(32.dp),
+                    color = Color(0xF2101014),
+                    border = BorderStroke(1.dp, Color(0x2EFFFFFF)),
+                    shadowElevation = 16.dp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
+                        .shadow(24.dp, shape = RoundedCornerShape(32.dp), spotColor = Color.Black)
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .padding(horizontal = 6.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp, horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val tabs = listOf(
-                                "discover" to "Radar",
-                                "my_lists" to "My List",
-                                "ai_recs"  to "For You"
+                        val tabs = listOf(
+                            Triple("discover", "Radar", Icons.Filled.Search),
+                            Triple("my_lists", "My List", Icons.Filled.PlayArrow),
+                            Triple("ai_recs", "For You", Icons.Filled.AutoFixHigh)
+                        )
+
+                        tabs.forEach { (tabId, label, icon) ->
+                            val isSelected = currentRoute == tabId
+                            val interactionSource = remember { MutableInteractionSource() }
+                            val isPressed by interactionSource.collectIsPressedAsState()
+                            val scale by animateFloatAsState(
+                                targetValue = if (isPressed) 0.94f else 1f,
+                                label = "nav_scale_$tabId",
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMedium
+                                )
                             )
 
-                            tabs.forEach { (tabId, label) ->
-                                val isSelected = currentRoute == tabId
-                                val interactionSource = remember { MutableInteractionSource() }
-                                val isPressed by interactionSource.collectIsPressedAsState()
-                                val scale by animateFloatAsState(
-                                    targetValue = if (isPressed) 0.93f else 1f,
-                                    label = "nav_scale_$tabId",
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessMedium
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .scale(scale)
+                                    .clip(RoundedCornerShape(26.dp))
+                                    .background(
+                                        color = if (isSelected) Loopa.Amber else Color.Transparent
                                     )
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .scale(scale)
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(
-                                            color = if (isSelected) Loopa.Amber else Color.Transparent
-                                        )
-                                        .then(
-                                            if (!isSelected) Modifier.border(
-                                                width = 1.dp,
-                                                color = Loopa.BorderMd,
-                                                shape = RoundedCornerShape(999.dp)
-                                            ) else Modifier
-                                        )
-                                        .clickable(
-                                            interactionSource = interactionSource,
-                                            indication = null,
-                                            onClick = {
-                                                if (currentRoute == "settings") {
-                                                    navController.popBackStack()
-                                                    if (tabId != "my_lists") {
-                                                        navController.navigate(tabId) {
-                                                            popUpTo("discover") { saveState = true }
-                                                            launchSingleTop = true
-                                                            restoreState = true
-                                                        }
-                                                    }
-                                                } else if (currentRoute != tabId) {
+                                    .then(
+                                        if (isSelected) Modifier.shadow(8.dp, RoundedCornerShape(26.dp), spotColor = Loopa.Amber)
+                                        else Modifier
+                                    )
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = null,
+                                        onClick = {
+                                            if (currentRoute == "settings") {
+                                                navController.popBackStack()
+                                                if (tabId != "my_lists") {
                                                     navController.navigate(tabId) {
                                                         popUpTo("discover") { saveState = true }
                                                         launchSingleTop = true
                                                         restoreState = true
                                                     }
                                                 }
+                                            } else if (currentRoute != tabId) {
+                                                navController.navigate(tabId) {
+                                                    popUpTo("discover") { saveState = true }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
                                             }
-                                        )
-                                        .padding(horizontal = 20.dp, vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
+                                        }
+                                    )
+                                    .padding(vertical = 11.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) Loopa.Base else Loopa.TextSecondary,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
                                     Text(
                                         text = label,
-                                        color = if (isSelected) Loopa.Base else Loopa.TextMuted,
-                                        fontSize = 13.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        color = if (isSelected) Loopa.Base else Loopa.TextSecondary,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
                                     )
                                 }
                             }

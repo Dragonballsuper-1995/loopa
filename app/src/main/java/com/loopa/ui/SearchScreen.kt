@@ -219,19 +219,23 @@ fun DiscoverScreen(
                                 Box(
                                     modifier = Modifier
                                         .clip(Loopa.PillShape)
-                                        .background(if (isSelected) Loopa.Amber else Loopa.Surface)
+                                        .background(if (isSelected) Loopa.Amber else Loopa.Surface.copy(alpha = 0.85f))
                                         .border(
                                             1.dp,
                                             if (isSelected) Color.Transparent else Loopa.Border,
                                             Loopa.PillShape
                                         )
+                                        .then(
+                                            if (isSelected) Modifier.shadow(8.dp, Loopa.PillShape, spotColor = Loopa.Amber)
+                                            else Modifier
+                                        )
                                         .clickable { selectedMediaType = type }
-                                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                                        .padding(horizontal = 16.dp, vertical = 7.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = type,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         color = if (isSelected) Loopa.Base else Loopa.TextSecondary,
                                         fontSize = 12.sp
                                     )
