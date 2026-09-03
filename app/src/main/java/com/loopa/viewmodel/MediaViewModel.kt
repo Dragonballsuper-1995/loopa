@@ -811,6 +811,17 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    suspend fun fetchCredits(id: Int, mediaType: String): List<com.loopa.model.TmdbCast> {
+        return runCatching {
+            val apiKey = com.loopa.app.BuildConfig.TMDB_API_KEY
+            if (mediaType == "tv" || mediaType == "anime") {
+                NetworkModule.tmdbApi.getTvDetails(id, apiKey).credits?.cast ?: emptyList()
+            } else {
+                NetworkModule.tmdbApi.getMovieDetails(id, apiKey).credits?.cast ?: emptyList()
+            }
+        }.getOrDefault(emptyList())
+    }
+
     fun fetchHomeData() {
         if (_isHomeDataLoaded) return // Already loaded — serve from cached StateFlows
         _isHomeDataLoaded = true

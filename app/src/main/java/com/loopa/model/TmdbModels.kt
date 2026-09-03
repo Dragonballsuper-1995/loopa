@@ -51,7 +51,17 @@ data class TmdbGenre(@Json(name = "name") val name: String)
 data class TmdbCrew(@Json(name = "job") val job: String, @Json(name = "name") val name: String)
 
 @JsonClass(generateAdapter = true)
-data class TmdbCredits(@Json(name = "crew") val crew: List<TmdbCrew>?)
+data class TmdbCast(
+    @Json(name = "name") val name: String,
+    @Json(name = "character") val character: String?,
+    @Json(name = "profile_path") val profilePath: String?
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbCredits(
+    @Json(name = "crew") val crew: List<TmdbCrew>?,
+    @Json(name = "cast") val cast: List<TmdbCast>? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class TmdbMovieDetailResponse(
@@ -69,5 +79,6 @@ data class TmdbTvDetailResponse(
     @Json(name = "genres") val genres: List<TmdbGenre>?,
     @Json(name = "created_by") val createdBy: List<TmdbCreator>?,
     @Json(name = "number_of_seasons") val numberOfSeasons: Int?,
-    @Json(name = "number_of_episodes") val numberOfEpisodes: Int?
+    @Json(name = "number_of_episodes") val numberOfEpisodes: Int?,
+    @Json(name = "credits") val credits: TmdbCredits? = null
 )

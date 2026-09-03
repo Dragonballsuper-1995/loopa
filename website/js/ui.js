@@ -575,25 +575,35 @@ const UI = {
         // Title overlay
         document.getElementById('modalTitle').textContent = item.title;
 
-        // Tags row (rating · year · type · tracking badge)
+        // Tags row (rating · year · type · 4K UHD · DOLBY · tracking badge)
         const typeLabel = (type || 'Unknown').charAt(0).toUpperCase() + (type || 'unknown').slice(1);
         const trackingBadge = inList
-            ? `<span class="text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md bg-loopAmberSubtle text-loopAmber border border-loopAmber/20">● Tracking</span>`
+            ? `<span class="text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md bg-loopAmberSubtle text-loopAmber border border-loopAmber/30 flex items-center gap-1.5 shadow-[0_0_10px_rgba(255,90,54,0.2)]"><span class="w-1.5 h-1.5 rounded-full bg-loopAmber animate-pulse"></span> Tracking</span>`
             : '';
         const tagsRow = document.getElementById('modalTagsRow');
         if (tagsRow) {
             let metadataBadges = [];
-            if (item.score) metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10">⭐ ${item.score}</span>`);
-            if (item.year) metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10">${this._escapeHTML(String(item.year))}</span>`);
-            if (typeLabel) metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10">${this._escapeHTML(typeLabel)}</span>`);
+            if (item.score) {
+                metadataBadges.push(`<span class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-black/60 text-accentGold border border-accentGold/30 flex items-center gap-1 shadow-sm"><i class="fa-solid fa-star text-[9px]"></i> ${item.score}</span>`);
+            }
+            if (item.year) {
+                metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-white/10 text-textPrimary border border-white/10">${this._escapeHTML(String(item.year))}</span>`);
+            }
+            if (typeLabel) {
+                metadataBadges.push(`<span class="text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-md bg-white/10 text-textSecondary uppercase border border-white/10">${this._escapeHTML(typeLabel)}</span>`);
+            }
             
+            // High-tech badges
+            metadataBadges.push(`<span class="text-[9px] font-extrabold tracking-wider px-2 py-1 rounded-md bg-white/10 text-white/90 border border-white/15">4K UHD</span>`);
+            metadataBadges.push(`<span class="text-[9px] font-extrabold tracking-wider px-2 py-1 rounded-md bg-white/10 text-accentCyan border border-accentCyan/30">DOLBY ATMOS</span>`);
+
             // Runtime or Episode Counts
             if (type === 'movie' && item.runtime) {
                 const rtVal = String(item.runtime).replace(/\s*min\s*/gi, '').trim();
-                metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10"><i class="fa-regular fa-clock mr-1 text-loopAmber/70"></i>${rtVal} min</span>`);
+                metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-white/10 text-textSecondary border border-white/10"><i class="fa-regular fa-clock mr-1 text-loopAmber/80"></i>${rtVal} min</span>`);
             } else if ((type === 'tv' || type === 'anime') && item.totalEpisodes > 0) {
                 const seasonsText = item.totalSeasons ? `${item.totalSeasons} Season${item.totalSeasons > 1 ? 's' : ''} · ` : '';
-                metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-loopSurface/80 text-textSecondary border border-white/10"><i class="fa-solid fa-list-ol mr-1 text-loopAmber/70"></i>${seasonsText}${item.totalEpisodes} Episodes</span>`);
+                metadataBadges.push(`<span class="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-white/10 text-textSecondary border border-white/10"><i class="fa-solid fa-list-ol mr-1 text-loopAmber/80"></i>${seasonsText}${item.totalEpisodes} Eps</span>`);
             }
 
             if (trackingBadge) metadataBadges.push(trackingBadge);
@@ -601,7 +611,7 @@ const UI = {
             tagsRow.innerHTML = metadataBadges.join('');
         }
 
-        // Genre pills (Phase 3C)
+        // Genre pills
         const genrePills = document.getElementById('modalGenrePills');
         if (genrePills) {
             genrePills.innerHTML = (item.genres || []).map(g =>
@@ -610,25 +620,39 @@ const UI = {
             genrePills.classList.toggle('hidden', !item.genres?.length);
         }
 
-        // Episodes & Runtime (still track for potential future use)
-        const epEl = document.getElementById('modalEpisodes');
-        if (epEl) {
-            if (item.totalEpisodes > 0) {
-                epEl.textContent = `${item.totalEpisodes} ${item.totalEpisodes === 1 ? 'Episode' : 'Episodes'}`;
-                epEl.classList.remove('hidden');
+        // Cast & Crew Bento Card Fetch & Render
+        const castRow = document.getElementById('modalCastRow');
+        const castTile = document.getElementById('modalCastTile');
+        if (castRow && castTile) {
+            castRow.innerHTML = `
+                <div class="flex items-center gap-2 text-xs text-textMuted py-2">
+                    <i class="fa-solid fa-circle-notch fa-spin text-loopAmber text-xs"></i>
+                    <span>Loading cast…</span>
+                </div>
+            `;
+            if (item.id) {
+                API.fetchCredits(item.id, type).then(cast => {
+                    if (cast && cast.length > 0) {
+                        castRow.innerHTML = cast.map(c => `
+                            <div class="flex flex-col items-center text-center w-[72px] shrink-0 group">
+                                <div class="w-12 h-12 rounded-full overflow-hidden border border-white/15 bg-loopBase group-hover:border-loopAmber/50 transition-all duration-200 shadow-md">
+                                    ${c.profileUrl 
+                                        ? `<img src="${c.profileUrl}" alt="${this._escapeHTML(c.name)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">`
+                                        : `<div class="w-full h-full flex items-center justify-center text-xs font-bold text-textSecondary bg-loopRaised">${this._escapeHTML(c.name.charAt(0))}</div>`}
+                                </div>
+                                <span class="text-[11px] font-bold text-textPrimary truncate w-full mt-1.5 group-hover:text-loopAmber transition-colors">${this._escapeHTML(c.name)}</span>
+                                <span class="text-[9px] text-textMuted truncate w-full">${this._escapeHTML(c.character || '')}</span>
+                            </div>
+                        `).join('');
+                        castTile.classList.remove('hidden');
+                    } else {
+                        castTile.classList.add('hidden');
+                    }
+                }).catch(() => {
+                    castTile.classList.add('hidden');
+                });
             } else {
-                epEl.classList.add('hidden');
-            }
-        }
-
-        const rtEl = document.getElementById('modalRuntime');
-        if (rtEl) {
-            if (item.runtime) {
-                const rtVal = String(item.runtime).replace(/\s*min\s*/gi, '').trim();
-                rtEl.textContent = `${rtVal} min`;
-                rtEl.classList.remove('hidden');
-            } else {
-                rtEl.classList.add('hidden');
+                castTile.classList.add('hidden');
             }
         }
 

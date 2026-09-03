@@ -79,6 +79,11 @@ fun MediaDetailSheet(
         genres = viewModel.fetchGenres(currentMovie.id, mediaTypeVal)
     }
 
+    var castMembers by remember(currentMovie.id) { mutableStateOf<List<com.loopa.model.TmdbCast>>(emptyList()) }
+    LaunchedEffect(currentMovie.id, mediaTypeVal) {
+        castMembers = viewModel.fetchCredits(currentMovie.id, mediaTypeVal)
+    }
+
     ModalBottomSheet(
         onDismissRequest = {
             onDismiss()
@@ -122,7 +127,7 @@ fun MediaDetailSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(230.dp)
+                            .height(255.dp)
                     ) {
                         if (backdropUrl != null) {
                             AsyncImage(
@@ -146,9 +151,9 @@ fun MediaDetailSheet(
                                 .background(
                                     Brush.verticalGradient(
                                         colorStops = arrayOf(
-                                            0.00f to Loopa.Base.copy(alpha = 0.40f),
-                                            0.25f to Color.Transparent,
-                                            0.65f to Loopa.Surface.copy(alpha = 0.70f),
+                                            0.00f to Loopa.Base.copy(alpha = 0.45f),
+                                            0.22f to Color.Transparent,
+                                            0.60f to Loopa.Surface.copy(alpha = 0.75f),
                                             1.00f to Loopa.Surface
                                         )
                                     )
@@ -211,7 +216,7 @@ fun MediaDetailSheet(
                                 .fillMaxWidth()
                                 .padding(horizontal = 20.dp, vertical = 12.dp)
                         ) {
-                            // Metadata Badges Row
+                            // Metadata Badges Row (★ Rating · Year · Type · 4K UHD · DOLBY)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -220,26 +225,26 @@ fun MediaDetailSheet(
                                 if (movie.voteAverage != null && movie.voteAverage > 0) {
                                     Box(
                                         modifier = Modifier
-                                            .clip(Loopa.BadgeShape)
-                                            .background(Loopa.Surface.copy(alpha = 0.85f))
-                                            .border(1.dp, Loopa.Border, Loopa.BadgeShape)
-                                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                                            .clip(Loopa.PillShape)
+                                            .background(Color.Black.copy(alpha = 0.65f))
+                                            .border(1.dp, Loopa.Gold.copy(alpha = 0.4f), Loopa.PillShape)
+                                            .padding(horizontal = 7.dp, vertical = 2.dp)
                                     ) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                                         ) {
                                             Icon(
                                                 Icons.Filled.Star,
                                                 null,
-                                                tint = Loopa.Amber,
+                                                tint = Loopa.Gold,
                                                 modifier = Modifier.size(11.dp)
                                             )
                                             Text(
                                                 text = String.format("%.1f", movie.voteAverage),
-                                                color = Loopa.TextPrimary,
+                                                color = Loopa.Gold,
                                                 fontSize = 11.sp,
-                                                fontWeight = FontWeight.SemiBold
+                                                fontWeight = FontWeight.Bold
                                             )
                                         }
                                     }
@@ -248,10 +253,9 @@ fun MediaDetailSheet(
                                 if (year.isNotBlank()) {
                                     Box(
                                         modifier = Modifier
-                                            .clip(Loopa.BadgeShape)
-                                            .background(Loopa.Surface.copy(alpha = 0.85f))
-                                            .border(1.dp, Loopa.Border, Loopa.BadgeShape)
-                                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color.White.copy(alpha = 0.10f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
                                     ) {
                                         Text(
                                             text = year,
@@ -263,44 +267,64 @@ fun MediaDetailSheet(
                                 }
 
                                 val typeLabel = when (mediaTypeVal) {
-                                    "tv" -> "TV Show"
-                                    "anime" -> "Anime"
-                                    else -> "Movie"
+                                    "tv" -> "TV"
+                                    "anime" -> "ANIME"
+                                    else -> "MOVIE"
                                 }
                                 Box(
                                     modifier = Modifier
-                                        .clip(Loopa.BadgeShape)
-                                        .background(Loopa.Surface.copy(alpha = 0.85f))
-                                        .border(1.dp, Loopa.Border, Loopa.BadgeShape)
-                                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                                    ) {
-                                        Text(
-                                            text = typeLabel,
-                                            color = Loopa.TextSecondary,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color.White.copy(alpha = 0.10f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = typeLabel,
+                                        color = Loopa.TextPrimary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                // High-tech 4K UHD badge
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color.White.copy(alpha = 0.08f))
+                                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Text("4K UHD", color = Color.White.copy(alpha = 0.9f), fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                                }
+
+                                // High-tech DOLBY badge
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color.White.copy(alpha = 0.08f))
+                                        .border(1.dp, Loopa.Cyan.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Text("DOLBY", color = Loopa.Cyan, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                                }
 
                                 // In-List Tracking Badge
                                 if (dbEntry != null) {
                                     val isWatching = dbEntry.listName.equals("Watching", ignoreCase = true)
                                     val pillBg = if (isWatching) Loopa.AmberSubtle else Loopa.Surface
-                                    val pillBorder = if (isWatching) Loopa.Amber.copy(alpha = 0.3f) else Loopa.Border
+                                    val pillBorder = if (isWatching) Loopa.Amber.copy(alpha = 0.4f) else Loopa.Border
                                     val pillText = if (isWatching) Loopa.Amber else Loopa.TextSecondary
-                                    val pillIcon = if (isWatching) "●" else "✓"
 
                                     Box(
                                         modifier = Modifier
                                             .clip(Loopa.BadgeShape)
                                             .background(pillBg)
                                             .border(1.dp, pillBorder, Loopa.BadgeShape)
-                                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                                            .padding(horizontal = 7.dp, vertical = 2.dp)
                                     ) {
                                         Text(
-                                            text = "$pillIcon ${dbEntry.listName}",
+                                            text = "● ${dbEntry.listName}",
                                             color = pillText,
-                                            fontSize = 11.sp,
+                                            fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -313,9 +337,9 @@ fun MediaDetailSheet(
                             Text(
                                 text = title,
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 24.sp,
+                                fontSize = 25.sp,
                                 color = Loopa.TextPrimary,
-                                lineHeight = 28.sp,
+                                lineHeight = 29.sp,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -323,12 +347,12 @@ fun MediaDetailSheet(
                     }
                 }
 
-                // ── 2. Scrollable Body Content ──────────────────────────────
+                // ── 2. Scrollable Bento Body Content ────────────────────────
                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                            .padding(horizontal = 18.dp, vertical = 14.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Genre Pills
@@ -356,16 +380,36 @@ fun MediaDetailSheet(
                             }
                         }
 
-                        // Synopsis Section
+                        // Bento Card 1: Synopsis
                         if (!movie.overview.isNullOrBlank()) {
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = "SYNOPSIS",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Loopa.Amber,
-                                    letterSpacing = 1.sp
-                                )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(Loopa.CardShape)
+                                    .background(Loopa.Raised.copy(alpha = 0.4f))
+                                    .border(1.dp, Loopa.Border, Loopa.CardShape)
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .width(3.dp)
+                                            .height(13.dp)
+                                            .clip(CircleShape)
+                                            .background(Loopa.Amber)
+                                    )
+                                    Text(
+                                        text = "SYNOPSIS",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Loopa.Amber,
+                                        letterSpacing = 1.sp
+                                    )
+                                }
                                 Text(
                                     text = movie.overview,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -376,7 +420,126 @@ fun MediaDetailSheet(
                             }
                         }
 
-                        // ── Watchlist Actions ───────────────────────────────
+                        // Bento Card 2: Experience Specs (3 Columns)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(Loopa.CardShape)
+                                .background(Loopa.Raised.copy(alpha = 0.4f))
+                                .border(1.dp, Loopa.Border, Loopa.CardShape)
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("VIDEO", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Loopa.TextMuted)
+                                Spacer(Modifier.height(3.dp))
+                                Text("4K UHD", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Loopa.TextPrimary)
+                            }
+                            Box(Modifier.width(1.dp).height(28.dp).background(Loopa.Border))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("AUDIO", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Loopa.TextMuted)
+                                Spacer(Modifier.height(3.dp))
+                                Text("Atmos 5.1", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Loopa.Cyan)
+                            }
+                            Box(Modifier.width(1.dp).height(28.dp).background(Loopa.Border))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("ASPECT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Loopa.TextMuted)
+                                Spacer(Modifier.height(3.dp))
+                                Text("2.39:1", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Loopa.TextPrimary)
+                            }
+                        }
+
+                        // Bento Card 3: Cast & Key Roles (Apple TV Circular Avatars)
+                        if (castMembers.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(Loopa.CardShape)
+                                    .background(Loopa.Raised.copy(alpha = 0.4f))
+                                    .border(1.dp, Loopa.Border, Loopa.CardShape)
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .width(3.dp)
+                                            .height(13.dp)
+                                            .clip(CircleShape)
+                                            .background(Loopa.Amber)
+                                    )
+                                    Text(
+                                        text = "CAST & KEY ROLES",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Loopa.TextSecondary,
+                                        letterSpacing = 1.sp
+                                    )
+                                }
+
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(castMembers.take(10)) { cast ->
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.width(68.dp)
+                                        ) {
+                                            val profileUrl = cast.profilePath?.let {
+                                                TmdbUrlHelper.posterUrl(it, "w185")
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(46.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Loopa.Base)
+                                                    .border(1.dp, Loopa.Border, CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (profileUrl != null) {
+                                                    AsyncImage(
+                                                        model = profileUrl,
+                                                        contentDescription = cast.name,
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier.fillMaxSize()
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = cast.name.take(1),
+                                                        color = Loopa.TextSecondary,
+                                                        fontSize = 14.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                text = cast.name,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Loopa.TextPrimary,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            if (!cast.character.isNullOrBlank()) {
+                                                Text(
+                                                    text = cast.character,
+                                                    fontSize = 8.sp,
+                                                    color = Loopa.TextMuted,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Bento Card 4: Watchlist Control Hub ─────────────
                         if (dbEntry == null) {
                             // Primary Add To List CTA
                             LoopButton(
@@ -396,87 +559,89 @@ fun MediaDetailSheet(
                                     Icon(
                                         Icons.Filled.Add,
                                         contentDescription = null,
-                                        tint = Loopa.Base,
+                                        tint = Color.White,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         } else {
-                            // Status Selector Pills (Watching | Watched)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                val isWatching = dbEntry.listName.equals("Watching", ignoreCase = true)
-
-                                // Watching Button
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(Loopa.PillShape)
-                                        .background(if (isWatching) Loopa.AmberSubtle else Loopa.Base)
-                                        .border(
-                                            1.dp,
-                                            if (isWatching) Loopa.Amber.copy(alpha = 0.5f) else Loopa.Border,
-                                            Loopa.PillShape
-                                        )
-                                        .clickable {
-                                            if (!isWatching) {
-                                                viewModel.updateMediaItem(dbEntry.copy(listName = "Watching"), oldItem = dbEntry)
-                                            }
-                                        }
-                                        .padding(vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "Watching",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isWatching) Loopa.Amber else Loopa.TextSecondary
-                                    )
-                                }
-
-                                // Watched Button
-                                val isWatched = dbEntry.listName.equals("Watched", ignoreCase = true)
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(Loopa.PillShape)
-                                        .background(if (isWatched) Loopa.Raised else Loopa.Base)
-                                        .border(
-                                            1.dp,
-                                            if (isWatched) Loopa.BorderMd else Loopa.Border,
-                                            Loopa.PillShape
-                                        )
-                                        .clickable {
-                                            if (!isWatched) {
-                                                viewModel.updateMediaItem(dbEntry.copy(listName = "Watched"), oldItem = dbEntry)
-                                            }
-                                        }
-                                        .padding(vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "Watched",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isWatched) Loopa.TextPrimary else Loopa.TextSecondary
-                                    )
-                                }
-                            }
-
-                            // Unified User Control Card (Rating + Notes + Progress)
+                            // Unified User Control Card (Status + Rating + Notes)
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(Loopa.CardShape)
                                     .background(Loopa.Surface)
                                     .border(1.dp, Loopa.Border, Loopa.CardShape)
-                                    .padding(16.dp),
+                                    .padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                // 1. Your Rating Section
+                                // Status Selector Pills (Watching | Watched)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    val isWatching = dbEntry.listName.equals("Watching", ignoreCase = true)
+                                    val isWatched = dbEntry.listName.equals("Watched", ignoreCase = true)
+
+                                    // Watching Button
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(Loopa.PillShape)
+                                            .background(if (isWatching) Loopa.AmberSubtle else Loopa.Base)
+                                            .border(
+                                                1.dp,
+                                                if (isWatching) Loopa.Amber.copy(alpha = 0.5f) else Loopa.Border,
+                                                Loopa.PillShape
+                                            )
+                                            .clickable {
+                                                if (!isWatching) {
+                                                    viewModel.updateMediaItem(dbEntry.copy(listName = "Watching"), oldItem = dbEntry)
+                                                }
+                                            }
+                                            .padding(vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "Watching",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isWatching) Loopa.Amber else Loopa.TextSecondary
+                                        )
+                                    }
+
+                                    // Watched Button
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(Loopa.PillShape)
+                                            .background(if (isWatched) Loopa.Raised else Loopa.Base)
+                                            .border(
+                                                1.dp,
+                                                if (isWatched) Loopa.BorderMd else Loopa.Border,
+                                                Loopa.PillShape
+                                            )
+                                            .clickable {
+                                                if (!isWatched) {
+                                                    viewModel.updateMediaItem(dbEntry.copy(listName = "Watched"), oldItem = dbEntry)
+                                                }
+                                            }
+                                            .padding(vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "Watched",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isWatched) Loopa.TextPrimary else Loopa.TextSecondary
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(color = Loopa.Border)
+
+                                // Your Rating Section
                                 var currentRating by remember(dbEntry.userRating) {
                                     mutableIntStateOf(dbEntry.userRating ?: 0)
                                 }
@@ -490,21 +655,12 @@ fun MediaDetailSheet(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(Loopa.BadgeShape)
-                                                .background(Loopa.AmberSubtle)
-                                                .border(1.dp, Loopa.Amber.copy(alpha = 0.2f), Loopa.BadgeShape),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.Star,
-                                                contentDescription = null,
-                                                tint = Loopa.Amber,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                        }
+                                        Icon(
+                                            Icons.Filled.Star,
+                                            contentDescription = null,
+                                            tint = Loopa.Amber,
+                                            modifier = Modifier.size(13.dp)
+                                        )
                                         Text(
                                             text = "Your Rating",
                                             fontWeight = FontWeight.Bold,
@@ -532,16 +688,9 @@ fun MediaDetailSheet(
                                                     color = Loopa.Amber
                                                 )
                                             }
-                                        } else {
-                                            Text(
-                                                text = "Unrated",
-                                                fontSize = 10.sp,
-                                                color = Loopa.TextMuted,
-                                                fontWeight = FontWeight.Medium
-                                            )
                                         }
 
-                                        // 5 Interactive Stars (Mapped to 2, 4, 6, 8, 10)
+                                        // 5 Interactive Stars
                                         Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                             for (i in 1..5) {
                                                 val starScore = i * 2
@@ -551,7 +700,7 @@ fun MediaDetailSheet(
                                                     contentDescription = "Rating $starScore",
                                                     tint = if (isActive) Loopa.Amber else Loopa.Raised,
                                                     modifier = Modifier
-                                                        .size(18.dp)
+                                                        .size(17.dp)
                                                         .clickable {
                                                             val newRating = if (currentRating == starScore) 0 else starScore
                                                             currentRating = newRating
@@ -565,7 +714,7 @@ fun MediaDetailSheet(
 
                                 HorizontalDivider(color = Loopa.Border)
 
-                                // 2. Personal Notes Section
+                                // Personal Notes Section
                                 var notesText by remember(dbEntry.personalNotes) {
                                     mutableStateOf(dbEntry.personalNotes ?: "")
                                 }
@@ -576,24 +725,13 @@ fun MediaDetailSheet(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.Edit,
-                                                contentDescription = null,
-                                                tint = Loopa.TextSecondary,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                            Text(
-                                                text = "PERSONAL NOTES",
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Loopa.TextMuted,
-                                                letterSpacing = 0.5.sp
-                                            )
-                                        }
+                                        Text(
+                                            text = "PERSONAL NOTES",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Loopa.TextMuted,
+                                            letterSpacing = 0.5.sp
+                                        )
 
                                         if (notesText != (dbEntry.personalNotes ?: "")) {
                                             Box(
@@ -617,16 +755,10 @@ fun MediaDetailSheet(
 
                                     OutlinedTextField(
                                         value = notesText,
-                                        onValueChange = {
-                                            notesText = it
-                                        },
+                                        onValueChange = { notesText = it },
                                         modifier = Modifier.fillMaxWidth(),
                                         placeholder = {
-                                            Text(
-                                                "Add notes, favorite quotes, or thoughts...",
-                                                color = Loopa.TextMuted,
-                                                fontSize = 12.sp
-                                            )
+                                            Text("Add personal notes, thoughts...", color = Loopa.TextMuted, fontSize = 12.sp)
                                         },
                                         shape = Loopa.InputShape,
                                         colors = OutlinedTextFieldDefaults.colors(
@@ -643,64 +775,79 @@ fun MediaDetailSheet(
                                     )
                                 }
 
-                                // 3. Season / Episode Checklist (TV & Anime)
-                                if (mediaTypeVal == "tv" || mediaTypeVal == "anime") {
-                                    EpisodeProgressSection(
-                                        mediaId = dbEntry.id,
-                                        mediaType = dbEntry.mediaType,
-                                        totalSeasons = dbEntry.totalSeasons ?: 1,
-                                        totalEpisodes = dbEntry.totalEpisodes ?: 0,
-                                        currentSeason = dbEntry.currentSeason ?: 1,
-                                        viewModel = viewModel,
-                                        onSeasonChange = { newSeason ->
-                                            viewModel.updateMediaItem(dbEntry.copy(currentSeason = newSeason))
+                                // Remove from My List Button
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(Loopa.PillShape)
+                                        .background(Loopa.Error.copy(alpha = 0.10f))
+                                        .border(1.dp, Loopa.Error.copy(alpha = 0.30f), Loopa.PillShape)
+                                        .clickable {
+                                            viewModel.removeMediaItem(dbEntry.id, dbEntry.mediaType)
                                         }
-                                    )
-                                }
-                            }
-
-                            // Remove from My List Button
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(Loopa.PillShape)
-                                    .background(Loopa.Error.copy(alpha = 0.12f))
-                                    .border(1.dp, Loopa.Error.copy(alpha = 0.35f), Loopa.PillShape)
-                                    .clickable {
-                                        viewModel.removeMediaItem(dbEntry.id, dbEntry.mediaType)
-                                    }
-                                    .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        Icons.Filled.Delete,
-                                        contentDescription = null,
-                                        tint = Loopa.Error,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = "Remove from My List",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Loopa.Error
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Delete,
+                                            contentDescription = null,
+                                            tint = Loopa.Error,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                        Text(
+                                            text = "Remove from My List",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Loopa.Error
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        // ── 3. More Like This Row ───────────────────────────
+                        // ── Bento Card 5: Season / Episode Progress (TV & Anime) ────
+                        if (mediaTypeVal == "tv" || mediaTypeVal == "anime") {
+                            if (dbEntry != null) {
+                                EpisodeProgressSection(
+                                    mediaId = dbEntry.id,
+                                    mediaType = dbEntry.mediaType,
+                                    totalSeasons = dbEntry.totalSeasons ?: 1,
+                                    totalEpisodes = dbEntry.totalEpisodes ?: 0,
+                                    currentSeason = dbEntry.currentSeason ?: 1,
+                                    viewModel = viewModel,
+                                    onSeasonChange = { newSeason ->
+                                        viewModel.updateMediaItem(dbEntry.copy(currentSeason = newSeason))
+                                    }
+                                )
+                            }
+                        }
+
+                        // ── Bento Card 6: More Like This Row ────────────────
                         if (similarItems.isNotEmpty()) {
                             Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = "More Like This",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = Loopa.TextPrimary
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    Modifier
+                                        .width(3.dp)
+                                        .height(14.dp)
+                                        .clip(CircleShape)
+                                        .background(Loopa.Amber)
+                                )
+                                Text(
+                                    text = "More Like This",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = Loopa.TextPrimary
+                                )
+                            }
+
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
@@ -713,7 +860,6 @@ fun MediaDetailSheet(
                                         imageUrl = simImg,
                                         mediaType = simMovie.mediaType ?: "movie",
                                         onClick = {
-                                            // Push onto history stack with smooth transition
                                             history.add(simMovie)
                                         }
                                     )

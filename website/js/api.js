@@ -656,6 +656,25 @@ const API = {
         return null;
     },
 
+    async fetchCredits(id, mediaType) {
+        try {
+            const isTv = mediaType === 'tv' || mediaType === 'anime';
+            const endpoint = isTv ? `/tv/${id}/credits` : `/movie/${id}/credits`;
+            const data = await this._tmdb(endpoint);
+            if (data && Array.isArray(data.cast)) {
+                return data.cast.slice(0, 10).map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    character: c.character,
+                    profileUrl: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : null
+                }));
+            }
+        } catch (e) {
+            console.warn('[fetchCredits] failed:', e.message);
+        }
+        return [];
+    },
+
     // ── Gemini AI Recommendations ─────────────────────────────────────────────
 
     async getAIRecommendations(watchedItems, likedItems = [], dislikedItems = [], chatHistory = []) {
