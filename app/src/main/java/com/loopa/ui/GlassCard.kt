@@ -16,20 +16,20 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RectangleShape,
+    shape: Shape = Loopa.CardShape,
+    backgroundColor: Color = Loopa.Surface.copy(alpha = 0.75f),
     content: @Composable BoxScope.() -> Unit
 ) {
     Box(
         modifier = modifier
             .clip(shape)
-            .background(com.loopa.ui.Loopa.Base.copy(alpha = 0.6f))
+            .background(backgroundColor)
             .border(
                 width = 1.dp,
-                brush = Brush.linearGradient(
+                brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.2f),
-                        Color.Transparent,
-                        com.loopa.ui.Loopa.Amber.copy(alpha = 0.1f) // Loopa amber accent
+                        Color.White.copy(alpha = 0.18f),
+                        Color.White.copy(alpha = 0.03f)
                     )
                 ),
                 shape = shape

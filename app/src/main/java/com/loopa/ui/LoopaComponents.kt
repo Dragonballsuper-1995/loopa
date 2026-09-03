@@ -45,27 +45,32 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 
 // ── Loopa Design Tokens ───────────────────────────────────────────────────────
 object Loopa {
-    // v2.1 — Phase 1: deeper surfaces, raised TextMuted, added Terracotta
-    val Base       = Color(0xFF0C0B09)
-    val Surface    = Color(0xFF1C1A17)
-    val Raised     = Color(0xFF2A2823)
-    val Amber      = Color(0xFFE8A87C)
-    val AmberStrong = Color(0xFFD4845A)
-    val AmberSubtle = Color(0xFF2A1F17)
-    val Terracotta  = Color(0xFFC47A5A)   // Secondary accent — decorative, non-CTA
-    val TextPrimary   = Color(0xFFF0EDE8)
-    val TextSecondary = Color(0xFFA09990)
-    val TextMuted     = Color(0xFF7A746D)   // Raised from #5C574F for readability
-    val Success    = Color(0xFF7AB87A)
-    val Error      = Color(0xFFC87070)
-    val Border     = Color(0x12F0EDE8)
-    val BorderMd   = Color(0x1FF0EDE8)
+    // v3.0 — Industry-Leading Obsidian & Electric Coral Design System
+    val Base          = Color(0xFF060608)
+    val Surface       = Color(0xFF101014)
+    val Raised        = Color(0xFF181820)
+    val Glass         = Color(0xB8101016)
+    val Amber         = Color(0xFFFF5A36)   // Primary Electric Sunset Coral
+    val AmberStrong   = Color(0xFFE04826)
+    val AmberSubtle   = Color(0xFF26120E)
+    val Terracotta    = Color(0xFFE88A6E)   // Secondary warm accent
+    val Gold          = Color(0xFFFFB800)   // Star rating & awards
+    val Cyan          = Color(0xFF00D2FF)   // Tech specs & anime badges
+    val Purple        = Color(0xFF8A4FFF)   // AI Concierge accent
+    val TextPrimary   = Color(0xFFFFFFFF)
+    val TextSecondary = Color(0xFFA3A3B2)
+    val TextMuted     = Color(0xFF686878)
+    val Success       = Color(0xFF4ADE80)
+    val Error         = Color(0xFFF87171)
+    val Border        = Color(0x12FFFFFF)
+    val BorderMd      = Color(0x1FFFFFFF)
+    val BorderStrong  = Color(0x38FFFFFF)
 
     val PillShape    = RoundedCornerShape(999.dp)
-    val CardShape    = RoundedCornerShape(14.dp)
+    val CardShape    = RoundedCornerShape(16.dp)
     val BadgeShape   = RoundedCornerShape(6.dp)
-    val InputShape   = RoundedCornerShape(10.dp)
-    val DialogShape  = RoundedCornerShape(20.dp)
+    val InputShape   = RoundedCornerShape(12.dp)
+    val DialogShape  = RoundedCornerShape(24.dp)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,9 +84,9 @@ fun LoopButton(
     isSecondary: Boolean = false,
     leadingIcon: @Composable (() -> Unit)? = null
 ) {
-    val bgColor = if (isSecondary) Loopa.Surface else Loopa.Amber
-    val textColor = if (isSecondary) Loopa.TextPrimary else Loopa.Base
-    val borderColor = if (isSecondary) Loopa.BorderMd else Color.Transparent
+    val bgColor = if (isSecondary) Loopa.Surface.copy(alpha = 0.85f) else Loopa.Amber
+    val textColor = Color.White
+    val borderColor = if (isSecondary) Loopa.BorderStrong else Color.Transparent
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()

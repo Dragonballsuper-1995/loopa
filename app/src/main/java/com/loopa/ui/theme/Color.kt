@@ -2,36 +2,36 @@ package com.loopa.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ── Loopa v2.1 Color System ───────────────────────────────────────────────────
-// Design: Warm dark palette + single Loopa Amber accent + Terracotta secondary
-// Phase 1 update: deeper surface layers, raised TextMuted for accessibility
-
+// ── Loopa v3.0 Color System (Industry-Leading Obsidian & Electric Coral) ───────
 // Canvas / Background layers
-val LoopBase    = Color(0xFF0C0B09)   // Primary canvas — warm near-black (deepened)
-val LoopSurface = Color(0xFF1C1A17)   // Cards, containers (warmer mid-dark)
-val LoopRaised  = Color(0xFF2A2823)   // Hover states, elevated elements (more contrast)
+val LoopBase    = Color(0xFF060608)   // Ultra-deep obsidian canvas
+val LoopSurface = Color(0xFF101014)   // Cards, panels
+val LoopRaised  = Color(0xFF181820)   // Elevated elements, hover states
 
-// Brand Accent — Loopa Amber (CTA-only)
-val LoopAmber       = Color(0xFFE8A87C)   // Primary accent — buttons, active states, ratings
-val LoopAmberStrong = Color(0xFFD4845A)   // Active / pressed states
-val LoopAmberSubtle = Color(0xFF2A1F17)   // Chip / tag backgrounds
+// Brand Accent — Electric Sunset Coral / Primary CTA
+val LoopAmber       = Color(0xFFFF5A36)   // Primary accent — buttons, active states
+val LoopAmberStrong = Color(0xFFE04826)   // Active / pressed states
+val LoopAmberSubtle = Color(0xFF26120E)   // Chip / tag background tint
 
-// Secondary Accent — Terracotta (non-CTA highlights)
-val LoopTerracotta  = Color(0xFFC47A5A)   // Secondary accent for decorative / non-interactive highlights
+// Secondary Accents & Badges
+val LoopTerracotta  = Color(0xFFE88A6E)   // Secondary warm accent
+val LoopGold        = Color(0xFFFFB800)   // Star rating & awards
+val LoopCyan        = Color(0xFF00D2FF)   // Tech specs & anime badges
+val LoopPurple      = Color(0xFF8A4FFF)   // AI Concierge accent
 
 // Foreground / Typography
-val TextPrimary   = Color(0xFFF0EDE8)   // Warm off-white — headlines, primary UI
-val TextSecondary = Color(0xFFA09990)   // Warm medium gray — labels, meta
-val TextMuted     = Color(0xFF7A746D)   // Low-emphasis — captions, placeholders (raised for readability)
+val TextPrimary   = Color(0xFFFFFFFF)   // Pure crisp white
+val TextSecondary = Color(0xFFA3A3B2)   // Refined neutral gray
+val TextMuted     = Color(0xFF686878)   // Accessible meta text
 
 // Semantic
-val LoopSuccess = Color(0xFF7AB87A)   // Watched state
-val LoopError   = Color(0xFFC87070)   // Error / remove state
+val LoopSuccess = Color(0xFF4ADE80)   // Watched state
+val LoopError   = Color(0xFFF87171)   // Error / remove state
 
 // Borders
-val BorderSubtle  = Color(0x12F0EDE8)   // Hairline dividers
-val BorderDefault = Color(0x1FF0EDE8)   // Card borders
-val BorderStrong  = Color(0x33F0EDE8)   // Focus rings
+val BorderSubtle  = Color(0x12FFFFFF)   // Hairline dividers
+val BorderDefault = Color(0x1FFFFFFF)   // Card borders
+val BorderStrong  = Color(0x38FFFFFF)   // Focus rings / active strokes
 
 // ── Material You Mappings (Dark Theme) ───────────────────────────────────────
 val md_theme_dark_primary             = LoopAmber

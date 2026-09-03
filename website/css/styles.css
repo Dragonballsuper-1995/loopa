@@ -8,15 +8,20 @@
 }
 
 body {
-    background-color: #0C0B09; /* Phase 1A: updated loopBase */
-    color: #F0EDE8;
-    font-family: 'DM Sans', sans-serif;
+    background-color: #060608;
+    color: #FFFFFF;
+    font-family: 'Plus Jakarta Sans', 'DM Sans', sans-serif;
+    background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 90, 54, 0.12) 0%, transparent 70%),
+        radial-gradient(circle 600px at 100% 20%, rgba(138, 79, 255, 0.05) 0%, transparent 60%),
+        radial-gradient(circle 800px at 0% 80%, rgba(0, 210, 255, 0.04) 0%, transparent 60%);
+    background-attachment: fixed;
 }
 
 /* Selection */
 ::selection {
-    background-color: rgba(232, 168, 124, 0.25);
-    color: #F0EDE8;
+    background-color: rgba(255, 90, 54, 0.3);
+    color: #FFFFFF;
 }
 
 /* Scrollbars */
@@ -29,12 +34,13 @@ body {
     scrollbar-width: none;
 }
 
-/* Frosted Glass — warm version */
+/* Frosted Glass — Ultra-sleek spatial blur */
 .frosted-glass {
-    background-color: rgba(28, 26, 23, 0.85) !important; /* Phase 1A: new loopSurface */
-    backdrop-filter: blur(24px) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    border: 1px solid rgba(240, 237, 232, 0.08) !important;
+    background-color: rgba(16, 16, 22, 0.75) !important;
+    backdrop-filter: blur(28px) !important;
+    -webkit-backdrop-filter: blur(28px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 16px 40px -8px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* Dark Theme Dropdown Options */
@@ -57,7 +63,7 @@ select option:hover, select option:focus, select option:active, select option:ch
     box-shadow: 0 30px 70px -10px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.02) inset !important;
 }
 
-/* Horizontal Scroll Edge Fade — Phase 1E: halved from 48px to 24px so first card shows fully */
+/* Horizontal Scroll Edge Fade */
 .scroll-fade-container {
     position: relative;
     width: 100%;
@@ -68,8 +74,8 @@ select option:hover, select option:focus, select option:active, select option:ch
     top: 0;
     left: 0;
     bottom: 0;
-    width: 24px;
-    background: linear-gradient(to right, #0C0B09 10%, transparent);
+    width: 32px;
+    background: linear-gradient(to right, #060608 15%, transparent);
     pointer-events: none;
     z-index: 10;
 }
@@ -79,8 +85,8 @@ select option:hover, select option:focus, select option:active, select option:ch
     top: 0;
     right: 0;
     bottom: 0;
-    width: 24px;
-    background: linear-gradient(to left, #0C0B09 10%, transparent);
+    width: 32px;
+    background: linear-gradient(to left, #060608 15%, transparent);
     pointer-events: none;
     z-index: 10;
 }
@@ -249,25 +255,28 @@ select option:hover, select option:focus, select option:active, select option:ch
 
 /* Amber glow on focused inputs */
 .loop-input:focus {
-    border-color: rgba(232, 168, 124, 0.6);
+    border-color: rgba(255, 90, 54, 0.7);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(232, 168, 124, 0.08);
+    box-shadow: 0 0 0 3px rgba(255, 90, 54, 0.15);
 }
 
 /* Status badge */
 .status-badge-watching {
-    color: #E8A87C;
-    border-color: rgba(232, 168, 124, 0.4);
+    color: #FF8F6B;
+    border-color: rgba(255, 143, 107, 0.4);
+    background: rgba(255, 90, 54, 0.1);
 }
 
 .status-badge-watched {
-    color: #7AB87A;
-    border-color: rgba(122, 184, 122, 0.4);
+    color: #4ADE80;
+    border-color: rgba(74, 222, 128, 0.4);
+    background: rgba(74, 222, 128, 0.1);
 }
 
 .status-badge-planned {
-    color: #A09990;
-    border-color: rgba(160, 153, 144, 0.3);
+    color: #A3A3B2;
+    border-color: rgba(163, 163, 178, 0.3);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* Shimmer skeleton */
@@ -282,7 +291,7 @@ select option:hover, select option:focus, select option:active, select option:ch
 }
 
 .skeleton {
-    background: linear-gradient(90deg, #1C1A17 25%, #2A2823 50%, #1C1A17 75%); /* Phase 1A: updated tokens */
+    background: linear-gradient(90deg, #101014 25%, #181820 50%, #101014 75%);
     background-size: 400px 100%;
     animation: shimmer 1.4s ease-in-out infinite;
 }
@@ -294,43 +303,48 @@ select option:hover, select option:focus, select option:active, select option:ch
 
 /* Pill button base */
 .btn-primary {
-    background: #E8A87C;
-    color: #0C0B09; /* Phase 1A: updated loopBase */
+    background: linear-gradient(135deg, #FF6B4A 0%, #FF451A 100%);
+    color: #FFFFFF;
     font-weight: 600;
     border-radius: 9999px;
     padding: 12px 28px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 20px rgba(255, 90, 54, 0.35);
     transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-primary:hover {
-    background: #D4845A;
-    transform: scale(1.02);
+    background: linear-gradient(135deg, #FF7B5C 0%, #FF552E 100%);
+    box-shadow: 0 6px 28px rgba(255, 90, 54, 0.5);
+    transform: translateY(-1px) scale(1.02);
 }
 
 .btn-primary:active {
-    transform: scale(0.98);
+    transform: translateY(0) scale(0.98);
 }
 
 .btn-secondary {
-    background: transparent;
-    color: #F0EDE8;
+    background: rgba(255, 255, 255, 0.06);
+    color: #FFFFFF;
     font-weight: 500;
     border-radius: 9999px;
-    border: 1px solid rgba(240, 237, 232, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 12px 28px;
+    backdrop-filter: blur(16px);
     transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-secondary:hover {
-    background: rgba(240, 237, 232, 0.06);
-    border-color: rgba(240, 237, 232, 0.25);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.28);
+    transform: translateY(-1px);
 }
 
 /* Filter pill */
 .filter-pill {
-    background: #1A1915;
-    color: #A09990;
-    border: 1px solid rgba(240, 237, 232, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: #A3A3B2;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 9999px;
     padding: 8px 20px;
     font-weight: 500;
@@ -339,38 +353,39 @@ select option:hover, select option:focus, select option:active, select option:ch
 }
 
 .filter-pill:hover {
-    color: #F0EDE8;
-    border-color: rgba(240, 237, 232, 0.2);
-    background: #242320;
+    color: #FFFFFF;
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .filter-pill.active {
-    background: rgba(232, 168, 124, 0.12);
-    color: #E8A87C;
-    border-color: rgba(232, 168, 124, 0.35);
+    background: rgba(255, 90, 54, 0.15);
+    color: #FF8F6B;
+    border-color: rgba(255, 90, 54, 0.4);
+    box-shadow: 0 0 16px rgba(255, 90, 54, 0.15);
 }
 
-/* Section accent line — Phase 1B: warm grey (amber reserved for CTAs only) */
+/* Section accent line — Cineby/Industry-grade vibrant marker */
 .section-accent {
-    width: 3px;
-    height: 1.3em;
-    background: #7A746D;
+    width: 3.5px;
+    height: 1.25em;
+    background: linear-gradient(to bottom, #FF5A36, #FF8F6B);
     border-radius: 9999px;
     display: inline-block;
     flex-shrink: 0;
 }
 
-/* Hero gradient */
+/* Hero gradients */
 .hero-gradient-top {
-    background: linear-gradient(to bottom, #0F0E0C 0%, rgba(15, 14, 12, 0.4) 60%, transparent 100%);
+    background: linear-gradient(to bottom, #060608 0%, rgba(6, 6, 8, 0.4) 60%, transparent 100%);
 }
 
 .hero-gradient-base {
-    background: linear-gradient(to top, #0F0E0C 0%, rgba(15, 14, 12, 0.5) 50%, transparent 100%);
+    background: linear-gradient(to top, #060608 0%, rgba(6, 6, 8, 0.7) 50%, transparent 100%);
 }
 
 .hero-gradient-side {
-    background: linear-gradient(to right, #0F0E0C 0%, rgba(15, 14, 12, 0.3) 40%, transparent 100%);
+    background: linear-gradient(to right, #060608 0%, rgba(6, 6, 8, 0.4) 40%, transparent 100%);
 }
 
 /* Status selector button */
