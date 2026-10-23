@@ -15,7 +15,7 @@
 
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0c0b09">
+    <meta name="theme-color" content="#060608">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -580,203 +580,124 @@
             </button>
 
             <!-- Cinematic Backdrop Header -->
-            <div id="modalBackdrop" class="relative w-full h-[250px] md:h-[280px] overflow-hidden flex-shrink-0">
+            <div id="modalBackdrop" class="relative w-full h-[260px] md:h-[300px] overflow-hidden flex-shrink-0">
                 <img id="modalBackdropImg" src="" alt=""
                      class="w-full h-full object-cover object-[center_20%] transition-opacity duration-500">
                 <!-- Multi-zone cinematic gradients -->
                 <div class="absolute inset-0 bg-gradient-to-t from-loopBase via-loopBase/60 to-transparent"></div>
-                <div class="absolute inset-0 bg-gradient-to-r from-loopBase/80 via-transparent to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-loopBase/85 via-transparent to-transparent"></div>
                 
-                <!-- Title & Tech Badges Overlay -->
-                <div id="modalBackdropTitle" class="absolute bottom-0 left-0 right-0 p-6 z-10">
-                    <div class="flex flex-wrap items-center gap-2 mb-2" id="modalTagsRow">
-                        <!-- Tags injected by JS -->
+                <!-- Title & Tech Badges & Quick Action Header -->
+                <div id="modalBackdropTitle" class="absolute bottom-0 left-0 right-0 p-6 z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2 mb-2" id="modalTagsRow">
+                            <!-- Tags injected by JS -->
+                        </div>
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-textPrimary leading-tight tracking-tight font-display" id="modalTitle">Loading…</h2>
                     </div>
-                    <h2 class="text-2xl md:text-3xl font-extrabold text-textPrimary leading-tight tracking-tight font-display" id="modalTitle">Loading…</h2>
+
+                    <!-- Quick Header Action Row (Directly Accessible) -->
+                    <div id="modalHeaderActions" class="flex items-center gap-2.5 shrink-0 flex-wrap">
+                        <button id="watchlistBtn"
+                            class="btn-primary text-xs md:text-sm font-semibold px-4 py-2.5 rounded-full flex items-center justify-center gap-2 shadow-lg hover:shadow-glowCoral transition-all">
+                            <i class="fa-solid fa-plus" id="watchlistBtnIcon"></i>
+                            <span id="watchlistBtnText">Add to List</span>
+                        </button>
+                        <div id="statusSelector" class="hidden flex items-center gap-1.5 bg-loopSurface/80 p-1 rounded-full border border-white/10 backdrop-blur-md">
+                            <button class="status-btn px-3 py-1.5 text-xs rounded-full font-medium transition-all" data-status="Watching">Watching</button>
+                            <button class="status-btn px-3 py-1.5 text-xs rounded-full font-medium transition-all" data-status="Watched">Watched</button>
+                        </div>
+                        <button id="btnDeleteWatchlist" class="hidden text-textMuted hover:text-red-400 transition-colors bg-white/5 hover:bg-red-500/15 border border-white/10 hover:border-red-500/30 rounded-full w-9 h-9 flex items-center justify-center text-xs" title="Remove from list">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- Scrollable Bento Body -->
             <div class="flex-1 overflow-y-auto no-scrollbar p-5 md:p-6 flex flex-col gap-5">
 
-                <!-- Bento Row 1: Left (Synopsis & Cast) + Right (Control Hub) -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-5">
+                <!-- Repositioned Responsive Bento Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     
-                    <!-- Left: Synopsis, Genres & Cast (3 cols) -->
-                    <div class="md:col-span-3 flex flex-col gap-4">
-                        <!-- Genre Pills -->
-                        <div id="modalGenrePills" class="flex flex-wrap gap-2"></div>
-
-                        <!-- Synopsis Tile -->
-                        <div class="p-4 rounded-xl bg-loopSurface/60 border border-white/[0.06] backdrop-blur-md">
-                            <div class="flex items-center gap-2 mb-2">
+                    <!-- Bento Box 1: Synopsis & Genre Tags (Span 2 cols) -->
+                    <div class="md:col-span-2 p-4 md:p-5 rounded-xl bg-loopSurface/60 border border-white/[0.06] backdrop-blur-md flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
                                 <span class="section-accent"></span>
                                 <span class="text-[11px] font-bold tracking-wider uppercase text-loopAmber">Synopsis</span>
                             </div>
-                            <p class="text-xs md:text-sm text-textSecondary leading-relaxed font-normal" id="modalSummary"></p>
+                            <div id="modalGenrePills" class="flex flex-wrap gap-1.5"></div>
                         </div>
-
-                        <!-- Cast & Key Roles Bento Tile -->
-                        <div id="modalCastTile" class="p-4 rounded-xl bg-loopSurface/60 border border-white/[0.06] backdrop-blur-md">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="flex items-center gap-2">
-                                    <span class="section-accent"></span>
-                                    <span class="text-[11px] font-bold tracking-wider uppercase text-textSecondary">Cast & Key Roles</span>
-                                </div>
-                                <span class="text-[10px] text-textMuted font-medium" id="castCountLabel">Featured</span>
-                            </div>
-                            <div id="modalCastRow" class="flex gap-3 overflow-x-auto no-scrollbar py-1">
-                                <!-- Cast avatars injected by JS -->
-                            </div>
-                        </div>
+                        <p class="text-xs md:text-sm text-textSecondary leading-relaxed font-normal" id="modalSummary"></p>
                     </div>
 
-                    <!-- Right: Watchlist Control Hub Bento (2 cols) -->
-                    <div class="md:col-span-2 flex flex-col gap-4">
-                        <div class="p-4 rounded-xl bg-loopSurface/80 border border-white/[0.08] backdrop-blur-md flex flex-col gap-4 shadow-lg">
-                            
-                            <!-- Main Watchlist Button -->
-                            <div id="modalActions">
-                                <button id="watchlistBtn"
-                                    class="btn-primary w-full text-sm font-semibold flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-plus" id="watchlistBtnIcon"></i>
-                                    <span id="watchlistBtnText">Add to List</span>
-                                </button>
-
-                                <!-- Status Selector -->
-                                <div id="statusSelector" class="hidden flex gap-2 flex-wrap mt-3">
-                                    <button class="status-btn flex-1 py-2 text-xs" data-status="Watching">Watching</button>
-                                    <button class="status-btn flex-1 py-2 text-xs" data-status="Watched">Watched</button>
-                                </div>
-                            </div>
-
-                            <!-- Rating & Notes Container -->
-                            <div id="progressSection" class="hidden flex flex-col gap-3.5 pt-1 border-t border-white/[0.06]">
-                                <!-- Your Rating -->
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <i class="fa-solid fa-star text-loopAmber text-xs"></i>
-                                        <span class="text-xs font-bold text-textPrimary">Your Rating</span>
-                                    </div>
-                                    <div id="starRating"></div>
-                                </div>
-
-                                <!-- Personal Notes -->
-                                <div class="flex flex-col gap-2" id="notesSection">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-[10px] font-bold uppercase tracking-wider text-textMuted flex items-center gap-1.5">
-                                            <i class="fa-solid fa-pen-nib text-[10px] text-textSecondary"></i>
-                                            <span>Notes</span>
-                                        </span>
-                                        <button id="btnSaveNotes" type="button" class="btn-primary py-1 px-3 text-[10px] font-semibold flex items-center gap-1 rounded-md shadow-sm">
-                                            <i class="fa-solid fa-floppy-disk text-[9px]"></i>
-                                            <span>Save</span>
-                                        </button>
-                                    </div>
-                                    <textarea id="personalNotesInput" class="w-full bg-loopBase/90 border border-white/10 rounded-lg p-2.5 text-xs text-textPrimary placeholder-textMuted focus:outline-none focus:border-loopAmber/50 transition-all resize-none font-medium leading-relaxed" placeholder="Add personal notes..." rows="2"></textarea>
-                                </div>
-                            </div>
-
-                            <!-- Remove Button -->
-                            <button id="btnDeleteWatchlist" class="hidden text-red-400 hover:text-red-300 transition-colors bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg px-3 py-2 flex items-center justify-center gap-2 text-xs font-semibold w-full">
-                                <i class="fa-solid fa-trash-can text-xs"></i>
-                                <span>Remove from My List</span>
-                            </button>
-                        </div>
-
-                        <!-- Tech Specs Micro-Bento Card -->
-                        <div class="p-3.5 rounded-xl bg-loopRaised/40 border border-white/[0.06] flex flex-col gap-2">
-                            <div class="text-[10px] font-bold uppercase tracking-wider text-textMuted flex items-center gap-1.5">
-                                <i class="fa-solid fa-sliders text-loopAmber/80 text-[10px]"></i>
-                                <span>Experience Specs</span>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2 text-center pt-1">
-                                <div class="p-2 rounded-lg bg-loopBase/60 border border-white/5">
-                                    <div class="text-[9px] text-textMuted font-medium">Video</div>
-                                    <div class="text-[11px] font-bold text-textPrimary mt-0.5">4K UHD</div>
-                                </div>
-                                <div class="p-2 rounded-lg bg-loopBase/60 border border-white/5">
-                                    <div class="text-[9px] text-textMuted font-medium">Audio</div>
-                                    <div class="text-[11px] font-bold text-accentCyan mt-0.5">Atmos 5.1</div>
-                                </div>
-                                <div class="p-2 rounded-lg bg-loopBase/60 border border-white/5">
-                                    <div class="text-[9px] text-textMuted font-medium">Aspect</div>
-                                    <div class="text-[11px] font-bold text-textPrimary mt-0.5">2.39:1</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Bento Row 2: Interactive Episode Tracker (TV & Anime) -->
-                <div id="seasonChecklistSection" class="hidden p-4 md:p-5 rounded-xl bg-loopSurface/70 border border-white/[0.07] shadow-lg">
-                    <button id="btnToggleEpisodesSection" type="button" class="w-full flex items-center justify-between py-1 text-sm font-semibold text-textSecondary hover:text-textPrimary transition-colors group">
+                    <!-- Bento Box 2: Experience Specs (Span 1 col) -->
+                    <div class="p-4 md:p-5 rounded-xl bg-loopSurface/60 border border-white/[0.06] backdrop-blur-md flex flex-col justify-between gap-3">
                         <div class="flex items-center gap-2">
                             <span class="section-accent"></span>
-                            <span class="text-sm font-bold text-textPrimary">Episode Tracker</span>
+                            <span class="text-[11px] font-bold tracking-wider uppercase text-textSecondary">Experience Specs</span>
                         </div>
-                        <div class="flex items-center gap-2.5">
-                            <!-- Dual Micro Progress Badges -->
-                            <div id="episodesProgressBadge" class="flex items-center gap-1.5">
-                                <!-- Injected by JS -->
+                        <div class="grid grid-cols-3 gap-2 text-center pt-1">
+                            <div class="p-2.5 rounded-lg bg-loopBase/60 border border-white/5">
+                                <div class="text-[9px] text-textMuted font-medium uppercase tracking-wider">Video</div>
+                                <div class="text-xs font-bold text-textPrimary mt-1">4K UHD</div>
                             </div>
-                            <i class="fa-solid fa-chevron-down text-textMuted text-[10px] transition-transform duration-200" id="episodesSectionIcon"></i>
+                            <div class="p-2.5 rounded-lg bg-loopBase/60 border border-white/5">
+                                <div class="text-[9px] text-textMuted font-medium uppercase tracking-wider">Audio</div>
+                                <div class="text-xs font-bold text-accentCyan mt-1">Atmos 5.1</div>
+                            </div>
+                            <div class="p-2.5 rounded-lg bg-loopBase/60 border border-white/5">
+                                <div class="text-[9px] text-textMuted font-medium uppercase tracking-wider">Aspect</div>
+                                <div class="text-xs font-bold text-textPrimary mt-1">2.39:1</div>
+                            </div>
                         </div>
-                    </button>
-                    
-                    <div id="episodesSectionContent" class="hidden mt-3.5 pt-1">
-                        <!-- Visual Progress Dashboard -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 p-3.5 bg-loopBase/60 border border-white/[0.08] rounded-xl shadow-inner">
-                            <!-- Season Progress Card -->
-                            <div class="flex flex-col gap-2">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-[10px] font-bold text-textMuted uppercase tracking-wider flex items-center gap-1.5">
-                                        <i class="fa-solid fa-layer-group text-[9px] text-loopAmber"></i>
-                                        <span>Season Progress</span>
-                                    </span>
-                                    <span class="text-xs font-bold text-textPrimary" id="visualSeasonText">S1 / 3</span>
-                                </div>
-                                <!-- Segmented Season Bar -->
-                                <div class="flex gap-1.5 h-2 w-full items-center" id="visualSeasonSegments"></div>
+                    </div>
+
+                    <!-- Bento Box 3: Cast & Key Roles (Span 2 cols) -->
+                    <div id="modalCastTile" class="md:col-span-2 p-4 md:p-5 rounded-xl bg-loopSurface/60 border border-white/[0.06] backdrop-blur-md flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="section-accent"></span>
+                                <span class="text-[11px] font-bold tracking-wider uppercase text-textSecondary">Cast & Key Roles</span>
                             </div>
-                            
-                            <!-- Episode Progress Card -->
-                            <div class="flex flex-col gap-2">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-[10px] font-bold text-loopAmber uppercase tracking-wider flex items-center gap-1.5">
-                                        <i class="fa-solid fa-circle-play text-[9px]"></i>
-                                        <span>Episode Progress</span>
-                                    </span>
-                                    <span class="text-xs font-bold text-textPrimary" id="visualEpisodeText">0 / 0 (0%)</span>
-                                </div>
-                                <!-- Smooth Gradient Episode Bar -->
-                                <div class="h-2 w-full bg-loopSurface rounded-full overflow-hidden border border-white/5 relative">
-                                    <div id="visualEpisodeBar" class="h-full bg-gradient-to-r from-loopAmber to-loopAmberStrong rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(232,168,124,0.5)]" style="width: 0%;"></div>
-                                </div>
+                            <span class="text-[10px] text-textMuted font-medium" id="castCountLabel">Featured</span>
+                        </div>
+                        <div id="modalCastRow" class="flex gap-3 overflow-x-auto no-scrollbar py-1">
+                            <!-- Cast avatars injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Bento Box 4: Your Rating & Personal Notes (Span 1 col, shown when item in list) -->
+                    <div id="progressSection" class="hidden p-4 md:p-5 rounded-xl bg-loopSurface/80 border border-white/[0.08] backdrop-blur-md flex flex-col gap-3.5 shadow-lg">
+                        <!-- Rating -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-star text-loopAmber text-xs"></i>
+                                <span class="text-xs font-bold text-textPrimary">Your Rating</span>
                             </div>
+                            <div id="starRating"></div>
                         </div>
 
-                        <!-- Custom Season Dropdown and Mark Season Button -->
-                        <div class="flex items-center gap-2 mb-3.5 z-20 relative" id="seasonDropdownContainer">
-                            <div class="relative flex-1" id="seasonDropdownWrapper">
-                                <button id="seasonDropdownBtn" type="button" class="w-full bg-loopBase border border-white/10 hover:border-loopAmber/40 rounded-xl px-4 py-2 text-xs font-semibold text-textPrimary flex items-center justify-between transition-all shadow-inner group">
-                                    <span id="seasonDropdownLabel" class="group-hover:text-loopAmber transition-colors">Season 1</span>
-                                    <i class="fa-solid fa-chevron-down text-textMuted text-[10px] transition-transform duration-200" id="seasonDropdownIcon"></i>
+                        <!-- Personal Notes -->
+                        <div class="flex flex-col gap-2 pt-2 border-t border-white/[0.06]" id="notesSection">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-textMuted flex items-center gap-1.5">
+                                    <i class="fa-solid fa-pen-nib text-[10px] text-textSecondary"></i>
+                                    <span>Notes</span>
+                                </span>
+                                <button id="btnSaveNotes" type="button" class="btn-primary py-1 px-2.5 text-[10px] font-semibold flex items-center gap-1 rounded-md shadow-sm">
+                                    <i class="fa-solid fa-floppy-disk text-[9px]"></i>
+                                    <span>Save</span>
                                 </button>
-                                <div id="seasonDropdownMenu" class="absolute left-0 right-0 top-full mt-1.5 bg-loopRaised/95 backdrop-blur-xl border border-white/10 rounded-xl p-1.5 shadow-2xl z-30 hidden flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar"></div>
                             </div>
-                            <button id="btnMarkSeasonWatched" type="button" class="shrink-0 bg-loopBase border border-white/10 hover:border-loopAmber/40 rounded-xl px-3 py-2 text-[11px] font-semibold text-textSecondary hover:text-loopAmber flex items-center gap-1.5 transition-colors" title="Mark season as watched">
-                                <i class="fa-solid fa-check-double text-loopAmber/80"></i>
-                                <span class="hidden sm:inline">Complete</span>
-                            </button>
+                            <textarea id="personalNotesInput" class="w-full bg-loopBase/90 border border-white/10 rounded-lg p-2.5 text-xs text-textPrimary placeholder-textMuted focus:outline-none focus:border-loopAmber/50 transition-all resize-none font-medium leading-relaxed" placeholder="Add personal notes..." rows="2"></textarea>
                         </div>
-
-                        <div id="episodeList" class="flex flex-col gap-2 max-h-56 overflow-y-auto no-scrollbar pr-1"></div>
                     </div>
                 </div>
 
-                <!-- Bento Row 3: More Like This Recommendations -->
-                <section id="moreLikeThisSection" class="hidden pt-2">
+                <!-- More Like This Recommendations -->
+                <section id="moreLikeThisSection" class="hidden pt-1">
                     <div class="flex items-center gap-2 mb-3">
                         <span class="section-accent"></span>
                         <h3 class="text-sm font-bold text-textPrimary">More Like This</h3>

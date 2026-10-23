@@ -517,27 +517,7 @@ const App = {
         // Phase 2B: Scroll-transparent header — fade header over hero, restore when scrolled past
         const header = document.querySelector('header');
         const radarTab = document.getElementById('tab-search');
-        if (header) {
-            const updateHeaderTransparency = () => {
-                const heroSection = document.getElementById('hero-section');
-                const isRadarVisible = radarTab && !radarTab.classList.contains('hidden');
-                if (isRadarVisible && heroSection) {
-                    const scrollY = window.scrollY || document.documentElement.scrollTop;
-                    const heroHeight = heroSection.offsetHeight;
-                    // Transparent when within top 60% of hero height
-                    if (scrollY < heroHeight * 0.6) {
-                        header.classList.add('header-transparent');
-                    } else {
-                        header.classList.remove('header-transparent');
-                    }
-                } else {
-                    header.classList.remove('header-transparent');
-                }
-            };
-            window.addEventListener('scroll', updateHeaderTransparency, { passive: true });
-            // Run once immediately so state is correct on load
-            requestAnimationFrame(updateHeaderTransparency);
-        }
+        // Header is always frosted glass across all scroll positions
     },
 
     // ── Auth ──────────────────────────────────────────────────────────────────
@@ -1225,11 +1205,7 @@ const App = {
         this.s.heroPaused = true; // Pause hero carousel while modal is open
         this.s.drawerItem = item;
         this.s.drawerDBEntry = this.s.watchlist.find(w => w.id === item.id && w.media_type === item.mediaType) || null;
-        this.s.drawerWatchedEpisodes = [];
-        if (!this.s.isGuest && this.s.user) {
-            this.s.drawerWatchedEpisodes = await SBWatchedEpisodes.getForMedia(this.s.user.id, item.id, item.mediaType);
-        }
-        UI.renderDrawer(item, this.s.drawerDBEntry, this.s.drawerWatchedEpisodes);
+        UI.renderDrawer(item, this.s.drawerDBEntry);
         document.getElementById('detailModal').classList.add('active');
         document.body.style.overflow = 'hidden'; // prevent background scroll
 
@@ -1238,7 +1214,7 @@ const App = {
                 const full = await API.fetchDetails(item.id, item.mediaType || item.media_type, item.provider);
                 if (full) {
                     this.s.drawerItem = { ...item, ...full };
-                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry, this.s.drawerWatchedEpisodes);
+                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
                 }
             }
         } catch {}
@@ -1256,11 +1232,7 @@ const App = {
         this.s.heroPaused = true; // Pause hero carousel while modal is open
         this.s.drawerItem = basic;
         this.s.drawerDBEntry = dbItem;
-        this.s.drawerWatchedEpisodes = [];
-        if (!this.s.isGuest && this.s.user) {
-            this.s.drawerWatchedEpisodes = await SBWatchedEpisodes.getForMedia(this.s.user.id, dbItem.id, dbItem.media_type);
-        }
-        UI.renderDrawer(basic, dbItem, this.s.drawerWatchedEpisodes);
+        UI.renderDrawer(basic, dbItem);
         document.getElementById('detailModal').classList.add('active');
         document.body.style.overflow = 'hidden'; // prevent background scroll
 
@@ -1269,7 +1241,7 @@ const App = {
                 const full = await API.fetchDetails(dbItem.id, dbItem.media_type, basic.provider);
                 if (full) {
                     this.s.drawerItem = { ...basic, ...full };
-                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry, this.s.drawerWatchedEpisodes);
+                    UI.renderDrawer(this.s.drawerItem, this.s.drawerDBEntry);
                 }
             }
         } catch {}
@@ -1322,164 +1294,25 @@ const App = {
             await SBList.remove(this.s.user.id, id, type);
             this.s.watchlist = this.s.watchlist.filter(w => !(w.id === id && w.media_type === type));
             this.s.drawerDBEntry = null;
-            this.s.drawerWatchedEpisodes = [];
-            UI.renderDrawer(this.s.drawerItem, null, []);
+            UI.renderDrawer(this.s.drawerItem, null);
             this._updateWLUI();
             this._reindexSearch();
             UI.toast('TARGET PURGED');
         } catch (e) { UI.toast('SYSTEM ERROR', 'error'); }
     },
 
-    async markAllEpisodesWatched(item, dbEntry) {
-        if (!dbEntry || this.s.isGuest || !this.s.user) return;
-        const mediaType = (dbEntry.media_type || item?.mediaType || '').toLowerCase();
-        if (mediaType !== 'tv' && mediaType !== 'anime') return;
-
-        let totalSeasons = item?.totalSeasons || dbEntry.total_seasons || 1;
-        let isAnime = mediaType === 'anime' || item?.provider === 'anilist' || item?.provider === 'jikan' || item?.provider === 'kitsu';
-
-        const currentData = this.s.drawerWatchedEpisodes || [];
-        if (currentData.length > 0) {
-            await SBList.update(this.s.user.id, dbEntry.id, dbEntry.media_type, { progress_backup: JSON.stringify(currentData) });
-            dbEntry.progress_backup = JSON.stringify(currentData);
-        }
-
-        const episodesToAdd = [];
-
-        if (isAnime) {
-            let epCount = dbEntry.total_episodes || item?.totalEpisodes || 0;
-            for (let ep = 1; ep <= epCount; ep++) {
-                episodesToAdd.push({ season_number: 1, episode_number: ep });
-            }
-        } else {
-            const seasonPromises = [];
-            for (let s = 1; s <= totalSeasons; s++) {
-                seasonPromises.push(API.fetchTVSeasonDetails(dbEntry.id, s).catch(() => null));
-            }
-            const seasonsData = await Promise.all(seasonPromises);
-            for (let s = 1; s <= totalSeasons; s++) {
-                const seasonData = seasonsData[s - 1];
-                let epCount = seasonData?.episodes?.length || 0;
-                for (let ep = 1; ep <= epCount; ep++) {
-                    episodesToAdd.push({ season_number: s, episode_number: ep });
-                }
-            }
-        }
-
-        if (episodesToAdd.length > 0) {
-            await SBWatchedEpisodes.addBulk(this.s.user.id, dbEntry.id, dbEntry.media_type, episodesToAdd);
-        }
-
-        this.s.drawerWatchedEpisodes = JSON.parse(
-            localStorage.getItem(`loopa_episodes_${this.s.user.id}_${dbEntry.id}`) || '[]'
-        );
-        const newCount = this.s.drawerWatchedEpisodes.length;
-        const idx = this.s.watchlist.findIndex(w => w.id === dbEntry.id && w.media_type === dbEntry.media_type);
-        if (idx >= 0) {
-            this.s.watchlist[idx].current_episode = newCount;
-            this.s.drawerDBEntry.current_episode = newCount;
-        }
-    },
-
-    async markSeasonWatched(item, dbEntry, seasonNum, epCount) {
-        if (!dbEntry || this.s.isGuest || !epCount) return;
-        const episodesToAdd = [];
-        for (let ep = 1; ep <= epCount; ep++) {
-            episodesToAdd.push({ season_number: seasonNum, episode_number: ep });
-        }
-        await SBWatchedEpisodes.addBulk(this.s.user.id, dbEntry.id, dbEntry.media_type, episodesToAdd);
-        
-        this.s.drawerWatchedEpisodes = await SBWatchedEpisodes.getForMedia(this.s.user.id, dbEntry.id, dbEntry.media_type);
-        const newCount = this.s.drawerWatchedEpisodes.length;
-        const idx = this.s.watchlist.findIndex(w => w.id === dbEntry.id && w.media_type === dbEntry.media_type);
-        
-        // Auto-shift status
-        const totalEps = dbEntry.total_episodes || item?.totalEpisodes || 0;
-        let newStatus = dbEntry.list_name;
-        if (newCount > 0 && newCount < totalEps) newStatus = 'Watching';
-        else if (newCount > 0 && newCount >= totalEps) newStatus = 'Watched';
-        else if (newCount === 0) newStatus = 'Watching';
-
-        if (newStatus !== dbEntry.list_name) {
-            await this.updateStatus(newStatus);
-        }
-
-        if (idx >= 0) {
-            this.s.watchlist[idx].current_episode = newCount;
-            this.s.drawerDBEntry.current_episode = newCount;
-        }
-        UI.renderDrawer(item, dbEntry, this.s.drawerWatchedEpisodes);
-        UI.toast(`SEASON ${seasonNum} WATCHED`);
-    },
-
     async updateStatus(status) {
         const e = this.s.drawerDBEntry;
         if (!e || this.s.isGuest) return;
         try {
-            const prevStatus = e.list_name;
             await SBList.update(this.s.user.id, e.id, e.media_type, { list_name: status });
             e.list_name = status;
             const idx = this.s.watchlist.findIndex(w => w.id === e.id && w.media_type === e.media_type);
             if (idx >= 0) this.s.watchlist[idx].list_name = status;
-            
-            if (status === 'Watched') {
-                await this.markAllEpisodesWatched(this.s.drawerItem, e);
-            } else if (status === 'Watching' && prevStatus === 'Watched') {
-                const backupRaw = e.progress_backup;
-                if (backupRaw) {
-                    await SBWatchedEpisodes.removeAll(this.s.user.id, e.id, e.media_type);
-                    const backup = JSON.parse(backupRaw);
-                    if (backup.length > 0) {
-                        await SBWatchedEpisodes.addBulk(this.s.user.id, e.id, e.media_type, backup);
-                    }
-                    this.s.drawerWatchedEpisodes = backup;
-                    e.current_episode = backup.length;
-                    if (idx >= 0) this.s.watchlist[idx].current_episode = backup.length;
-                    
-                    await SBList.update(this.s.user.id, e.id, e.media_type, { progress_backup: null });
-                    e.progress_backup = null;
-                }
-            }
 
-            UI.renderDrawer(this.s.drawerItem, e, this.s.drawerWatchedEpisodes);
+            UI.renderDrawer(this.s.drawerItem, e);
             UI.toast('STATUS UPDATED');
         } catch (err) {}
-    },
-
-    // updateProgress removed as requested in redesign
-
-    async toggleEpisodeWatched(seasonNum, episodeNum, isWatched) {
-        const e = this.s.drawerDBEntry;
-        if (!e || this.s.isGuest) return;
-        try {
-            if (isWatched) {
-                await SBWatchedEpisodes.add(this.s.user.id, e.id, e.media_type, seasonNum, episodeNum);
-            } else {
-                await SBWatchedEpisodes.remove(this.s.user.id, e.id, e.media_type, seasonNum, episodeNum);
-            }
-            // Refresh local episode count
-            this.s.drawerWatchedEpisodes = await SBWatchedEpisodes.getForMedia(this.s.user.id, e.id, e.media_type);
-            const newCount = this.s.drawerWatchedEpisodes.length;
-            const idx = this.s.watchlist.findIndex(w => w.id === e.id && w.media_type === e.media_type);
-            
-            // Auto-shift status
-            const totalEps = e.total_episodes || this.s.drawerItem?.totalEpisodes || 0;
-            let newStatus = e.list_name;
-            if (newCount > 0 && newCount < totalEps) newStatus = 'Watching';
-            else if (newCount > 0 && newCount >= totalEps) newStatus = 'Watched';
-            else if (newCount === 0) newStatus = 'Watching';
-
-            if (newStatus !== e.list_name) {
-                await this.updateStatus(newStatus);
-            }
-
-            if (idx >= 0) {
-                this.s.watchlist[idx].current_episode = newCount;
-                this.s.drawerDBEntry.current_episode = newCount;
-            }
-        } catch (err) {
-            console.error(err);
-        }
     },
 
     async setRating(rating) {

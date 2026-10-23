@@ -261,7 +261,7 @@ fun AiRecommendationsScreen(viewModel: MediaViewModel) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 90.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 74.dp)
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
             OutlinedTextField(

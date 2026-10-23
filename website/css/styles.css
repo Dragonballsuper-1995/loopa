@@ -45,18 +45,18 @@ body {
 
 /* Dark Theme Dropdown Options */
 select option {
-    background-color: #1A1915 !important;
-    color: #F0EDE8 !important;
+    background-color: #101014 !important;
+    color: #FFFFFF !important;
     padding: 10px 14px;
 }
 select option:hover, select option:focus, select option:active, select option:checked {
-    background-color: #242320 !important;
-    color: #E8A87C !important;
+    background-color: #181820 !important;
+    color: #FF5A36 !important;
 }
 
 /* Super Frosted & Readable Dropdown */
 .dropdown-frosted {
-    background-color: rgba(18, 17, 14, 0.95) !important;
+    background-color: rgba(16, 16, 20, 0.95) !important;
     backdrop-filter: blur(40px) !important;
     -webkit-backdrop-filter: blur(40px) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -96,9 +96,9 @@ select option:hover, select option:focus, select option:active, select option:ch
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background-color: rgba(26, 25, 21, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #F0EDE8;
+    background-color: rgba(24, 24, 32, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #FFFFFF;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -106,9 +106,9 @@ select option:hover, select option:focus, select option:active, select option:ch
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .header-nav-btn:hover {
-    background-color: rgba(232, 168, 124, 0.95);
-    color: #0F0E0C;
-    border-color: #E8A87C;
+    background-color: #FF5A36;
+    color: #060608;
+    border-color: #FF5A36;
     transform: scale(1.1);
 }
 
@@ -149,17 +149,17 @@ select option:hover, select option:focus, select option:active, select option:ch
     transform: translateX(-50%);
     width: 0;
     height: 2px;
-    background: #E8A87C;
+    background: #FF5A36;
     border-radius: 9999px;
     transition: width 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-btn.active-nav::after {
-    width: 100%;  /* Phase 1E: full-width underline — cleaner than 70% */
+    width: 100%;
 }
 
 .nav-btn.active-nav {
-    color: #F0EDE8 !important;
+    color: #FFFFFF !important;
 }
 
 /* ── Phase 3A: Card Hover System ─────────────────────────────────────────── */
@@ -215,9 +215,9 @@ select option:hover, select option:focus, select option:active, select option:ch
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    border: 1px solid rgba(240, 237, 232, 0.20);
-    background: rgba(28, 26, 23, 0.90);
-    color: #F0EDE8;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(24, 24, 32, 0.85);
+    color: #FFFFFF;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -228,14 +228,14 @@ select option:hover, select option:focus, select option:active, select option:ch
 }
 
 .card-action-btn:hover {
-    background: rgba(232, 168, 124, 0.90);
-    color: #0C0B09;
+    background: #FF5A36;
+    color: #060608;
     border-color: transparent;
 }
 
 .card-action-btn.primary {
-    background: #E8A87C;
-    color: #0C0B09;
+    background: #FF5A36;
+    color: #060608;
     border-color: transparent;
     width: 32px;
     height: 32px;
@@ -243,7 +243,7 @@ select option:hover, select option:focus, select option:active, select option:ch
 }
 
 .card-action-btn.primary:hover {
-    background: #D4845A;
+    background: #E04826;
 }
 
 /* Hide hover panel on touch-only devices */
@@ -395,20 +395,20 @@ select option:hover, select option:focus, select option:active, select option:ch
     font-size: 14px;
     font-weight: 500;
     transition: all 150ms ease;
-    border: 1px solid rgba(240, 237, 232, 0.1);
-    color: #A09990;
-    background: #1A1915;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #A3A3B2;
+    background: #101014;
 }
 
 .status-btn:hover {
-    color: #F0EDE8;
-    border-color: rgba(240, 237, 232, 0.25);
+    color: #FFFFFF;
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .status-btn.active-status {
-    background: rgba(232, 168, 124, 0.14);
-    color: #E8A87C;
-    border-color: rgba(232, 168, 124, 0.4);
+    background: rgba(255, 90, 54, 0.15);
+    color: #FF5A36;
+    border-color: rgba(255, 90, 54, 0.4);
 }
 
 /* Smooth page fade in */
@@ -444,7 +444,7 @@ select option:hover, select option:focus, select option:active, select option:ch
 
 .hero-meta-text {
     font-size: 0.8125rem; /* 13px */
-    color: #7A746D; /* textMuted v2.1 */
+    color: #A3A3B2;
     font-weight: 500;
 }
 
@@ -454,8 +454,8 @@ select option:hover, select option:focus, select option:active, select option:ch
 .hero-gradient-top {
     background: linear-gradient(
         to bottom,
-        rgba(12, 11, 9, 0.55) 0%,
-        transparent 28%
+        rgba(6, 6, 8, 0.75) 0%,
+        transparent 35%
     );
 }
 
@@ -463,9 +463,9 @@ select option:hover, select option:focus, select option:active, select option:ch
 .hero-gradient-base {
     background: linear-gradient(
         to top,
-        #0C0B09 0%,
-        rgba(12, 11, 9, 0.75) 22%,
-        transparent 52%
+        #060608 0%,
+        rgba(6, 6, 8, 0.80) 35%,
+        transparent 70%
     );
 }
 
@@ -473,22 +473,18 @@ select option:hover, select option:focus, select option:active, select option:ch
 .hero-gradient-side {
     background: linear-gradient(
         to right,
-        rgba(12, 11, 9, 0.70) 0%,
-        transparent 45%
+        rgba(6, 6, 8, 0.85) 0%,
+        transparent 55%
     );
 }
 
-/* ── Phase 2B: Scroll-transparent header ────────────────────────────────── */
+/* ── Always-Frosted Glass Header ────────────────────────────────────────── */
 header {
-    transition: background-color 300ms ease, border-color 300ms ease, backdrop-filter 300ms ease;
-}
-
-/* Applied by JS when user scrolls above the hero */
-header.header-transparent {
-    background-color: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    border-color: transparent !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    background-color: rgba(6, 6, 8, 0.85) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    transition: backdrop-filter 300ms ease, background-color 300ms ease;
 }
 
 /* ── Phase 1E: Larger search input text ──────────────────────────────────── */
@@ -527,9 +523,9 @@ header.header-transparent {
     inset: 0;
     background: linear-gradient(
         to top,
-        rgba(18, 17, 14, 0.96) 0%,
-        rgba(18, 17, 14, 0.65) 35%,
-        transparent 65%
+        rgba(16, 16, 20, 0.98) 0%,
+        rgba(16, 16, 20, 0.65) 40%,
+        transparent 75%
     );
     pointer-events: none;
 }
@@ -546,13 +542,13 @@ header.header-transparent {
 
 /* ── Phase 3C: Genre Pills ────────────────────────────────────────────────── */
 .genre-pill {
-    background: rgba(240, 237, 232, 0.06);
-    border: 1px solid rgba(240, 237, 232, 0.10);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 9999px;
     padding: 4px 14px;
     font-size: 12px;
     font-weight: 500;
-    color: #A09990;
+    color: #A3A3B2;
     white-space: nowrap;
     transition: background 150ms ease, border-color 150ms ease;
 }
@@ -560,7 +556,7 @@ header.header-transparent {
 /* ── Phase 3C: More Like This Row ────────────────────────────────────────── */
 #moreLikeThisSection {
     flex-shrink: 0;
-    border-top: 1px solid rgba(240, 237, 232, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding: 16px 0 8px;
 }
 
@@ -591,7 +587,7 @@ header.header-transparent {
     gap: 10px;
     font-weight: 700;
     font-size: 14px;
-    color: #F0EDE8;
+    color: #FFFFFF;
     user-select: none;
 }
 
@@ -600,13 +596,13 @@ header.header-transparent {
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
 }
 
-/* ── Top 10 Row Cards & Monumental 3D Rank Typography ───────────────────────── */
+/* ── Top 10 Row Cards & Monumental 3D Rank Typography (Matches Android App) ──── */
 .top10-card-wrapper {
     position: relative;
     display: flex;
     align-items: flex-end;
     flex-shrink: 0;
-    margin-right: 12px;
+    margin-right: 14px;
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -616,39 +612,39 @@ header.header-transparent {
 
 .top10-rank {
     position: absolute;
-    left: -12px;
-    bottom: -10px;
-    font-size: 130px;
+    left: -14px;
+    bottom: -4px;
+    font-size: 114px;
     font-weight: 900;
     font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-    line-height: 0.75;
-    letter-spacing: -8px;
-    color: #060608;
-    -webkit-text-stroke: 3.5px rgba(255, 255, 255, 0.22);
-    text-shadow: 4px 6px 20px rgba(0, 0, 0, 0.95);
+    line-height: 0.8;
+    letter-spacing: -6px;
+    color: rgba(104, 104, 120, 0.45);
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.85);
     pointer-events: none;
-    z-index: 5;
+    z-index: 1;
     user-select: none;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .top10-rank.top3 {
-    -webkit-text-stroke: 4px #FF5A36;
-    text-shadow: 0 0 30px rgba(255, 90, 54, 0.45), 4px 6px 20px rgba(0, 0, 0, 0.95);
+    color: #FF5A36;
+    text-shadow: 0 0 24px rgba(255, 90, 54, 0.45), 0 6px 20px rgba(0, 0, 0, 0.9);
 }
 
 .top10-card-wrapper:hover .top10-rank {
-    transform: scale(1.06) translateY(-4px);
-    -webkit-text-stroke: 4px #FFFFFF;
+    transform: scale(1.05) translateY(-2px);
+    color: rgba(163, 163, 178, 0.65);
 }
 
 .top10-card-wrapper:hover .top10-rank.top3 {
-    -webkit-text-stroke: 4px #FF7B5C;
+    color: #FF7B5C;
+    text-shadow: 0 0 32px rgba(255, 90, 54, 0.6), 0 6px 24px rgba(0, 0, 0, 0.95);
 }
 
 .top10-card-wrapper .media-card {
-    margin-left: 64px;
-    z-index: 10;
+    margin-left: 54px;
+    z-index: 2;
     width: 140px;
 }
 
@@ -681,7 +677,7 @@ header.header-transparent {
 .see-all-link {
     font-size: 12px;
     font-weight: 600;
-    color: #7A746D;
+    color: #A3A3B2;
     transition: color 150ms ease, transform 150ms ease;
     display: inline-flex;
     align-items: center;
@@ -690,7 +686,7 @@ header.header-transparent {
 }
 
 .see-all-link:hover {
-    color: #E8A87C;
+    color: #FF5A36;
     transform: translateX(2px);
 }
 
@@ -703,13 +699,13 @@ header.header-transparent {
     border-radius: 8px;
     cursor: pointer;
     transition: background 150ms ease;
-    color: #F0EDE8;
+    color: #FFFFFF;
     font-size: 13px;
     font-weight: 500;
 }
 
 .autocomplete-row:hover {
-    background: rgba(240, 237, 232, 0.08);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* ── Phase 4D: Auth Shifting Ambient Gradient ──────────────────────────────── */
@@ -720,9 +716,9 @@ header.header-transparent {
 }
 
 #authModal {
-    background: radial-gradient(ellipse at 20% 50%, rgba(42,31,23,0.55) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 20%, rgba(28,24,18,0.75) 0%, transparent 50%),
-                rgba(12,11,9,0.92);
+    background: radial-gradient(ellipse at 20% 50%, rgba(255, 90, 54, 0.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(138, 79, 255, 0.08) 0%, transparent 60%),
+                rgba(6, 6, 8, 0.95);
     background-size: 200% 200%;
     animation: ambientShift 10s ease infinite;
 }

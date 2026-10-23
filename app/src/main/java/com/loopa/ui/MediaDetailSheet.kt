@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.loopa.db.MediaItemEntity
 import com.loopa.model.TmdbMovie
-import com.loopa.ui.components.EpisodeProgressSection
 import com.loopa.util.TmdbUrlHelper
 import com.loopa.viewmodel.MediaViewModel
 
@@ -343,6 +342,118 @@ fun MediaDetailSheet(
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
+
+                            Spacer(Modifier.height(12.dp))
+
+                            // Quick Header Action (Add to List / Status Pills / Delete)
+                            if (dbEntry == null) {
+                                LoopButton(
+                                    text = "Add to List",
+                                    onClick = {
+                                        viewModel.addMediaItem(
+                                            id = movie.id,
+                                            title = title,
+                                            imageUrl = posterUrl ?: backdropUrl,
+                                            date = date,
+                                            score = movie.voteAverage,
+                                            listName = "Watching",
+                                            mediaType = mediaTypeVal
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Filled.Add,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val isWatching = dbEntry.listName.equals("Watching", ignoreCase = true)
+                                    val isWatched = dbEntry.listName.equals("Watched", ignoreCase = true)
+
+                                    // Watching Button
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(Loopa.PillShape)
+                                            .background(if (isWatching) Loopa.AmberSubtle else Loopa.Raised)
+                                            .border(
+                                                1.dp,
+                                                if (isWatching) Loopa.Amber.copy(alpha = 0.5f) else Loopa.Border,
+                                                Loopa.PillShape
+                                            )
+                                            .clickable {
+                                                if (!isWatching) {
+                                                    viewModel.updateMediaItem(dbEntry.copy(listName = "Watching"), oldItem = dbEntry)
+                                                }
+                                            }
+                                            .padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "Watching",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isWatching) Loopa.Amber else Loopa.TextSecondary
+                                        )
+                                    }
+
+                                    // Watched Button
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(Loopa.PillShape)
+                                            .background(if (isWatched) Loopa.Raised else Loopa.Surface)
+                                            .border(
+                                                1.dp,
+                                                if (isWatched) Loopa.BorderMd else Loopa.Border,
+                                                Loopa.PillShape
+                                            )
+                                            .clickable {
+                                                if (!isWatched) {
+                                                    viewModel.updateMediaItem(dbEntry.copy(listName = "Watched"), oldItem = dbEntry)
+                                                }
+                                            }
+                                            .padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "Watched",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isWatched) Loopa.TextPrimary else Loopa.TextSecondary
+                                        )
+                                    }
+
+                                    // Delete from List Icon Button
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(Loopa.Error.copy(alpha = 0.12f))
+                                            .border(1.dp, Loopa.Error.copy(alpha = 0.30f), CircleShape)
+                                            .clickable {
+                                                viewModel.removeMediaItem(dbEntry.id, dbEntry.mediaType)
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Delete,
+                                            contentDescription = "Remove",
+                                            tint = Loopa.Error,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -539,34 +650,8 @@ fun MediaDetailSheet(
                             }
                         }
 
-                        // ── Bento Card 4: Watchlist Control Hub ─────────────
-                        if (dbEntry == null) {
-                            // Primary Add To List CTA
-                            LoopButton(
-                                text = "Add to List",
-                                onClick = {
-                                    viewModel.addMediaItem(
-                                        id = movie.id,
-                                        title = title,
-                                        imageUrl = posterUrl ?: backdropUrl,
-                                        date = date,
-                                        score = movie.voteAverage,
-                                        listName = "Watching",
-                                        mediaType = mediaTypeVal
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Filled.Add,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        } else {
-                            // Unified User Control Card (Status + Rating + Notes)
+                        // ── Bento Card 4: Rating & Personal Notes (When in list) ─────
+                        if (dbEntry != null) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -576,71 +661,6 @@ fun MediaDetailSheet(
                                     .padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                // Status Selector Pills (Watching | Watched)
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    val isWatching = dbEntry.listName.equals("Watching", ignoreCase = true)
-                                    val isWatched = dbEntry.listName.equals("Watched", ignoreCase = true)
-
-                                    // Watching Button
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(Loopa.PillShape)
-                                            .background(if (isWatching) Loopa.AmberSubtle else Loopa.Base)
-                                            .border(
-                                                1.dp,
-                                                if (isWatching) Loopa.Amber.copy(alpha = 0.5f) else Loopa.Border,
-                                                Loopa.PillShape
-                                            )
-                                            .clickable {
-                                                if (!isWatching) {
-                                                    viewModel.updateMediaItem(dbEntry.copy(listName = "Watching"), oldItem = dbEntry)
-                                                }
-                                            }
-                                            .padding(vertical = 10.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "Watching",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isWatching) Loopa.Amber else Loopa.TextSecondary
-                                        )
-                                    }
-
-                                    // Watched Button
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(Loopa.PillShape)
-                                            .background(if (isWatched) Loopa.Raised else Loopa.Base)
-                                            .border(
-                                                1.dp,
-                                                if (isWatched) Loopa.BorderMd else Loopa.Border,
-                                                Loopa.PillShape
-                                            )
-                                            .clickable {
-                                                if (!isWatched) {
-                                                    viewModel.updateMediaItem(dbEntry.copy(listName = "Watched"), oldItem = dbEntry)
-                                                }
-                                            }
-                                            .padding(vertical = 10.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "Watched",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isWatched) Loopa.TextPrimary else Loopa.TextSecondary
-                                        )
-                                    }
-                                }
-
-                                HorizontalDivider(color = Loopa.Border)
-
                                 // Your Rating Section
                                 var currentRating by remember(dbEntry.userRating) {
                                     mutableIntStateOf(dbEntry.userRating ?: 0)
@@ -774,55 +794,6 @@ fun MediaDetailSheet(
                                         maxLines = 4
                                     )
                                 }
-
-                                // Remove from My List Button
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(Loopa.PillShape)
-                                        .background(Loopa.Error.copy(alpha = 0.10f))
-                                        .border(1.dp, Loopa.Error.copy(alpha = 0.30f), Loopa.PillShape)
-                                        .clickable {
-                                            viewModel.removeMediaItem(dbEntry.id, dbEntry.mediaType)
-                                        }
-                                        .padding(vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Filled.Delete,
-                                            contentDescription = null,
-                                            tint = Loopa.Error,
-                                            modifier = Modifier.size(15.dp)
-                                        )
-                                        Text(
-                                            text = "Remove from My List",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Loopa.Error
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // ── Bento Card 5: Season / Episode Progress (TV & Anime) ────
-                        if (mediaTypeVal == "tv" || mediaTypeVal == "anime") {
-                            if (dbEntry != null) {
-                                EpisodeProgressSection(
-                                    mediaId = dbEntry.id,
-                                    mediaType = dbEntry.mediaType,
-                                    totalSeasons = dbEntry.totalSeasons ?: 1,
-                                    totalEpisodes = dbEntry.totalEpisodes ?: 0,
-                                    currentSeason = dbEntry.currentSeason ?: 1,
-                                    viewModel = viewModel,
-                                    onSeasonChange = { newSeason ->
-                                        viewModel.updateMediaItem(dbEntry.copy(currentSeason = newSeason))
-                                    }
-                                )
                             }
                         }
 

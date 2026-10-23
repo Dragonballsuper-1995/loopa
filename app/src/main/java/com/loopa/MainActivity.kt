@@ -204,16 +204,20 @@ fun MediaTrackerApp(
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(horizontal = 24.dp, vertical = 12.dp)
+                    .padding(horizontal = 24.dp, vertical = 4.dp)
             ) {
                 Surface(
                     shape = RoundedCornerShape(32.dp),
-                    color = Color(0xF2101014),
+                    color = Color(0x99101016),
                     border = BorderStroke(1.dp, Color(0x2EFFFFFF)),
                     shadowElevation = 16.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .shadow(24.dp, shape = RoundedCornerShape(32.dp), spotColor = Color.Black)
+                        .clip(RoundedCornerShape(32.dp))
+                        .hazeEffect(state = hazeState) {
+                            blurRadius = 24.dp
+                        }
                 ) {
                     Row(
                         modifier = Modifier

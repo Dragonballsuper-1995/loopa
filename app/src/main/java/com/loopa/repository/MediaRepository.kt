@@ -221,77 +221,16 @@ class MediaRepository(
         }
     }
 
-    // ── Episode sync ─────────────────────────────────────────────────────────
+    // ── Episode sync (Removed per design refresh) ───────────────────────────
 
-    /** Marks an episode watched in Room, then pushes to Supabase (queues if offline). */
-    suspend fun insertWatchedEpisode(episode: WatchedEpisodeEntity, userId: String) {
-        watchedEpisodeDao.insertWatchedEpisode(episode)
-        val remote = RemoteWatchedEpisode(
-            mediaId       = episode.mediaId,
-            userId        = userId,
-            mediaType     = episode.mediaType,
-            seasonNumber  = episode.seasonNumber,
-            episodeNumber = episode.episodeNumber,
-            watchedAt     = episode.watchedAt
-        )
-        try {
-            NetworkModule.supabase.postgrest["watched_episodes"].upsert(remote)
-        } catch (e: Exception) {
-            android.util.Log.w("MediaRepository", "insertWatchedEpisode offline — queuing: ${e.message}")
-            pendingOpDao.enqueue(
-                PendingOpEntity(opType = "UPSERT_EPISODE", payload = lenientJson.encodeToString(remote))
-            )
-        }
-    }
+    suspend fun insertWatchedEpisode(episode: WatchedEpisodeEntity, userId: String) {}
 
-    /** Unmarks an episode watched in Room, then deletes from Supabase (queues if offline). */
     suspend fun deleteWatchedEpisode(
         mediaId: Int, mediaType: String, userId: String,
         seasonNumber: Int, episodeNumber: Int
-    ) {
-        watchedEpisodeDao.deleteWatchedEpisode(mediaId, mediaType, seasonNumber, episodeNumber)
-        val stub = RemoteWatchedEpisode(
-            mediaId = mediaId, userId = userId, mediaType = mediaType,
-            seasonNumber = seasonNumber, episodeNumber = episodeNumber
-        )
-        try {
-            NetworkModule.supabase.postgrest["watched_episodes"].delete {
-                filter {
-                    eq("media_id",       mediaId)
-                    eq("user_id",        userId)
-                    eq("media_type",     mediaType)
-                    eq("season_number",  seasonNumber)
-                    eq("episode_number", episodeNumber)
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.w("MediaRepository", "deleteWatchedEpisode offline — queuing: ${e.message}")
-            pendingOpDao.enqueue(
-                PendingOpEntity(opType = "DELETE_EPISODE", payload = lenientJson.encodeToString(stub))
-            )
-        }
-    }
+    ) {}
 
-    /** Bulk-inserts all episodes for a media item and syncs each to Supabase. */
-    suspend fun insertAllEpisodesWatched(episodes: List<WatchedEpisodeEntity>, userId: String) {
-        val remotes = episodes.map {
-            RemoteWatchedEpisode(
-                mediaId = it.mediaId,
-                userId = userId,
-                mediaType = it.mediaType,
-                seasonNumber = it.seasonNumber,
-                episodeNumber = it.episodeNumber,
-                watchedAt = it.watchedAt
-            )
-        }
-        watchedEpisodeDao.insertWatchedEpisodes(episodes)
-        try {
-            NetworkModule.supabase.postgrest["watched_episodes"].upsert(remotes)
-        } catch (e: Exception) {
-            android.util.Log.w("MediaRepository", "Bulk upsert offline: ${e.message}")
-            // Fallback queue logic omitted for brevity, but bulk insert works
-        }
-    }
+    suspend fun insertAllEpisodesWatched(episodes: List<WatchedEpisodeEntity>, userId: String) {}
 
     /**
      * Full sync: downloads all remote items and applies Last-Write-Wins logic.
@@ -331,71 +270,11 @@ class MediaRepository(
             }
         }
 
-        // ── 2. Sync Watched Episodes ──────────────────────────────────────
-        val remoteEpisodes = retryWithBackoff {
-            NetworkModule.supabase.postgrest["watched_episodes"]
-                .select()
-                .decodeList<RemoteWatchedEpisode>()
-        }
-        val localEpisodes = watchedEpisodeDao.getAllWatchedEpisodesSync()
-        val remoteEpisodeMap = remoteEpisodes.associateBy { "${it.mediaId}_${it.mediaType}_${it.seasonNumber}_${it.episodeNumber}" }
-        
-        // Delete local episodes removed from the server
-        localEpisodes
-            .filter { "${it.mediaId}_${it.mediaType}_${it.seasonNumber}_${it.episodeNumber}" !in remoteEpisodeMap }
-            .forEach { watchedEpisodeDao.deleteWatchedEpisode(it.mediaId, it.mediaType, it.seasonNumber, it.episodeNumber) }
-            
-        // Upsert remote episodes using watchedAt timestamp comparison
-        val localEpisodeMap = localEpisodes.associateBy { "${it.mediaId}_${it.mediaType}_${it.seasonNumber}_${it.episodeNumber}" }
-        remoteEpisodes.forEach { remote ->
-            val key = "${remote.mediaId}_${remote.mediaType}_${remote.seasonNumber}_${remote.episodeNumber}"
-            val local = localEpisodeMap[key]
-            val shouldApply = local == null || (remote.watchedAt) >= (local.watchedAt)
-            if (shouldApply) {
-                watchedEpisodeDao.insertWatchedEpisode(
-                    com.loopa.db.WatchedEpisodeEntity(
-                        mediaId = remote.mediaId,
-                        mediaType = remote.mediaType,
-                        seasonNumber = remote.seasonNumber,
-                        episodeNumber = remote.episodeNumber,
-                        watchedAt = remote.watchedAt
-                    )
-                )
-            }
-        }
+        // Episode sync removed per design refresh
     }
 
-    /**
-     * Silently fetches the latest watched episodes for a specific media item from Supabase
-     * and upserts them into Room to ensure the detail pane has the freshest data.
-     */
     suspend fun fetchWatchedEpisodes(mediaId: Int, mediaType: String, userId: String) {
-        try {
-            val remoteEpisodes = NetworkModule.supabase.postgrest["watched_episodes"]
-                .select {
-                    filter {
-                        eq("media_id", mediaId)
-                        eq("media_type", mediaType)
-                        eq("user_id", userId)
-                    }
-                }
-                .decodeList<RemoteWatchedEpisode>()
-
-            // Upsert directly into Room
-            remoteEpisodes.forEach { remote ->
-                watchedEpisodeDao.insertWatchedEpisode(
-                    com.loopa.db.WatchedEpisodeEntity(
-                        mediaId = remote.mediaId,
-                        mediaType = remote.mediaType,
-                        seasonNumber = remote.seasonNumber,
-                        episodeNumber = remote.episodeNumber,
-                        watchedAt = remote.watchedAt
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("MediaRepository", "Failed to fetch watched episodes: ${e.message}")
-        }
+        // No-op
     }
 
     /**
@@ -447,23 +326,8 @@ class MediaRepository(
                         }
                         pendingOpDao.deleteById(op.localId)
                     }
-                    // Episode ops
-                    "UPSERT_EPISODE" -> {
-                        val remote = lenientJson.decodeFromString<RemoteWatchedEpisode>(op.payload)
-                        NetworkModule.supabase.postgrest["watched_episodes"].upsert(remote)
-                        pendingOpDao.deleteById(op.localId)
-                    }
-                    "DELETE_EPISODE" -> {
-                        val remote = lenientJson.decodeFromString<RemoteWatchedEpisode>(op.payload)
-                        NetworkModule.supabase.postgrest["watched_episodes"].delete {
-                            filter {
-                                eq("media_id",       remote.mediaId)
-                                eq("user_id",        remote.userId)
-                                eq("media_type",     remote.mediaType)
-                                eq("season_number",  remote.seasonNumber)
-                                eq("episode_number", remote.episodeNumber)
-                            }
-                        }
+                    // Episode ops removed per design refresh
+                    "UPSERT_EPISODE", "DELETE_EPISODE" -> {
                         pendingOpDao.deleteById(op.localId)
                     }
                 }

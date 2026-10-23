@@ -7,15 +7,15 @@
 
     <!-- Infinity loop stroke — white, refined 2.5px stroke -->
     <path
-        android:strokeColor="#F0EDE8"
+        android:strokeColor="#FFFFFF"
         android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:fillColor="@android:color/transparent"
         android:pathData="M34,54C34,62 42,66 54,54C66,42 74,46 74,54C74,62 66,66 54,54C42,42 34,46 34,54Z" />
 
-    <!-- Loopa Amber play arrow — #E8A87C -->
+    <!-- Loopa Electric Coral play arrow — #FF5A36 -->
     <path
-        android:fillColor="#E8A87C"
+        android:fillColor="#FF5A36"
         android:pathData="M71,49.5L78,54L71,58.5Z" />
 
 </vector>

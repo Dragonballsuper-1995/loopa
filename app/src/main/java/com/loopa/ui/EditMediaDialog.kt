@@ -261,20 +261,6 @@ fun EditMediaDialog(
                         }
                     }
 
-                    // ── Season & Episode Progress (TV / Anime only) ─────────────────
-                    if (item.mediaType == "tv" || item.mediaType == "anime") {
-                        com.loopa.ui.components.EpisodeProgressSection(
-                            mediaId = item.id,
-                            mediaType = item.mediaType,
-                            totalSeasons = item.totalSeasons ?: 1,
-                            totalEpisodes = item.totalEpisodes ?: 0,
-                            currentSeason = seasonInput.toIntOrNull() ?: 1,
-                            viewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-                            onSeasonChange = { newSeason ->
-                                seasonInput = newSeason.toString()
-                            }
-                        )
-                    }
 
                     HorizontalDivider(color = Loopa.Border)
 

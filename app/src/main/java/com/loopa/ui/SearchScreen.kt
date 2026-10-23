@@ -180,9 +180,9 @@ fun DiscoverScreen(
                         .background(
                             brush = Brush.verticalGradient(
                                 colorStops = arrayOf(
-                                    0.0f to Color(0xF50F0E0C),
-                                    0.45f to Color(0xCC0F0E0C),
-                                    0.75f to Color(0x660F0E0C),
+                                    0.0f to Color(0xF5060608),
+                                    0.45f to Color(0xCC060608),
+                                    0.75f to Color(0x66060608),
                                     1.0f to Color.Transparent
                                 )
                             )
@@ -381,11 +381,11 @@ fun RadarSearchBar(
                 isFocused = it.isFocused
                 onFocusChange(it.isFocused)
             },
-        color = Color(0x66161512),
+        color = Loopa.Surface.copy(alpha = 0.85f),
         shape = Loopa.PillShape,
         border = BorderStroke(
             width = 1.dp,
-            color = if (isFocused) Loopa.Amber.copy(alpha = 0.5f) else Color(0x1FADACAB)
+            color = if (isFocused) Loopa.Amber.copy(alpha = 0.6f) else Loopa.Border
         )
     ) {
         Row(

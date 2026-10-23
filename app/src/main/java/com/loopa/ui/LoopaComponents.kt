@@ -173,7 +173,7 @@ fun LoopCard(
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
     )
     val borderColor by animateColorAsState(
-        targetValue = if (isPressed) Color(0x33F0EDE8) else Loopa.Border,
+        targetValue = if (isPressed) Color(0x33FFFFFF) else Loopa.Border,
         label = "card_border"
     )
 

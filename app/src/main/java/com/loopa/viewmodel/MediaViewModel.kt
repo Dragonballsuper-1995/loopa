@@ -914,64 +914,17 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ── Episode tracking methods (Removed per design refresh) ───────────────
     fun getWatchedEpisodesForMedia(mediaId: Int, mediaType: String): kotlinx.coroutines.flow.Flow<List<com.loopa.db.WatchedEpisodeEntity>> {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
-            if (userId != null) {
-                repository.fetchWatchedEpisodes(mediaId, mediaType, userId)
-            }
-        }
-        return watchedEpisodeDao.getWatchedEpisodesForMedia(mediaId, mediaType)
+        return kotlinx.coroutines.flow.flowOf(emptyList())
     }
 
     fun toggleEpisodeWatched(mediaId: Int, mediaType: String, seasonNumber: Int, episodeNumber: Int, isWatched: Boolean, totalEpisodes: Int = 0) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
-            if (isWatched) {
-                val entity = com.loopa.db.WatchedEpisodeEntity(mediaId, mediaType, seasonNumber, episodeNumber)
-                if (userId != null) {
-                    repository.insertWatchedEpisode(entity, userId)
-                } else {
-                    // Guest mode — Room only
-                    watchedEpisodeDao.insertWatchedEpisode(entity)
-                }
-            } else {
-                if (userId != null) {
-                    repository.deleteWatchedEpisode(mediaId, mediaType, userId, seasonNumber, episodeNumber)
-                } else {
-                    watchedEpisodeDao.deleteWatchedEpisode(mediaId, mediaType, seasonNumber, episodeNumber)
-                }
-            }
-            autoUpdateWatchStatus(mediaId, mediaType, totalEpisodes)
-        }
+        // No-op
     }
 
     fun markSeasonWatched(mediaId: Int, mediaType: String, seasonNumber: Int, episodeNumbers: List<Int>, totalEpisodes: Int = 0) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
-            val entities = episodeNumbers.map { com.loopa.db.WatchedEpisodeEntity(mediaId, mediaType, seasonNumber, it) }
-            if (userId != null) {
-                repository.insertAllEpisodesWatched(entities, userId)
-            } else {
-                entities.forEach { watchedEpisodeDao.insertWatchedEpisode(it) }
-            }
-            autoUpdateWatchStatus(mediaId, mediaType, totalEpisodes)
-        }
-    }
-
-    private suspend fun autoUpdateWatchStatus(mediaId: Int, mediaType: String, totalEpisodes: Int) {
-        val currentCount = watchedEpisodeDao.countWatchedForMedia(mediaId, mediaType)
-        val item = mediaItemDao.getMediaItem(mediaId, mediaType) ?: return
-        
-        val newStatus = when {
-            totalEpisodes > 0 && currentCount >= totalEpisodes -> "Watched"
-            else -> "Watching"
-        }
-        
-        if (item.listName != newStatus) {
-            val updated = item.copy(listName = newStatus)
-            repository.insertMediaItem(updated)
-        }
+        // No-op
     }
 
     fun repairMediaItem(mediaId: Int, mediaType: String) {
@@ -1007,33 +960,7 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun markAllEpisodesWatched(mediaId: Int, mediaType: String, totalSeasons: Int) {
-        viewModelScope.launch {
-            val userId = NetworkModule.supabase.auth.currentUserOrNull()?.id
-            try {
-                val episodes = mutableListOf<com.loopa.db.WatchedEpisodeEntity>()
-                for (s in 1..totalSeasons) {
-                    val seasonDetails = fetchTvSeasonDetails(mediaId, s)
-                    seasonDetails?.episodes?.forEach { ep ->
-                        episodes.add(com.loopa.db.WatchedEpisodeEntity(mediaId, mediaType, s, ep.episodeNumber))
-                    }
-                }
-                if (userId != null) {
-                    repository.insertAllEpisodesWatched(episodes, userId)
-                } else {
-                    episodes.forEach { watchedEpisodeDao.insertWatchedEpisode(it) }
-                }
-            } catch (_: Exception) {
-                // Fallback: mark first 10 episodes of season 1
-                val fallback = (1..10).map {
-                    com.loopa.db.WatchedEpisodeEntity(mediaId, mediaType, 1, it)
-                }
-                if (userId != null) {
-                    repository.insertAllEpisodesWatched(fallback, userId)
-                } else {
-                    fallback.forEach { watchedEpisodeDao.insertWatchedEpisode(it) }
-                }
-            }
-        }
+        // No-op
     }
 
     // ── Data Portability Suite (Import & Export) ──────────────────────────

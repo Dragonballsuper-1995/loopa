@@ -62,4 +62,4 @@ val md_theme_dark_inverseOnSurface    = LoopBase
 val md_theme_dark_inversePrimary      = LoopAmberStrong
 val md_theme_dark_surfaceTint         = LoopAmber
 val md_theme_dark_outlineVariant      = BorderSubtle
-val md_theme_dark_scrim               = Color(0xCC0C0B09)
+val md_theme_dark_scrim               = Color(0xCC060608)
