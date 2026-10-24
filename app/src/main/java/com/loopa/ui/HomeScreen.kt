@@ -60,6 +60,46 @@ fun HomeScreen(
     val upcomingAnime by viewModel.upcomingAnime.collectAsState()
     val savedItems by viewModel.savedMediaItems.collectAsState()
 
+    val topAnimeMapped = remember(topAnime) {
+        topAnime.take(10).map { anime ->
+            val imageUrl = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl
+            TmdbMovie(
+                id = anime.malId,
+                title = anime.title,
+                name = anime.title,
+                posterPath = imageUrl,
+                backdropPath = imageUrl,
+                releaseDate = "",
+                firstAirDate = "",
+                voteAverage = anime.score,
+                overview = anime.synopsis ?: "",
+                mediaType = "anime",
+                genreIds = null,
+                popularity = null
+            )
+        }
+    }
+
+    val upcomingAnimeMapped = remember(upcomingAnime) {
+        upcomingAnime.take(10).map { anime ->
+            val imageUrl = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl
+            TmdbMovie(
+                id = anime.malId,
+                title = anime.title,
+                name = anime.title,
+                posterPath = imageUrl,
+                backdropPath = imageUrl,
+                releaseDate = "",
+                firstAirDate = "",
+                voteAverage = anime.score,
+                overview = anime.synopsis ?: "",
+                mediaType = "anime",
+                genreIds = null,
+                popularity = null
+            )
+        }
+    }
+
     var activeTrackMovie by remember { mutableStateOf<TmdbMovie?>(null) }
     var hoverMovie by remember { mutableStateOf<TmdbMovie?>(null) }
     var internalSeeAllCategory by remember { mutableStateOf<SeeAllCategory?>(null) }
@@ -125,7 +165,7 @@ fun HomeScreen(
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            items(state.trending.take(10)) { movie ->
+                            items(state.trending.take(10), key = { "trending_${it.id}_${it.mediaType}" }) { movie ->
                                 val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                                 HomePosterCard(
                                     title = movie.title ?: movie.name ?: "Unknown",
@@ -164,7 +204,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
-                        itemsIndexed(top10Today) { index, movie ->
+                        itemsIndexed(top10Today, key = { index, movie -> "top10_${movie.id}_$index" }) { index, movie ->
                             val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                             Top10PosterCard(
                                 rank = index + 1,
@@ -197,31 +237,11 @@ fun HomeScreen(
                 if (topAnime.isEmpty()) {
                     LoadingRow()
                 } else {
-                    // Pre-compute once when topAnime changes — avoids TmdbMovie allocation on every scroll frame
-                    val topAnimeMapped = remember(topAnime) {
-                        topAnime.take(10).map { anime ->
-                            val imageUrl = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl
-                            TmdbMovie(
-                                id = anime.malId,
-                                title = anime.title,
-                                name = anime.title,
-                                posterPath = imageUrl,
-                                backdropPath = imageUrl,
-                                releaseDate = "",
-                                firstAirDate = "",
-                                voteAverage = anime.score,
-                                overview = anime.synopsis ?: "",
-                                mediaType = "anime",
-                                genreIds = null,
-                                popularity = null
-                            )
-                        }
-                    }
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(topAnimeMapped) { tmdbEquivalent ->
+                        items(topAnimeMapped, key = { "anime_${it.id}" }) { tmdbEquivalent ->
                             HomePosterCard(
                                 title = tmdbEquivalent.title ?: "",
                                 imageUrl = tmdbEquivalent.posterPath,
@@ -256,7 +276,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(popularMovies.take(10)) { movie ->
+                        items(popularMovies.take(10), key = { "pop_mov_${it.id}" }) { movie ->
                             val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                             HomePosterCard(
                                 title = movie.title ?: "Unknown",
@@ -292,7 +312,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(popularTv.take(10)) { tv ->
+                        items(popularTv.take(10), key = { "pop_tv_${it.id}" }) { tv ->
                             val imageUrl = TmdbUrlHelper.posterUrl(tv.posterPath, "w342")
                             HomePosterCard(
                                 title = tv.name ?: tv.title ?: "Unknown",
@@ -328,7 +348,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(topRatedMovies.take(10)) { movie ->
+                        items(topRatedMovies.take(10), key = { "top_mov_${it.id}" }) { movie ->
                             val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                             HomePosterCard(
                                 title = movie.title ?: "Unknown",
@@ -364,7 +384,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(upcomingMovies.take(10)) { movie ->
+                        items(upcomingMovies.take(10), key = { "up_mov_${it.id}" }) { movie ->
                             val imageUrl = TmdbUrlHelper.posterUrl(movie.posterPath, "w342")
                             HomePosterCard(
                                 title = movie.title ?: "Unknown",
@@ -400,7 +420,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(topRatedTv.take(10)) { tv ->
+                        items(topRatedTv.take(10), key = { "top_tv_${it.id}" }) { tv ->
                             val imageUrl = TmdbUrlHelper.posterUrl(tv.posterPath, "w342")
                             HomePosterCard(
                                 title = tv.name ?: tv.title ?: "Unknown",
@@ -436,7 +456,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(airingTodayTv.take(10)) { tv ->
+                        items(airingTodayTv.take(10), key = { "air_tv_${it.id}" }) { tv ->
                             val imageUrl = TmdbUrlHelper.posterUrl(tv.posterPath, "w342")
                             HomePosterCard(
                                 title = tv.name ?: tv.title ?: "Unknown",
@@ -472,25 +492,10 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(upcomingAnime.take(10)) { anime ->
-                            val imageUrl = anime.images?.jpg?.largeImageUrl ?: anime.images?.jpg?.imageUrl
-                            val tmdbEquivalent = TmdbMovie(
-                                id = anime.malId,
-                                title = anime.title,
-                                name = anime.title,
-                                posterPath = imageUrl,
-                                backdropPath = imageUrl,
-                                releaseDate = "",
-                                firstAirDate = "",
-                                voteAverage = anime.score,
-                                overview = anime.synopsis ?: "",
-                                mediaType = "anime",
-                                genreIds = null,
-                                popularity = null
-                            )
+                        items(upcomingAnimeMapped, key = { "up_anime_${it.id}" }) { tmdbEquivalent ->
                             HomePosterCard(
-                                title = anime.title,
-                                imageUrl = imageUrl,
+                                title = tmdbEquivalent.title ?: "",
+                                imageUrl = tmdbEquivalent.posterPath,
                                 mediaType = "anime",
                                 onClick = { activeTrackMovie = tmdbEquivalent },
                                 onLongPress = { hoverMovie = tmdbEquivalent },
@@ -602,7 +607,7 @@ fun HeroCarousel(
             if (item != null) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     val imageUrl = (item.backdropPath ?: item.posterPath)?.let {
-                        TmdbUrlHelper.backdropUrl(it, "w1280")
+                        TmdbUrlHelper.backdropUrl(it, "w780")
                     }
                     if (imageUrl != null) {
                         AsyncImage(

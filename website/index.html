@@ -36,16 +36,17 @@
     <meta name="twitter:image" content="https://loopa.app/og-image.jpg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://image.tmdb.org">
     <link rel="preconnect" href="https://utkqrfdheofuepeuzutg.supabase.co">
-    <link rel="preconnect" href="https://loopa-tmdb-proxy.sujalsanjay-chhajed2023.workers.dev">
+    <link rel="preconnect" href="https://loopa-ai-proxy.sujalsanjay-chhajed2023.workers.dev">
     
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Supabase JS v2 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 
-    <link rel="stylesheet" href="css/output.css?v=22">
+    <link rel="stylesheet" href="css/output.css?v=24">
 </head>
 
 <body class="flex flex-col min-h-screen overflow-x-hidden">
@@ -751,21 +752,21 @@
     <!-- PJAX Overlay Container -->
     <div id="staticPageOverlay" class="fixed inset-0 z-[200] bg-loopBase overflow-y-auto hidden opacity-0 transition-opacity duration-300"></div>
 
-    <script src="js/config.js?v=21" defer></script>
-    <script src="js/storage.js?v=21" defer></script>
-    <script src="js/api.js?v=21" defer></script>
-    <script src="js/supabase.js?v=21" defer></script>
-    <script src="js/portability.js?v=21" defer></script>
-    <script src="js/search-engine.js?v=21" defer></script>
-    <script src="js/ui.js?v=21" defer></script>
-    <script src="js/app.js?v=21" defer></script>
+    <script src="js/config.js?v=24" defer></script>
+    <script src="js/storage.js?v=24" defer></script>
+    <script src="js/api.js?v=24" defer></script>
+    <script src="js/supabase.js?v=24" defer></script>
+    <script src="js/portability.js?v=24" defer></script>
+    <script src="js/search-engine.js?v=24" defer></script>
+    <script src="js/ui.js?v=24" defer></script>
+    <script src="js/app.js?v=24" defer></script>
 
 
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=21').then(registration => {
+                navigator.serviceWorker.register('sw.js?v=24').then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
                 }, err => {
                     console.log('ServiceWorker registration failed: ', err);

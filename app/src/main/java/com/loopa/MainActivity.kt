@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,7 +60,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        NetworkModule.prewarmConnections()
+        NetworkModule.initialize(applicationContext)
         setContent {
             val viewModel: MediaViewModel = viewModel()
             val themeMode by viewModel.themeMode.collectAsState()
@@ -216,7 +217,7 @@ fun MediaTrackerApp(
                         .shadow(24.dp, shape = RoundedCornerShape(32.dp), spotColor = Color.Black)
                         .clip(RoundedCornerShape(32.dp))
                         .hazeEffect(state = hazeState) {
-                            blurRadius = 24.dp
+                            blurRadius = 16.dp
                         }
                 ) {
                     Row(
@@ -248,7 +249,10 @@ fun MediaTrackerApp(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .scale(scale)
+                                    .graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                    }
                                     .clip(RoundedCornerShape(26.dp))
                                     .background(
                                         color = if (isSelected) Loopa.Amber else Color.Transparent

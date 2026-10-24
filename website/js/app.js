@@ -358,12 +358,20 @@ const App = {
                     grid.innerHTML = UI.skeletonGrid(8);
                 }
 
+                clearTimeout(this.s.aiIdleDebounce);
+
                 if (immediate) {
-                    this._doSearch(q);
+                    this._doSearch(q, true);
                 } else {
                     this.s.searchDebounce = setTimeout(() => {
-                        this._doSearch(q);
-                    }, 300);
+                        this._doSearch(q, false);
+                        // Schedule background AI semantic/spelling check after 700ms idle
+                        this.s.aiIdleDebounce = setTimeout(() => {
+                            if (this.s.searchResults.length < 3 && searchInput.value.trim() === q) {
+                                this._doSearch(q, true);
+                            }
+                        }, 700);
+                    }, 220);
                 }
             };
 
@@ -847,7 +855,7 @@ const App = {
     },
 
 
-    async _doSearch(q) {
+    async _doSearch(q, allowAi = false) {
         // Abort previous in-flight search requests and increment sequence ID
         if (this.s.searchAbortController) {
             this.s.searchAbortController.abort();
@@ -863,12 +871,12 @@ const App = {
                 actualQuery = cached;
             }
 
-            // 1. Perform instant fast search with unified Edge API (~20-80ms)
+            // 1. Instant local hits first (< 1ms)
+            const localHits = LoopaSearchEngine.getSuggestions(q, 4);
+
+            // 2. Perform fast search with unified Edge API (~20-80ms)
             const fastResults = await API.searchFast(actualQuery, signal);
             if (currentSeq !== this.s.searchSeqId) return; // Stale query discarded
-
-            // Fetch fuzzy matches from local watchlist index
-            const localHits = LoopaSearchEngine.getSuggestions(q, 4);
 
             const renderResults = (remoteItems) => {
                 if (currentSeq !== this.s.searchSeqId) return; // Stale query discarded
@@ -916,53 +924,55 @@ const App = {
             // RENDER INSTANTLY NOW (< 50ms)!
             renderResults(fastResults);
 
-            // 2. Asynchronously run AI Semantic Smart Search in background
-            const isNaturalLanguage = q.split(/\s+/).length >= 3 || /(like|about|vibe|dystopian|cyberpunk|anime|movie|show|recommend|similar|dark|funny|robot|car|cook)/i.test(q);
-            if (isNaturalLanguage || (fastResults.length < 3 && q.length >= 4)) {
-                (async () => {
-                    try {
-                        const semanticResults = await API.searchSemantic(q, signal);
-                        if (currentSeq !== this.s.searchSeqId) return;
-                        if (semanticResults && semanticResults.length > 0) {
-                            renderResults([...semanticResults, ...fastResults]);
-                            return;
-                        }
-                    } catch (err) {
-                        if (err.name === 'AbortError') return;
-                    }
-
-                    // Fallback to spelling correction if semantic returned no extra results
-                    if (!cached && fastResults.length < 3 && CONFIG.RECOMMENDATIONS_URL) {
+            // 3. Asynchronously run AI Semantic Smart Search ONLY if allowed (explicit Enter or idle trigger)
+            if (allowAi) {
+                const isNaturalLanguage = q.split(/\s+/).length >= 3 || /(like|about|vibe|dystopian|cyberpunk|anime|movie|show|recommend|similar|dark|funny|robot|car|cook)/i.test(q);
+                if (isNaturalLanguage || (fastResults.length < 3 && q.length >= 4)) {
+                    (async () => {
                         try {
-                            const prompt = `Correct any typos or spelling errors in this media search query: '${q}'. Return ONLY a raw JSON object: {"correctedQuery":"<corrected title>"}. Example: "Moha" -> {"correctedQuery":"Mohabbatein"}.`;
-                            const aiRes = await fetch(CONFIG.RECOMMENDATIONS_URL, {
-                                method: 'POST',
-                                signal: signal,
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
-                                },
-                                body: JSON.stringify({ prompt })
-                            });
+                            const semanticResults = await API.searchSemantic(q, signal);
                             if (currentSeq !== this.s.searchSeqId) return;
-                            if (aiRes.ok) {
-                                let text = await aiRes.text();
-                                text = text.replace(/```json?/g, '').replace(/```/g, '').trim();
-                                const parsed = JSON.parse(text);
-                                if (parsed.correctedQuery && parsed.correctedQuery.toLowerCase() !== q.toLowerCase()) {
-                                    LoopaSearchEngine.cacheCorrection(q, parsed.correctedQuery);
-                                    const extraRes = await API.searchFast(parsed.correctedQuery, signal);
-                                    if (currentSeq !== this.s.searchSeqId) return;
-                                    if (extraRes.length > 0) {
-                                        renderResults([...fastResults, ...extraRes]);
-                                    }
-                                }
+                            if (semanticResults && semanticResults.length > 0) {
+                                renderResults([...semanticResults, ...fastResults]);
+                                return;
                             }
                         } catch (err) {
                             if (err.name === 'AbortError') return;
                         }
-                    }
-                })();
+
+                        // Fallback to spelling correction if semantic returned no extra results
+                        if (!cached && fastResults.length < 3 && CONFIG.RECOMMENDATIONS_URL) {
+                            try {
+                                const prompt = `Correct any typos or spelling errors in this media search query: '${q}'. Return ONLY a raw JSON object: {"correctedQuery":"<corrected title>"}. Example: "Moha" -> {"correctedQuery":"Mohabbatein"}.`;
+                                const aiRes = await fetch(CONFIG.RECOMMENDATIONS_URL, {
+                                    method: 'POST',
+                                    signal: signal,
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-Loopa-Client-Key': CONFIG.CLIENT_KEY
+                                    },
+                                    body: JSON.stringify({ prompt })
+                                });
+                                if (currentSeq !== this.s.searchSeqId) return;
+                                if (aiRes.ok) {
+                                    let text = await aiRes.text();
+                                    text = text.replace(/```json?/g, '').replace(/```/g, '').trim();
+                                    const parsed = JSON.parse(text);
+                                    if (parsed.correctedQuery && parsed.correctedQuery.toLowerCase() !== q.toLowerCase()) {
+                                        LoopaSearchEngine.cacheCorrection(q, parsed.correctedQuery);
+                                        const extraRes = await API.searchFast(parsed.correctedQuery, signal);
+                                        if (currentSeq !== this.s.searchSeqId) return;
+                                        if (extraRes.length > 0) {
+                                            renderResults([...fastResults, ...extraRes]);
+                                        }
+                                    }
+                                }
+                            } catch (err) {
+                                if (err.name === 'AbortError') return;
+                            }
+                        }
+                    })();
+                }
             }
         } catch (err) {
             if (err.name === 'AbortError') return;

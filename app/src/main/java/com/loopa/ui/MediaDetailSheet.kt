@@ -110,7 +110,7 @@ fun MediaDetailSheet(
             val date = movie.releaseDate ?: movie.firstAirDate ?: ""
             val year = date.take(4)
             val backdropUrl = (movie.backdropPath ?: movie.posterPath)?.let {
-                TmdbUrlHelper.backdropUrl(it, "w1280")
+                TmdbUrlHelper.backdropUrl(it, "w780")
             }
             val posterUrl = movie.posterPath?.let {
                 TmdbUrlHelper.posterUrl(it, "w500")

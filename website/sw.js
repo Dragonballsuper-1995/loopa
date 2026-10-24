@@ -1,4 +1,4 @@
-const CACHE_NAME = 'loopa-cache-v9';
+const CACHE_NAME = 'loopa-cache-v10';
 
 // Static assets to cache immediately on install
 const PRECACHE_URLS = [
@@ -6,15 +6,15 @@ const PRECACHE_URLS = [
     './index.html',
     './manifest.json',
     './css/styles.css',
-    './css/output.css?v=21',
-    './js/config.js?v=20',
-    './js/storage.js?v=20',
-    './js/supabase.js?v=20',
-    './js/portability.js?v=20',
-    './js/api.js?v=20',
-    './js/search-engine.js?v=20',
-    './js/ui.js?v=20',
-    './js/app.js?v=20',
+    './css/output.css?v=24',
+    './js/config.js?v=24',
+    './js/storage.js?v=24',
+    './js/supabase.js?v=24',
+    './js/portability.js?v=24',
+    './js/api.js?v=24',
+    './js/search-engine.js?v=24',
+    './js/ui.js?v=24',
+    './js/app.js?v=24',
     './assets/logo.svg',
     './assets/favicon.svg',
     './assets/icon-192.png',

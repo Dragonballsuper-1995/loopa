@@ -42,7 +42,7 @@ object TmdbUrlHelper {
     }
 
     /**
-     * Builds a proxied TMDB poster URL.
+     * Builds a TMDB poster URL using TMDB edge CDN directly.
      * Supported sizes: w92, w154, w185, w342, w500, w780, original. Default is "w342".
      */
     fun posterUrl(path: String?, size: String = "w342"): String? {
@@ -50,16 +50,16 @@ object TmdbUrlHelper {
         if (path.startsWith("http://") || path.startsWith("https://")) {
             val cleaned = cleanPath(path)
             if (cleaned != null && cleaned.startsWith("/")) {
-                return "$PROXY_BASE_URL$size$cleaned"
+                return "$TMDB_BASE_URL$size$cleaned"
             }
             return path
         }
         val formattedPath = if (path.startsWith("/")) path else "/$path"
-        return "$PROXY_BASE_URL$size$formattedPath"
+        return "$TMDB_BASE_URL$size$formattedPath"
     }
 
     /**
-     * Builds a proxied TMDB backdrop URL.
+     * Builds a TMDB backdrop URL using TMDB edge CDN directly.
      * Supported sizes: w300, w500, w780, w1280, original. Default is "w500".
      */
     fun backdropUrl(path: String?, size: String = "w500"): String? {
@@ -67,16 +67,16 @@ object TmdbUrlHelper {
         if (path.startsWith("http://") || path.startsWith("https://")) {
             val cleaned = cleanPath(path)
             if (cleaned != null && cleaned.startsWith("/")) {
-                return "$PROXY_BASE_URL$size$cleaned"
+                return "$TMDB_BASE_URL$size$cleaned"
             }
             return path
         }
         val formattedPath = if (path.startsWith("/")) path else "/$path"
-        return "$PROXY_BASE_URL$size$formattedPath"
+        return "$TMDB_BASE_URL$size$formattedPath"
     }
 
     /**
-     * Builds a proxied TMDB profile or small image URL.
+     * Builds a TMDB profile or small image URL using TMDB edge CDN directly.
      * Supported sizes: w45, w185, h632, original. Default is "w185".
      */
     fun profileUrl(path: String?, size: String = "w185"): String? {
@@ -84,12 +84,23 @@ object TmdbUrlHelper {
         if (path.startsWith("http://") || path.startsWith("https://")) {
             val cleaned = cleanPath(path)
             if (cleaned != null && cleaned.startsWith("/")) {
-                return "$PROXY_BASE_URL$size$cleaned"
+                return "$TMDB_BASE_URL$size$cleaned"
             }
             return path
         }
         val formattedPath = if (path.startsWith("/")) path else "/$path"
-        return "$PROXY_BASE_URL$size$formattedPath"
+        return "$TMDB_BASE_URL$size$formattedPath"
+    }
+
+    /**
+     * Converts a direct TMDB URL to the fallback worker proxy URL if needed.
+     */
+    fun toProxyUrl(url: String?): String? {
+        if (url.isNullOrBlank()) return null
+        if (url.startsWith(TMDB_BASE_URL)) {
+            return url.replace(TMDB_BASE_URL, PROXY_BASE_URL)
+        }
+        return url
     }
 
     /**

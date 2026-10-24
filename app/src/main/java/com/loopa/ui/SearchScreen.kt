@@ -72,8 +72,6 @@ fun DiscoverScreen(
         }
     }
 
-    val localHazeState = remember { HazeState() }
-
     AnimatedContent(
         targetState = activeSeeAllCategory,
         transitionSpec = {
@@ -90,7 +88,7 @@ fun DiscoverScreen(
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
                 // 1. The Scrollable Content
-                Box(modifier = Modifier.fillMaxSize().hazeSource(state = localHazeState)) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     if (query.isBlank()) {
                         HomeScreen(
                             navController = navController,
@@ -119,12 +117,14 @@ fun DiscoverScreen(
                             }
                             is MediaUiState.InsufficientData -> {}
                             is MediaUiState.Success -> {
-                                val filteredList = state.trending.filter { movie ->
-                                    when (selectedMediaType) {
-                                        "Movies" -> movie.mediaType == "movie"
-                                        "TV Shows" -> movie.mediaType == "tv"
-                                        "Anime" -> movie.genreIds?.contains(16) == true || movie.mediaType == "anime"
-                                        else -> true
+                                val filteredList = remember(state.trending, selectedMediaType) {
+                                    state.trending.filter { movie ->
+                                        when (selectedMediaType) {
+                                            "Movies" -> movie.mediaType == "movie"
+                                            "TV Shows" -> movie.mediaType == "tv"
+                                            "Anime" -> movie.genreIds?.contains(16) == true || movie.mediaType == "anime"
+                                            else -> true
+                                        }
                                     }
                                 }
 
@@ -150,7 +150,7 @@ fun DiscoverScreen(
                                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                                         verticalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
-                                        items(filteredList.size) { index ->
+                                        items(filteredList.size, key = { filteredList[it].id }) { index ->
                                             val movie = filteredList[index]
                                             RecommendationCard(
                                                 movie = movie,
@@ -165,18 +165,11 @@ fun DiscoverScreen(
                     }
                 }
 
-                // 2. Search bar with progressive blur overlaid on top
+                // 2. Search bar with gradient scrim overlaid on top
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.TopCenter)
-                        .hazeEffect(state = localHazeState) {
-                            blurRadius = 24.dp
-                            progressive = HazeProgressive.verticalGradient(
-                                startIntensity = 1f,
-                                endIntensity = 0f
-                            )
-                        }
                         .background(
                             brush = Brush.verticalGradient(
                                 colorStops = arrayOf(

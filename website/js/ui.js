@@ -87,6 +87,19 @@ const UI = {
         return `https://placehold.co/400x600/1A1915/A09990?text=${encodeURIComponent((title || '?').substring(0, 12))}`;
     },
 
+    _handleImgError(img, title) {
+        if (!img || img.dataset.failed) return;
+        const currentSrc = img.src || '';
+        if (currentSrc.includes('image.tmdb.org/t/p/') && typeof CONFIG !== 'undefined' && CONFIG.TMDB_IMG_PROXY_BASE) {
+            img.dataset.failed = 'proxy';
+            const path = currentSrc.substring(currentSrc.indexOf('/t/p/') + 5);
+            img.src = `${CONFIG.TMDB_IMG_PROXY_BASE}${path}`;
+        } else {
+            img.dataset.failed = 'complete';
+            img.src = this._fallbackPoster(title);
+        }
+    },
+
     _typeBadgeClass(type) {
         if (type === 'anime') return 'text-loopAmber';
         if (type === 'tv')    return 'text-textSecondary';
@@ -134,7 +147,8 @@ const UI = {
         el.innerHTML = `
             <div class="media-card w-full aspect-[2/3] rounded-lg overflow-hidden relative bg-loopSurface border border-loopBorderSubtle">
                 ${statusBadge}
-                <img src="${this._escapeHTML(src)}" alt="${this._escapeHTML(item.title)}" loading="lazy"
+                <img src="${this._escapeHTML(src)}" alt="${this._escapeHTML(item.title)}" loading="lazy" decoding="async"
+                     onerror="UI._handleImgError(this, '${this._escapeHTML(item.title)}')"
                      class="poster-img w-full h-full object-cover relative z-10">
                 <!-- Default bottom label — fades out on hover -->
                 <div class="card-default-label absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none transition-opacity duration-200 group-hover:opacity-0"></div>
@@ -207,7 +221,8 @@ const UI = {
         el.className = `media-card w-full aspect-[2/3] relative rounded-lg overflow-hidden cursor-pointer bg-loopSurface border border-white/[0.07] group`;
         el.innerHTML = `
             ${statusBadge}
-            <img src="${this._escapeHTML(src)}" alt="${this._escapeHTML(item.title)}" loading="lazy"
+            <img src="${this._escapeHTML(src)}" alt="${this._escapeHTML(item.title)}" loading="lazy" decoding="async"
+                 onerror="UI._handleImgError(this, '${this._escapeHTML(item.title)}')"
                  class="poster-img w-full h-full object-cover relative z-10">
             <div class="absolute inset-0 bg-loopBase/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center p-4 text-center z-20 group-hover:delay-0 group-hover:group-hover:delay-[500ms]:opacity-0">
                 <i class="${overlayActionIcon} text-loopAmber text-3xl mb-3"></i>
@@ -340,6 +355,7 @@ const UI = {
 
                 this._bindHeroDots(heroItems || this._heroItems);
 
+                bgImg.onerror = () => this._handleImgError(bgImg, item.title);
                 requestAnimationFrame(() => {
                     bgImg.classList.remove('opacity-0');
                     if (content) content.classList.remove('opacity-0');
@@ -364,7 +380,8 @@ const UI = {
 
         // ── Initial render ────────────────────────────────────────────────────
         container.innerHTML = `
-            <img id="hero-bg-img" src="${this._escapeHTML(backdrop)}"
+            <img id="hero-bg-img" src="${this._escapeHTML(backdrop)}" decoding="async"
+                 onerror="UI._handleImgError(this, '${this._escapeHTML(item.title)}')"
                  class="absolute inset-0 w-full h-full object-cover object-[center_15%] transition-opacity duration-500 scale-105"
                  alt="${this._escapeHTML(item.title)}">
 
@@ -546,6 +563,8 @@ const UI = {
         const backdropSrc = item.backdropUrl || item.posterUrl || '';
         const backdropImg = document.getElementById('modalBackdropImg');
         if (backdropImg) {
+            backdropImg.decoding = 'async';
+            backdropImg.onerror = () => this._handleImgError(backdropImg, item.title);
             backdropImg.src = this._escapeHTML(backdropSrc);
             backdropImg.alt = this._escapeHTML(item.title);
         }

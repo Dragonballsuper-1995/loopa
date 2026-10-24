@@ -1,11 +1,16 @@
 package com.loopa.network
 
+import android.content.Context
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import okhttp3.Cache
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.io.File
+import java.util.concurrent.TimeUnit
 
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
@@ -32,27 +37,53 @@ object NetworkModule {
         .add(KotlinJsonAdapterFactory())
         .build()
 
-    val okHttpClient = OkHttpClient.Builder()
-        .addInterceptor { chain ->
-            val original = chain.request()
-            val requestBuilder = original.newBuilder()
-                .header("X-Loopa-Client-Key", com.loopa.app.BuildConfig.LOOPA_CLIENT_KEY)
-            val request = requestBuilder.build()
-            chain.proceed(request)
+    private fun createOkHttpClient(cache: Cache? = null): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectionPool(ConnectionPool(8, 5, TimeUnit.MINUTES))
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val requestBuilder = original.newBuilder()
+                    .header("X-Loopa-Client-Key", com.loopa.app.BuildConfig.LOOPA_CLIENT_KEY)
+                val request = requestBuilder.build()
+                chain.proceed(request)
+            }
+            .addInterceptor(HttpLoggingInterceptor().apply {
+                level = if (com.loopa.app.BuildConfig.DEBUG)
+                    HttpLoggingInterceptor.Level.BODY
+                else
+                    HttpLoggingInterceptor.Level.NONE
+            })
+
+        if (cache != null) {
+            builder.cache(cache)
         }
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = if (com.loopa.app.BuildConfig.DEBUG)
-                HttpLoggingInterceptor.Level.BODY
-            else
-                HttpLoggingInterceptor.Level.NONE
-        })
-        .build()
+        return builder.build()
+    }
+
+    @Volatile
+    var okHttpClient: OkHttpClient = createOkHttpClient()
+        private set
+
+    fun initialize(context: Context) {
+        try {
+            val cacheDir = File(context.cacheDir, "loopa_http_cache")
+            val cache = Cache(cacheDir, 30L * 1024 * 1024) // 30 MB
+            okHttpClient = createOkHttpClient(cache)
+        } catch (_: Exception) {}
+        prewarmConnections()
+    }
+
+    private val callFactory = okhttp3.Call.Factory { request ->
+        okHttpClient.newCall(request)
+    }
 
     val tmdbApi: TmdbApiService by lazy {
         val proxyBase = com.loopa.app.BuildConfig.AI_PROXY_URL.trimEnd('/') + "/tmdb/"
         Retrofit.Builder()
             .baseUrl(proxyBase)
-            .client(okHttpClient)
+            .callFactory(callFactory)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(TmdbApiService::class.java)
@@ -61,7 +92,7 @@ object NetworkModule {
     val kitsuApi: KitsuApiService by lazy {
         Retrofit.Builder()
             .baseUrl("https://kitsu.io/api/edge/")
-            .client(okHttpClient)
+            .callFactory(callFactory)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(KitsuApiService::class.java)
@@ -70,7 +101,7 @@ object NetworkModule {
     val anilistApi: AniListApiService by lazy {
         Retrofit.Builder()
             .baseUrl("https://graphql.anilist.co/")
-            .client(okHttpClient)
+            .callFactory(callFactory)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(AniListApiService::class.java)
@@ -79,7 +110,7 @@ object NetworkModule {
     val jikanApi: JikanApiService by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.jikan.moe/v4/")
-            .client(okHttpClient)
+            .callFactory(callFactory)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(JikanApiService::class.java)
@@ -89,7 +120,7 @@ object NetworkModule {
         val proxyBase = com.loopa.app.BuildConfig.AI_PROXY_URL.trimEnd('/') + "/"
         Retrofit.Builder()
             .baseUrl(proxyBase)
-            .client(okHttpClient)
+            .callFactory(callFactory)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(LoopaApiService::class.java)

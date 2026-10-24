@@ -87,19 +87,24 @@ export default {
           if (!isImage) {
             headers['Accept'] = 'application/json';
           }
-          const tmdbRes = await fetch(targetUrl.toString(), {
+          const fetchOptions = {
             method: 'GET',
             headers: headers
-          });
-
-          const data = await tmdbRes.arrayBuffer();
+          };
+          if (isImage) {
+            fetchOptions.cf = {
+              cacheEverything: true,
+              cacheTtl: 2592000 // 30 days edge cache
+            };
+          }
+          const tmdbRes = await fetch(targetUrl.toString(), fetchOptions);
           const corsHeaders = getCorsHeaders(request, isImage);
 
-          return new Response(data, {
+          return new Response(tmdbRes.body, {
             status: tmdbRes.status,
             headers: {
               'Content-Type': tmdbRes.headers.get('Content-Type') || (isImage ? 'image/jpeg' : 'application/json'),
-              'Cache-Control': isImage ? 'public, max-age=604800, immutable' : 'public, max-age=3600',
+              'Cache-Control': isImage ? 'public, max-age=604800, s-maxage=2592000, immutable' : 'public, max-age=3600',
               ...corsHeaders
             }
           });
